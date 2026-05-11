@@ -89,7 +89,7 @@ export default function Landing() {
           &copy; 2026 SmileCare Pro. جميع الحقوق محفوظة. نظام إدارة عيادات الأسنان المتطور.
         </p>
         <div style={{ color: "#38bdf8", fontSize: "10px", marginTop: "10px", opacity: 0.5 }}>
-          v1.0.1 - Live Update Active ✨
+          v1.0.2 - Live Update Active ✨
         </div>
       </footer>
     </div>

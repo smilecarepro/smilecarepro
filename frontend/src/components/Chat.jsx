@@ -134,6 +134,7 @@ export default function Chat() {
     <div style={{ fontFamily: 'inherit' }} dir="rtl">
       {/* Draggable FAB */}
       <button 
+        className="chat-fab-animate"
         style={{
           position: 'fixed', bottom: `${pos.y}px`, left: `${pos.x}px`, width: '60px', height: '60px',
           borderRadius: '50%', background: 'linear-gradient(135deg, #0061ff 0%, #6033ff 100%)',
@@ -245,6 +246,23 @@ export default function Chat() {
       <style>{`
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes pulseBadge { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        @keyframes chatFloat {
+          0% { transform: translateY(0px) rotate(0deg); }
+          25% { transform: translateY(-5px) rotate(2deg); }
+          50% { transform: translateY(0px) rotate(0deg); }
+          75% { transform: translateY(-5px) rotate(-2deg); }
+          100% { transform: translateY(0px) rotate(0deg); }
+        }
+        @keyframes chatShimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .chat-fab-animate {
+          animation: chatFloat 3s ease-in-out infinite;
+        }
+        .chat-fab-animate:hover {
+          animation-play-state: paused;
+        }
       `}</style>
     </div>
   );
