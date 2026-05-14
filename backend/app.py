@@ -60,7 +60,7 @@ scheduler.add_job(func=cleanup_old_tokens, trigger="cron", hour=3, minute=0)
 scheduler.start()
 
 # 🔐 Strict CORS Configuration
-CORS_ALLOWED = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,https://smilecarepro.netlify.app").split(",")
+CORS_ALLOWED = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,https://smilecarepro.netlify.app,https://big-production-b648.up.railway.app").split(",")
 
 # Allow credentials for secure cookie/auth handling
 CORS(app, resources={r"/*": {"origins": CORS_ALLOWED}}, supports_credentials=True)

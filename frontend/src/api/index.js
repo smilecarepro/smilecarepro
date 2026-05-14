@@ -1,6 +1,6 @@
 import { localDB } from "./db";
 
-export const BASE = "http://localhost:5050/api";
+export const BASE = import.meta.env.VITE_API_URL || "https://big-production-b648.up.railway.app/api";
 
 async function req(path, method = "GET", body = null, isMultipart = false) {
   const isRead = method === "GET";
