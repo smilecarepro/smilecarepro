@@ -234,7 +234,7 @@ def init_clinic_schema(conn):
 
     schema = [
         "CREATE TABLE IF NOT EXISTS treatment_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, patient_id INTEGER, tooth_number TEXT, procedure TEXT, notes TEXT, cost REAL DEFAULT 0, date TEXT DEFAULT CURRENT_DATE, FOREIGN KEY(patient_id) REFERENCES patients(id))",
-        "CREATE TABLE IF NOT EXISTS appointments (id INTEGER PRIMARY KEY AUTOINCREMENT, patient_id INTEGER, date TEXT, time TEXT, type TEXT, duration_min INTEGER, status TEXT DEFAULT 'قادم', notes TEXT, teeth_snapshot TEXT)",
+        "CREATE TABLE IF NOT EXISTS appointments (id INTEGER PRIMARY KEY AUTOINCREMENT, patient_id INTEGER, patient_name TEXT, date TEXT, time TEXT, type TEXT, duration_min INTEGER, status TEXT DEFAULT 'قادم', notes TEXT, teeth_snapshot TEXT)",
         "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, role TEXT)",
         "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
         "CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT, amount REAL, payment_method TEXT DEFAULT 'Cash', date TEXT, notes TEXT)",
@@ -243,7 +243,11 @@ def init_clinic_schema(conn):
         "CREATE TABLE IF NOT EXISTS drugs (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, category TEXT, forms TEXT, doses_adult TEXT, doses_child TEXT, doses_elderly TEXT, timing TEXT, duration TEXT, note TEXT, warn_pregnant TEXT, warn_breastfeed TEXT, warn_renal TEXT, warn_hepatic TEXT, warn_allergy TEXT, warn_diabetes TEXT, warn_blood_pressure TEXT, max_daily_dose REAL DEFAULT 0, is_custom INTEGER DEFAULT 0, stock_quantity REAL DEFAULT 0, min_quantity REAL DEFAULT 5, unit TEXT DEFAULT 'Piece')",
         "CREATE TABLE IF NOT EXISTS inventory_items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, category TEXT, stock_quantity REAL DEFAULT 0, min_quantity REAL DEFAULT 5, unit TEXT DEFAULT 'Piece', purchase_price REAL DEFAULT 0, last_updated TEXT DEFAULT CURRENT_TIMESTAMP)",
         "CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, username TEXT, role TEXT, action TEXT, target_id INTEGER, target_name TEXT, description TEXT, old_data TEXT, new_data TEXT)",
-        "CREATE TABLE IF NOT EXISTS internal_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, sender_role TEXT, content TEXT, image_url TEXT, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+        "CREATE TABLE IF NOT EXISTS internal_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, sender_role TEXT, content TEXT, image_url TEXT, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+        "CREATE TABLE IF NOT EXISTS appointment_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, patient_name TEXT, phone TEXT, requested_date TEXT, status TEXT DEFAULT 'pending', notes TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+        "CREATE TABLE IF NOT EXISTS whatsapp_sessions (phone_number TEXT PRIMARY KEY, current_state TEXT, collected_data TEXT, last_interaction TEXT DEFAULT CURRENT_TIMESTAMP)",
+        "CREATE TABLE IF NOT EXISTS purchase_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT DEFAULT 'pending', total_price REAL DEFAULT 0, notes TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
+        "CREATE TABLE IF NOT EXISTS purchase_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER, inventory_item_id INTEGER, name TEXT, requested_qty REAL, received_qty REAL, price_per_unit REAL, FOREIGN KEY(order_id) REFERENCES purchase_orders(id))"
     ]
     for s in schema: conn.execute(s)
 
@@ -253,6 +257,9 @@ def init_clinic_schema(conn):
     except: pass
     try:
         conn.execute("ALTER TABLE audit_logs ADD COLUMN new_data TEXT")
+    except: pass
+    try:
+        conn.execute("ALTER TABLE appointments ADD COLUMN image_url TEXT")
     except: pass
 
     # ==============================================================
@@ -458,7 +465,7 @@ def init_clinic_schema(conn):
             ))
     
     # Migrations for appointments
-    apt_cols = [("duration_min", "INTEGER DEFAULT 30"), ("type", "TEXT"), ("notes", "TEXT"), ("status", "TEXT DEFAULT 'قادم'")]
+    apt_cols = [("duration_min", "INTEGER DEFAULT 30"), ("type", "TEXT"), ("notes", "TEXT"), ("status", "TEXT DEFAULT 'قادم'"), ("patient_name", "TEXT")]
     for col, ctype in apt_cols:
         try: conn.execute(f"ALTER TABLE appointments ADD COLUMN {col} {ctype}")
         except: pass

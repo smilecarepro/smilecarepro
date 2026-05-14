@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import DrugAdder from "./DrugAdder";
 import { createSmartPrescription, getPrescriptionPDFUrl, getSettings } from "../api";
 import { useLanguage } from "../LanguageContext";
+import { useSettings } from "../SettingsContext";
 
-const DURATIONS = ["1 day","2 days","3 days","4 days","5 days","7 days","10 days","14 days","21 days","30 days"];
-const TIMINGS = ["Once daily","Twice daily","Three times daily","Four times daily","Every 8 hours","Every 12 hours","As needed"];
+// Static fallbacks removed - now handled via getDynamicList
 
 export default function PrescriptionModal({ patient, onClose, onRefresh, existingData, isWizard = false, onAdd, initialMeds, initialDiagnosis }) {
   const { t } = useLanguage();
+  const { getDynamicList } = useSettings();
   const [step, setStep] = useState(isWizard ? 1 : 0);
   const [settings, setSettings] = useState({});
   const [editablePatient, setEditablePatient] = useState({
@@ -362,12 +363,14 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                              <span style={{ fontSize: 13, color: "#334155" }}>{d.timing}</span>
                            ) : (
                              <select
-                               value={d.timing}
-                               onChange={e => updateDrug(i, "timing", e.target.value)}
-                               style={rxSelectStyle}
-                             >
-                               {[...(d.timingOptions || []), ...TIMINGS].filter((v, idx, arr) => arr.indexOf(v) === idx).map(o => <option key={o} value={o}>{o}</option>)}
-                             </select>
+                                value={d.timing}
+                                onChange={e => updateDrug(i, "timing", e.target.value)}
+                                style={rxSelectStyle}
+                              >
+                                {getDynamicList('med_frequencies', [
+                                  "Once daily", "Twice daily", "Three times daily", "Four times daily", "Every 8 hours", "Every 12 hours", "As needed"
+                                ]).map(o => <option key={o} value={o}>{o}</option>)}
+                              </select>
                            )}
                          </div>
                          <span style={{ color: "#cbd5e1" }}>·</span>
@@ -378,12 +381,14 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                              <span style={{ fontSize: 13, color: "#334155" }}>{d.duration}</span>
                            ) : (
                              <select
-                               value={d.duration}
-                               onChange={e => updateDrug(i, "duration", e.target.value)}
-                               style={rxSelectStyle}
-                             >
-                               {[...(d.durationOptions || []), ...DURATIONS].filter((v, idx, arr) => arr.indexOf(v) === idx).map(o => <option key={o} value={o}>{o}</option>)}
-                             </select>
+                                value={d.duration}
+                                onChange={e => updateDrug(i, "duration", e.target.value)}
+                                style={rxSelectStyle}
+                              >
+                                {getDynamicList('med_durations', [
+                                  "1 day", "2 days", "3 days", "4 days", "5 days", "7 days", "10 days", "14 days", "21 days", "30 days"
+                                ]).map(o => <option key={o} value={o}>{o}</option>)}
+                              </select>
                            )}
                          </div>
                        </div>

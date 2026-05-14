@@ -22,7 +22,9 @@ import DrugStore     from "./pages/DrugStore";
 import TodaySchedule from "./pages/TodaySchedule";
 import AuditLog from "./pages/AuditLog";
 import Inventory from "./pages/Inventory";
+import Purchases from "./pages/Purchases";
 import DailySummary from "./pages/DailySummary";
+import BookingRequests from "./pages/BookingRequests";
 import Landing from "./pages/Landing";
 import Chat from "./components/Chat";
 import { lazy, Suspense as ReactSuspense } from "react";
@@ -77,8 +79,10 @@ function ProtectedApp() {
         <Route path="/drugs"          element={user?.role === 'secretary' ? <Navigate to="/home" /> : <DrugStore />} />
         <Route path="/settings"       element={<Settings />} />
         <Route path="/inventory"      element={<Inventory />} />
+        <Route path="/purchases"      element={<Purchases />} />
         <Route path="/daily-summary"  element={user?.role === 'secretary' ? <Navigate to="/home" /> : <DailySummary />} />
         <Route path="/audit-log"      element={user?.role === 'secretary' ? <Navigate to="/home" /> : <AuditLog />} />
+        <Route path="/booking-requests" element={<BookingRequests />} />
         <Route path="/"               element={<Navigate to="/home" replace />} />
         <Route path="*"               element={<Navigate to="/home" />} />
       </Routes>

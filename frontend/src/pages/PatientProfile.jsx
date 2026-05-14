@@ -26,7 +26,7 @@ export default function PatientProfile() {
   const nav = useNavigate();
   const location = useLocation();
   const { lang, t } = useLanguage();
-  const { settings } = useSettings();
+  const { settings, getDynamicList } = useSettings();
   const [patient, setPatient] = useState(null);
   const [tab, setTab] = useState(null);
   const [activePage, setActivePage] = useState("info"); // Default page
@@ -480,7 +480,9 @@ export default function PatientProfile() {
               <label className="input-label" style={{ marginBottom: 10, display: "block" }}>{t("نوع الحالة")}</label>
               <select className="glass-input" style={{ width: "100%", height: 44, marginBottom: 16 }} value={patient.case_category || ""} onChange={e => saveProfile({ case_category: e.target.value })}>
                 <option value="">{t("اختر...")}</option>
-                {["Filling", "Endodontic", "Extraction", "Surgery", "Implant", "Prosthetic", "Orthodontic", "Other"].map(c => <option key={c} value={c}>{t(c)}</option>)}
+                {getDynamicList('treatment_types', [
+                  "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"
+                ]).map(c => <option key={c} value={c}>{t(c)}</option>)}
               </select>
 
               <div className="action-card" onClick={() => setShowTimeline(true)} style={{ background: "rgba(0, 210, 255, 0.1)", borderColor: "rgba(0, 210, 255, 0.3)", marginBottom: 12 }}>
@@ -662,7 +664,12 @@ export default function PatientProfile() {
         <Modal title={t("إضافة إجراء")} onClose={() => setIsAddingTreatment(false)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <input className="glass-input" placeholder={t("رقم السن")} value={newTreatment.tooth_number} onChange={e => setNewTreatment({...newTreatment, tooth_number: e.target.value})} />
-            <input className="glass-input" placeholder={t("الإجراء")} value={newTreatment.procedure} onChange={e => setNewTreatment({...newTreatment, procedure: e.target.value})} />
+            <select className="glass-input" value={newTreatment.procedure} onChange={e => setNewTreatment({...newTreatment, procedure: e.target.value})}>
+              <option value="">-- {t("اختر الإجراء")} --</option>
+              {getDynamicList('treatment_types', [
+                "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"
+              ]).map(c => <option key={c} value={c}>{t(c)}</option>)}
+            </select>
             <textarea className="glass-input" placeholder={t("ملاحظات")} value={newTreatment.notes} onChange={e => setNewTreatment({...newTreatment, notes: e.target.value})} />
             <button className="btn-primary" onClick={() => addTreatment(id, { ...newTreatment, cost: 0 }).then(() => { setIsAddingTreatment(false); load(); })}>{t("حفظ")}</button>
           </div>
@@ -679,8 +686,8 @@ export default function PatientProfile() {
       {payModal.show && (
         <Modal title={t("إضافة دفعة")} onClose={() => setPayModal({...payModal, show: false})}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {isSessions && <input type="number" className="glass-input" placeholder={t("تكلفة الجلسة")} value={payModal.session_cost} onChange={e => setPayModal({...payModal, session_cost: e.target.value})} />}
-            <input type="number" className="glass-input" placeholder={t("المبلغ")} value={payModal.amount} onChange={e => setPayModal({...payModal, amount: e.target.value})} />
+            {isSessions && <input type="text" className="glass-input" placeholder={t("تكلفة الجلسة")} value={payModal.session_cost ? Number(payModal.session_cost).toLocaleString() : ""} onChange={e => setPayModal({...payModal, session_cost: e.target.value.replace(/\D/g, "")})} />}
+            <input type="text" className="glass-input" placeholder={t("المبلغ")} value={payModal.amount ? Number(payModal.amount).toLocaleString() : ""} onChange={e => setPayModal({...payModal, amount: e.target.value.replace(/\D/g, "")})} />
             <select className="glass-input" value={payModal.method} onChange={e => setPayModal({...payModal, method: e.target.value})}><option value="Cash">Cash</option><option value="Bank">Bank</option></select>
             <input className="glass-input" placeholder={t("ملاحظات")} value={payModal.notes} onChange={e => setPayModal({...payModal, notes: e.target.value})} />
             <button className="btn-primary" onClick={addPayment}>{t("حفظ")}</button>
@@ -709,7 +716,7 @@ export default function PatientProfile() {
         <Modal title={t("تعديل السعر الكلي")} onClose={() => setPriceModal({ ...priceModal, show: false })}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <label className="input-label">{t("السعر الجديد المتفق عليه")}:</label>
-            <input className="glass-input" type="number" value={priceModal.val} onChange={e => setPriceModal({ ...priceModal, val: e.target.value })} />
+            <input className="glass-input" type="text" value={priceModal.val ? Number(priceModal.val).toLocaleString() : ""} onChange={e => setPriceModal({ ...priceModal, val: e.target.value.replace(/\D/g, "") })} />
             <button className="btn-primary" onClick={() => { saveProfile({ total_agreed_price: parseFloat(priceModal.val) }); setPriceModal({ ...priceModal, show: false }); }}>{t("حفظ التغيير")}</button>
           </div>
         </Modal>
@@ -719,7 +726,7 @@ export default function PatientProfile() {
           <div style={{ minHeight: 500, display: "flex", flexDirection: "column" }}>
             {/* Wizard Progress Bar */}
             <div style={{ display: "flex", gap: 10, marginBottom: 30 }}>
-               {[t("البداية"), t("التشخيص"), t("الإجراء"), t("الوصفة"), t("الملخص")].map((label, i) => (
+               {[t("البداية"), t("التشخيص"), t("الإجراء"), t("الوصفة"), t("صورة"), t("الملخص")].map((label, i) => (
                  <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: sessionStep >= i ? "var(--primary)" : "rgba(255,255,255,0.05)", transition: "0.3s" }} />
                ))}
             </div>
@@ -798,7 +805,18 @@ export default function PatientProfile() {
                  <div className="animate-fade" style={{ maxWidth: 500, margin: "0 auto" }}>
                    <h3 style={{ marginBottom: 20 }}>📋 {t("خطوة 3: تفاصيل الإجراء")} ({sessionData.current.tooth === "General" ? t("إجراء عام") : `#${sessionData.current.tooth}`})</h3>
                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                      <input className="glass-input" placeholder={t("الإجراء (مثلاً: حشوة جذر)")} value={sessionData.current.procedure} onChange={e => setSessionData({...sessionData, current: { ...sessionData.current, procedure: e.target.value }})} />
+                      <select 
+                        className="glass-input" 
+                        value={sessionData.current.procedure} 
+                        onChange={e => setSessionData({...sessionData, current: { ...sessionData.current, procedure: e.target.value }})}
+                        style={{ width: "100%" }}
+                      >
+                        <option value="" disabled>{t("-- اختر الإجراء --")}</option>
+                        {getDynamicList("treatment_types", ["فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"]).map((trt, i) => (
+                          <option key={i} value={trt}>{trt}</option>
+                        ))}
+                      </select>
+
                       
                       {/* Previous History for this tooth */}
                       {sessionData.current.tooth && sessionData.current.tooth !== "General" && patient.treatments?.some(tr => String(tr.tooth_number) === String(sessionData.current.tooth)) && (
@@ -855,12 +873,54 @@ export default function PatientProfile() {
                    />
                    <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 20 }}>
                      <button className="btn-secondary" style={{ padding: "12px 30px" }} onClick={() => setSessionStep(2)}>← {t("السابق")}</button>
-                     <button className="btn-primary" style={{ padding: "12px 40px" }} onClick={() => setSessionStep(4)}>{t("التالي: الملخص النهائي")} →</button>
+                     <button className="btn-primary" style={{ padding: "12px 40px" }} onClick={() => setSessionStep(4)}>{t("التالي: إضافة صورة")} →</button>
                    </div>
                  </div>
                )}
 
                {sessionStep === 4 && (
+                 <div className="animate-fade" style={{ maxWidth: 500, margin: "0 auto", textAlign: "center" }}>
+                   <h3 style={{ marginBottom: 20 }}>📸 {t("خطوة 5: إضافة صورة (اختياري)")}</h3>
+                   <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 20 }}>{t("يمكنك التقاط صورة أو رفع صورة للمريض في هذه الجلسة. هذه الصورة لن تظهر في الطباعة المرفقة.")}</p>
+                   
+                   <div style={{ marginBottom: 30 }}>
+                     <input type="file" id="session-photo-upload" accept="image/*" hidden onChange={e => {
+                       const f = e.target.files[0];
+                       if (f) {
+                         const reader = new FileReader();
+                         reader.onloadend = () => setSessionData({...sessionData, photo: reader.result});
+                         reader.readAsDataURL(f);
+                       }
+                     }} />
+                     <label htmlFor="session-photo-upload" style={{ 
+                       display: "block", height: 200, border: "2px dashed var(--primary)", 
+                       borderRadius: 16, background: "rgba(0,210,255,0.05)", cursor: "pointer", 
+                       overflow: "hidden", position: "relative" 
+                     }}>
+                       {sessionData.photo ? (
+                         <img src={sessionData.photo} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                       ) : (
+                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                           <span style={{ fontSize: 40, marginBottom: 10 }}>📷</span>
+                           <span style={{ color: "var(--primary)", fontWeight: 600 }}>{t("انقر هنا لاختيار أو التقاط صورة")}</span>
+                         </div>
+                       )}
+                     </label>
+                     {sessionData.photo && (
+                       <button className="btn-ghost" style={{ marginTop: 10, color: "var(--danger)" }} onClick={() => setSessionData({...sessionData, photo: null})}>
+                         🗑️ {t("إزالة الصورة")}
+                       </button>
+                     )}
+                   </div>
+
+                   <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+                     <button className="btn-secondary" style={{ padding: "12px 30px" }} onClick={() => setSessionStep(3)}>← {t("السابق")}</button>
+                     <button className="btn-primary" style={{ padding: "12px 40px" }} onClick={() => setSessionStep(5)}>{t("التالي: الملخص النهائي")} →</button>
+                   </div>
+                 </div>
+               )}
+
+               {sessionStep === 5 && (
                  <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                    <div id="printable-session-summary" style={{ 
                      background: "white", 
@@ -987,8 +1047,15 @@ export default function PatientProfile() {
                        `}</style>
                    </div>
                    
-                   <div style={{ display: "flex", gap: 12 }} className="no-print">
-                      <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setSessionStep(3)}>← {t("السابق")}</button>
+                   {sessionData.photo && (
+                     <div className="no-print" style={{ background: "rgba(255,255,255,0.02)", padding: 20, borderRadius: 12, marginTop: 20, textAlign: "center" }}>
+                       <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text-muted)" }}>📸 {t("صورة الجلسة المرفقة (لا تظهر في الطباعة)")}</div>
+                       <img src={sessionData.photo} style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8, objectFit: "contain", border: "1px solid rgba(255,255,255,0.1)" }} />
+                     </div>
+                   )}
+                   
+                   <div style={{ display: "flex", gap: 12, marginTop: 20 }} className="no-print">
+                      <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setSessionStep(4)}>← {t("السابق")}</button>
                       <button className="btn-ghost" style={{ flex: 1, border: "2px solid #cbd5e1", background: "white", color: "#0ea5e9", fontWeight: "bold" }} onClick={() => window.print()}>
                         🖨 {t("طباعة التقرير")}
                       </button>
@@ -1009,12 +1076,12 @@ export default function PatientProfile() {
                             const todayApt = patient.visits?.find(v => v.date === today);
                             const teethSnapshot = JSON.stringify(sessionData.teeth);
                             if (todayApt) {
-                              await updateAppointment(todayApt.id, { status: 'finished', teeth_snapshot: teethSnapshot });
+                              await updateAppointment(todayApt.id, { status: 'finished', teeth_snapshot: teethSnapshot, image_url: sessionData.photo });
                             } else {
                               await addAppointment({
                                 patient_id: id, date: today,
                                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-                                type: t("جلسة علاج"), status: 'finished', teeth_snapshot: teethSnapshot
+                                type: t("جلسة علاج"), status: 'finished', teeth_snapshot: teethSnapshot, image_url: sessionData.photo
                               });
                             }
                             if (sessionData.paid) {
@@ -1050,12 +1117,10 @@ export default function PatientProfile() {
   );
 }
 
-function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid, initialTooth }) {
+function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid }) {
   const { t, lang } = useLanguage();
   const { settings } = useSettings();
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTooth, setSelectedTooth] = useState(initialTooth || null);
-  const [viewMode, setViewMode] = useState("teeth"); // Default to teeth mode as requested
+  const [expandedSession, setExpandedSession] = useState(null); // stores 'tooth-date' of expanded session
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -1064,7 +1129,7 @@ function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid, ini
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Group events by date
+  // 1. Group events by date
   const eventsByDate = {};
   const allEvents = [
     ...treatments.map(t => ({ ...t, type: 'treatment' })),
@@ -1074,290 +1139,224 @@ function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid, ini
 
   allEvents.forEach(ev => {
     const dateKey = ev.date ? ev.date.split(' ')[0] : 'Unknown';
-    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = { treatments: [], prescriptions: [], visits: [] };
+    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = { treatments: [], prescriptions: [], visits: [], date: dateKey };
     if (ev.type === 'treatment') eventsByDate[dateKey].treatments.push(ev);
     else if (ev.type === 'prescription') eventsByDate[dateKey].prescriptions.push(ev);
     else if (ev.type === 'visit') eventsByDate[dateKey].visits.push(ev);
   });
 
-  const sortedDates = Object.keys(eventsByDate).sort((a, b) => new Date(a) - new Date(b));
-  const sessionMapping = {};
-  sortedDates.forEach((d, i) => sessionMapping[d] = i + 1);
-
-  const displayDates = [...sortedDates].reverse();
-
+  // 2. Map sessions (dates) to Teeth
   const teethHistory = {};
-  treatments.forEach(tr => {
-    if (!tr.tooth_number) {
-       if (!teethHistory["General"]) teethHistory["General"] = [];
-       teethHistory["General"].push(tr);
-       return;
-    }
-    const s = String(tr.tooth_number).trim();
-    if (s.toLowerCase() === "general") {
-       if (!teethHistory["General"]) teethHistory["General"] = [];
-       teethHistory["General"].push(tr);
-       return;
-    }
-    const matches = s.match(/\d+/g);
-    if (matches) {
-      matches.forEach(m => {
-        if (!teethHistory[m]) teethHistory[m] = [];
-        if (!teethHistory[m].find(existing => existing.id === tr.id)) {
-          teethHistory[m].push(tr);
+  
+  Object.values(eventsByDate).forEach(session => {
+    // Collect all unique teeth treated in this session
+    const sessionTeeth = new Set();
+    if (session.treatments.length === 0) {
+      sessionTeeth.add("General");
+    } else {
+      session.treatments.forEach(tr => {
+        const toothNum = tr.tooth_number ? String(tr.tooth_number).trim() : "General";
+        if (toothNum.toLowerCase() === "general") {
+          sessionTeeth.add("General");
+        } else {
+          const matches = toothNum.match(/\d+/g);
+          if (matches) {
+            matches.forEach(m => sessionTeeth.add(m));
+          } else {
+            sessionTeeth.add(toothNum);
+          }
         }
       });
-    } else {
-       if (!teethHistory[s]) teethHistory[s] = [];
-       teethHistory[s].push(tr);
     }
+
+    // Add this session's date to each tooth's history
+    sessionTeeth.forEach(tNum => {
+      if (!teethHistory[tNum]) {
+        teethHistory[tNum] = { tooth: tNum, sessions: new Set(), latestDate: '0000-00-00' };
+      }
+      teethHistory[tNum].sessions.add(session.date);
+      if (session.date > teethHistory[tNum].latestDate) {
+        teethHistory[tNum].latestDate = session.date;
+      }
+    });
   });
 
-  const allTreatedTeeth = Object.keys(teethHistory);
-  const totalTreatmentsCount = treatments.length;
+  // 3. Sort teeth by the most recent session date
+  const sortedTeeth = Object.values(teethHistory).sort((a, b) => new Date(b.latestDate) - new Date(a.latestDate));
 
-  // Generate all tooth numbers 11-48
-  const allToothNumbers = ["General"];
-  for (let q = 1; q <= 4; q++) {
-    for (let tNum = 1; tNum <= 8; tNum++) {
-      allToothNumbers.push(`${q}${tNum}`);
-    }
-  }
-
-  const activeTooth = selectedTooth || (allTreatedTeeth.length > 0 ? allTreatedTeeth[0] : "General");
-  const currentToothHistory = teethHistory[activeTooth] || [];
+  const printSession = (dateKey, toothNum) => {
+      const content = document.getElementById(`printable-session-${dateKey}`);
+      if (!content) return;
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(`
+        <html dir="${lang === 'ar' ? 'rtl' : 'ltr'}">
+          <head>
+            <title>Session Report - ${dateKey}</title>
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+              body { font-family: 'Cairo', sans-serif; padding: 40px; background: white; color: black; line-height: 1.6; }
+              .glass-panel { padding: 15px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+              .glass-panel div { color: #1e293b !important; } /* Force dark text for print */
+              .btn-ghost, .btn-primary, .btn-secondary, button { display: none !important; }
+              .no-print { display: none !important; }
+              h2, h3, h4 { margin-top: 0; color: #0f172a; }
+              img { max-width: 100%; height: auto; }
+              .header { text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+               <h2>${settings?.clinic_name || 'SmileCare Clinic'}</h2>
+               <h3>${t("ملخص جلسة علاج المريض")}: ${patient.first_name} ${patient.last_name}</h3>
+               <p style="color: #64748b; margin: 0;">${t("تاريخ الجلسة")}: <strong>${dateKey}</strong> | ${t("السن المعالج")}: <strong>${toothNum}</strong></p>
+            </div>
+            ${content.innerHTML}
+          </body>
+        </html>
+      `);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 300);
+  };
 
   return (
-    <div style={{ minHeight: 700 }}>
-      {/* Header with toggle */}
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginBottom: 30, gap: 15 }}>
-        <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 22, fontWeight: 800, textAlign: isMobile ? "center" : "right", width: isMobile ? "100%" : "auto" }}>🦷 {t("السجل المتكامل للأسنان")}</h2>
-        <div style={{ background: "rgba(255,255,255,0.05)", padding: 4, borderRadius: 12, display: "flex", gap: 4, width: isMobile ? "100%" : "auto" }}>
-          <button onClick={() => setViewMode("teeth")} style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: viewMode === "teeth" ? "var(--primary)" : "transparent", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", flex: isMobile ? 1 : "none" }}>🦷 {t("حسب السن")}</button>
-          <button onClick={() => setViewMode("sessions")} style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: viewMode === "sessions" ? "var(--primary)" : "transparent", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", flex: isMobile ? 1 : "none" }}>🗓️ {t("حسب الجلسة")}</button>
-        </div>
-      </div>
+    <div style={{ minHeight: 600, padding: isMobile ? 10 : 20 }}>
+      <h2 style={{ marginBottom: 30, textAlign: "center", fontSize: 24, fontWeight: 800 }}>🦷 {t("السجل العلاجي (حسب السن)")}</h2>
+      
+      {sortedTeeth.length === 0 ? (
+         <div style={{ textAlign: "center", padding: "100px 0", color: "var(--text-muted)" }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>📁</div>
+            <div>{t("لا توجد إجراءات أو جلسات مسجلة بعد.")}</div>
+         </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
+          {sortedTeeth.map(toothObj => {
+             const toothLabel = toothObj.tooth === "General" ? t("إجراء عام (كافة الأسنان)") : `${t("السن رقم")} #${toothObj.tooth}`;
+             const sortedSessions = Array.from(toothObj.sessions).sort((a, b) => new Date(b) - new Date(a));
+             
+             return (
+               <div key={toothObj.tooth} className="glass-panel" style={{ padding: 20, borderTop: "4px solid var(--primary)" }}>
+                  <h3 style={{ margin: 0, marginBottom: 20, fontSize: 20, color: "white", fontWeight: 800, display: "flex", alignItems: "center", gap: 10 }}>
+                     <span style={{ fontSize: 24 }}>🦷</span> {toothLabel}
+                  </h3>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+                     {sortedSessions.map((dateKey, index) => {
+                         const session = eventsByDate[dateKey];
+                         const isExpanded = expandedSession === `${toothObj.tooth}-${dateKey}`;
+                         
+                         // Filters treatments specifically for this tooth in this session
+                         const filteredTreatments = session.treatments.filter(tr => 
+                           toothObj.tooth === "General" || 
+                           String(tr.tooth_number).split(/[\s,]+/).includes(toothObj.tooth)
+                         );
+                         
+                         const sessionPresc = session.prescriptions[0];
+                         const diagnosis = sessionPresc?.diagnosis || "";
+                         const sessionInvoice = patient.invoices?.find(inv => inv.date === dateKey);
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", gap: isMobile ? 20 : 32 }}>
-        {viewMode === "teeth" ? (
-          <>
-            {/* Sidebar - Full Teeth Grid */}
-            <div style={{ 
-              borderLeft: isMobile ? "none" : (lang==="ar"?"none":"1px solid rgba(255,255,255,0.08)"), 
-              borderRight: isMobile ? "none" : (lang==="ar"?"1px solid rgba(255,255,255,0.08)":"none"),
-              paddingRight: isMobile ? 0 : (lang==="ar"?16:0), 
-              paddingLeft: isMobile ? 0 : (lang==="ar"?0:16),
-              maxHeight: isMobile ? "250px" : "70vh", 
-              overflowY: "auto",
-              borderBottom: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none",
-              paddingBottom: isMobile ? 15 : 0
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-muted)", letterSpacing: 1, marginBottom: 16 }}>{t("اختر رقم السن لعرض تاريخه")}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                {allToothNumbers.map(tid => {
-                   const hasHistory = teethHistory[tid] && teethHistory[tid].length > 0;
-                   return (
-                    <div key={tid} 
-                      onClick={() => setSelectedTooth(tid)}
-                      style={{ 
-                        aspectRatio: "1/1", borderRadius: 12, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                        background: activeTooth === tid ? "var(--primary)" : (hasHistory ? "rgba(0, 210, 255, 0.15)" : "rgba(255,255,255,0.03)"),
-                        border: "1px solid",
-                        borderColor: activeTooth === tid ? "var(--primary)" : (hasHistory ? "rgba(0, 210, 255, 0.4)" : "rgba(255,255,255,0.05)"),
-                        color: activeTooth === tid ? "white" : (hasHistory ? "var(--primary)" : "var(--text-muted)"),
-                        transition: "0.2s",
-                        gridColumn: tid === "General" ? "span 4" : "auto",
-                        height: tid === "General" ? 40 : "auto"
-                      }}
-                    >
-                      <div style={{ fontSize: 14, fontWeight: 800 }}>{tid === "General" ? "🌐 General" : tid}</div>
-                      {hasHistory && tid !== "General" && <div style={{ width: 4, height: 4, borderRadius: "50%", background: activeTooth === tid ? "white" : "var(--primary)", marginTop: 2 }}></div>}
-                    </div>
-                   );
-                })}
-              </div>
-            </div>
-
-            {/* Main Content - Tooth History Summary */}
-            <div style={{ maxHeight: "70vh", overflowY: "auto", paddingRight: 10 }}>
-               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-                 <div style={{ width: 45, height: 45, borderRadius: 12, background: activeTooth === "General" ? "rgba(0, 210, 255, 0.1)" : "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{activeTooth === "General" ? "🌐" : "🦷"}</div>
-                 <div>
-                   <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>{t("السجل المتكامل للسن")} {activeTooth === "General" ? t("العام") : `#${activeTooth}`}</h3>
-                   <div style={{ fontSize: 13, color: currentToothHistory.length > 0 ? "var(--success)" : "var(--text-muted)", fontWeight: 600 }}>{currentToothHistory.length} {t("إجراءات مسجلة")}</div>
-                 </div>
-               </div>
-
-               {currentToothHistory.length === 0 ? (
-                 <div style={{ textAlign: "center", padding: "100px 0", color: "var(--text-muted)" }}>
-                    <div style={{ fontSize: 40, marginBottom: 16 }}>📁</div>
-                    <div>{t("لا توجد إجراءات مسجلة لهذا السن")}</div>
-                 </div>
-               ) : (
-                 <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                    {[...currentToothHistory].sort((a,b) => new Date(b.date) - new Date(a.date)).map((tr, i) => {
-                      const dateKey = tr.date.split(' ')[0];
-                      return (
-                        <div key={i} 
-                          onClick={() => {
-                            setSelectedDate(dateKey);
-                            setViewMode("sessions");
-                          }}
-                          className="action-card"
-                          style={{ 
-                            padding: 20, background: "rgba(255,255,255,0.03)", borderRadius: 16, 
-                            borderLeft: "4px solid var(--primary)", position: "relative",
-                            margin: 0, width: "auto"
-                          }}>
-                          <div style={{ position: "absolute", top: 20, left: lang==="ar"?"auto":20, right: lang==="ar"?20:"auto", fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>
-                            📅 {tr.date} {sessionMapping[dateKey] ? `· ${t("جلسة")} #${sessionMapping[dateKey]}` : ""}
-                          </div>
-                          <div style={{ marginTop: 15, width: "100%" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                              <div style={{ fontSize: 16, fontWeight: 800, color: "white" }}>{tr.procedure}</div>
-                            </div>
-                            {tr.notes && (
-                              <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 10, fontSize: 13, color: "#cbd5e1", lineHeight: 1.5 }}>
-                                {tr.notes}
+                         return (
+                           <div key={dateKey} style={{ 
+                             background: "rgba(255,255,255,0.03)", 
+                             borderRadius: 12, 
+                             border: isExpanded ? "1px solid var(--primary)" : "1px solid rgba(255,255,255,0.08)",
+                             overflow: "hidden",
+                             transition: "all 0.3s"
+                           }}>
+                              {/* Session Header (Clickable Accordion) */}
+                              <div 
+                                onClick={() => setExpandedSession(isExpanded ? null : `${toothObj.tooth}-${dateKey}`)}
+                                style={{ 
+                                  padding: "15px 20px", 
+                                  cursor: "pointer", 
+                                  display: "flex", 
+                                  justifyContent: "space-between", 
+                                  alignItems: "center",
+                                  background: isExpanded ? "rgba(0, 210, 255, 0.05)" : "transparent"
+                                }}
+                              >
+                                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                   <div style={{ fontSize: 20 }}>{index === 0 ? "🌟" : "📅"}</div>
+                                   <div>
+                                      <div style={{ fontWeight: 800, fontSize: 16 }}>{dateKey} {index === 0 && <span style={{ fontSize: 10, background: "var(--success)", padding: "2px 6px", borderRadius: 8, marginLeft: 8 }}>{t("الأحدث")}</span>}</div>
+                                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                                        {filteredTreatments.map(t => t.procedure).join(" + ") || t("جلسة مراجعة / فحص")}
+                                      </div>
+                                   </div>
+                                 </div>
+                                 <div style={{ fontSize: 20, color: isExpanded ? "var(--primary)" : "var(--text-muted)" }}>
+                                   {isExpanded ? "▲" : "▼"}
+                                 </div>
                               </div>
-                            )}
-                            <div style={{ fontSize: 10, color: "var(--primary)", marginTop: 10, fontWeight: 700, textAlign: "left" }}>🔍 {t("انقر لعرض تفاصيل الجلسة الكاملة")}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                 </div>
-               )}
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Sidebar - Sessions List */}
-            <div style={{ 
-              borderLeft: lang==="ar"?"none":"1px solid rgba(255,255,255,0.08)", 
-              borderRight: lang==="ar"?"1px solid rgba(255,255,255,0.08)":"none",
-              paddingRight: lang==="ar"?16:0, paddingLeft: lang==="ar"?0:16,
-              maxHeight: "70vh", overflowY: "auto"
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-muted)", letterSpacing: 1, marginBottom: 16 }}>{t("كافة الجلسات")}</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {displayDates.map(date => {
-                  const activeDate = selectedDate || displayDates[0];
-                  return (
-                    <div key={date} 
-                      onClick={() => setSelectedDate(date)}
-                      style={{ 
-                        padding: "16px", borderRadius: 16, cursor: "pointer",
-                        background: activeDate === date ? "var(--primary)" : "rgba(255,255,255,0.02)",
-                        border: "1px solid",
-                        borderColor: activeDate === date ? "var(--primary)" : "rgba(255,255,255,0.05)",
-                        color: activeDate === date ? "white" : "inherit",
-                        transition: "all 0.3s",
-                        boxShadow: activeDate === date ? "0 8px 20px -5px rgba(0, 210, 255, 0.4)" : "none",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                         <span style={{ fontWeight: 700, fontSize: 14 }}>{date}</span>
-                         <span style={{ fontSize: 10, opacity: 0.6 }}>#{sessionMapping[date]}</span>
-                      </div>
-                      <div style={{ fontSize: 10, marginTop: 4, opacity: 0.8 }}>
-                        {eventsByDate[date].treatments.length} {t("إجراء")} · {eventsByDate[date].prescriptions.length} {t("وصفة")}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            {/* Main Content - Session View */}
-            <div style={{ maxHeight: "70vh", overflowY: "auto", paddingRight: 10 }}>
-              {(() => {
-                const activeDate = selectedDate || displayDates[0];
-                const current = eventsByDate[activeDate] || { treatments: [], prescriptions: [], visits: [] };
-                
-                // Filter treatments for the current session based on activeTooth
-                const filteredTreatments = current.treatments.filter(tr => 
-                  !activeTooth || activeTooth === "General" || 
-                  String(tr.tooth_number).split(/[\s,]+/).includes(activeTooth)
-                );
+                              {/* Expanded Session Summary */}
+                              {isExpanded && (
+                                <div className="animate-fade" style={{ padding: 20, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                                   
+                                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
+                                      <h4 style={{ margin: 0, color: "white", fontSize: 16 }}>📄 {t("ملخص الجلسة الشامل")}</h4>
+                                      <button onClick={() => printSession(dateKey, toothLabel)} className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, border: "1px solid var(--primary)", color: "var(--primary)", borderRadius: 8 }}>
+                                         🖨 {t("طباعة الملخص")}
+                                      </button>
+                                   </div>
 
-                // Find diagnosis from prescriptions in this session
-                const sessionPresc = current.prescriptions[0];
-                const diagnosis = sessionPresc?.diagnosis || "";
+                                   <div id={`printable-session-${dateKey}`} style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+                                      {/* 1. Diagnosis */}
+                                      <div className="glass-panel" style={{ padding: 15, borderLeft: "4px solid #f59e0b", marginBottom: 0 }}>
+                                         <div style={{ fontSize: 12, fontWeight: 800, color: "#f59e0b", marginBottom: 8 }}>🔍 {t("التشخيص")}</div>
+                                         <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{diagnosis || t("لم يتم تسجيل تشخيص محدد")}</div>
+                                      </div>
 
-                // Find payment for this session
-                const sessionInvoice = patient.invoices?.find(inv => inv.date === activeDate);
+                                      {/* 2. Treatments */}
+                                      <div className="glass-panel" style={{ padding: 15, marginBottom: 0 }}>
+                                        <div style={{ fontWeight: 800, marginBottom: 10, fontSize: 13, color: "var(--primary)" }}>📋 {t("الإجراءات المنفذة")}</div>
+                                        {filteredTreatments.length > 0 ? filteredTreatments.map((tr, i) => (
+                                          <div key={i} style={{ padding: 10, background: "rgba(255,255,255,0.02)", borderRadius: 8, marginBottom: i !== filteredTreatments.length - 1 ? 8 : 0 }}>
+                                             <div style={{ fontWeight: 700, fontSize: 14, color: "white" }}>{tr.procedure}</div>
+                                             {tr.notes && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>{tr.notes}</div>}
+                                          </div>
+                                        )) : <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("لا توجد إجراءات مسجلة.")}</div>}
+                                      </div>
 
-                return (
-                  <div className="animate-fade">
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 45, height: 45, borderRadius: 12, background: "rgba(0, 210, 255, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📄</div>
-                        <div>
-                          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>{t("ملخص الجلسة رقم")} {sessionMapping[activeDate]} {activeTooth && activeTooth !== "General" ? `(${t("للسن")} #${activeTooth})` : ""}</h3>
-                          <div style={{ fontSize: 13, color: "var(--primary)", fontWeight: 600 }}>📅 {activeDate}</div>
-                        </div>
-                      </div>
-                    </div>
+                                      {/* 3. Prescriptions */}
+                                      <div className="glass-panel" style={{ padding: 15, marginBottom: 0 }}>
+                                         <div style={{ fontWeight: 800, marginBottom: 10, fontSize: 13, color: "var(--success)" }}>💊 {t("الوصفة الطبية")}</div>
+                                         {session.prescriptions.length > 0 ? (
+                                           session.prescriptions.map((pr, i) => (
+                                             <div key={i} style={{ fontSize: 13 }}>
+                                               <div style={{ fontWeight: 700 }}>{pr.meds}</div>
+                                               <button onClick={() => window.open(getPrescriptionPDFUrl(pr.id), "_blank")} className="btn-ghost no-print" style={{ padding: "4px 8px", fontSize: 11, marginTop: 8 }}>📄 {t("تحميل PDF")}</button>
+                                             </div>
+                                           ))
+                                         ) : <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("لم يتم صرف أدوية")}</div>}
+                                      </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                      {/* 1. Diagnosis Section */}
-                      <div className="glass-panel" style={{ padding: 20, borderLeft: "4px solid #f59e0b" }}>
-                         <div style={{ fontSize: 12, fontWeight: 800, color: "#f59e0b", marginBottom: 8, letterSpacing: 1 }}>🔍 {t("التشخيص")}</div>
-                         <div style={{ fontSize: 16, fontWeight: 700, color: "white" }}>{diagnosis || t("لم يتم تسجيل تشخيص محدد")}</div>
-                      </div>
-
-                      {/* 2. Treatments List */}
-                      <div className="glass-panel" style={{ padding: 20 }}>
-                        <div style={{ fontWeight: 800, marginBottom: 15, fontSize: 14, color: "var(--primary)", display: "flex", justifyContent: "space-between" }}>
-                          <span>📋 {t("الإجراءات المنفذة")} {activeTooth && activeTooth !== "General" ? `(${t("للسن")} #${activeTooth})` : ""}</span>
-                          <span>{filteredTreatments.length}</span>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                          {filteredTreatments.map((tr, i) => (
-                            <div key={i} style={{ padding: 12, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)" }}>
-                               <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
-                                   <span>{tr.tooth_number === "General" ? `🌐 ${t("إجراء عام")}` : `🦷 #${tr.tooth_number}`}</span>
-                               </div>
-                               <div style={{ fontSize: 13, color: "white" }}>{tr.procedure}</div>
-                               {tr.notes && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6, fontStyle: "italic" }}>{tr.notes}</div>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* 3. Prescriptions & Invoices */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                        <div className="glass-panel" style={{ padding: 20 }}>
-                           <div style={{ fontWeight: 800, marginBottom: 15, fontSize: 14, color: "var(--success)" }}>💊 {t("الوصفة الطبية")}</div>
-                           {current.prescriptions.length > 0 ? (
-                             current.prescriptions.map((pr, i) => (
-                               <div key={i} style={{ fontSize: 13 }}>
-                                 <div style={{ fontWeight: 700 }}>{pr.meds}</div>
-                                 <button onClick={() => window.open(getPrescriptionPDFUrl(pr.id), "_blank")} className="btn-ghost" style={{ padding: "4px 8px", fontSize: 11, marginTop: 8 }}>📄 {t("تحميل PDF")}</button>
-                               </div>
-                             ))
-                           ) : <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("لم يتم صرف أدوية")}</div>}
-                        </div>
-
-                        <div className="glass-panel" style={{ padding: 20 }}>
-                           <div style={{ fontWeight: 800, marginBottom: 15, fontSize: 14, color: "#10b981" }}>💵 {t("المدفوعات")}</div>
-                           {sessionInvoice ? (
-                             <div>
-                               <div style={{ fontSize: 18, fontWeight: 800, color: "white" }}>{(sessionInvoice.paid || sessionInvoice.paid_amount || 0).toLocaleString()} د</div>
-                               <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{t("طريقة الدفع")}: {sessionInvoice.payment_method}</div>
-                             </div>
-                           ) : <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("لم يتم تسجيل دفعات لهذه الجلسة")}</div>}
-                        </div>
-                      </div>
-                    </div>
+                                      {/* 4. Photo */}
+                                      {session.visits?.[0]?.image_url && (
+                                        <div className="glass-panel no-print" style={{ padding: 15, marginBottom: 0, textAlign: "center" }}>
+                                           <div style={{ fontWeight: 800, marginBottom: 10, fontSize: 13, color: "var(--primary)" }}>📸 {t("صورة الجلسة المرفقة")}</div>
+                                           <img src={session.visits[0].image_url} style={{ maxWidth: "100%", maxHeight: 250, borderRadius: 8, objectFit: "contain", border: "1px solid rgba(255,255,255,0.1)" }} />
+                                        </div>
+                                      )}
+                                   </div>
+                                </div>
+                              )}
+                           </div>
+                         );
+                     })}
                   </div>
-                );
-              })()}
-            </div>
-          </>
-        )}
-      </div>
+               </div>
+             );
+          })}
+        </div>
+      )}
     </div>
   );
 }

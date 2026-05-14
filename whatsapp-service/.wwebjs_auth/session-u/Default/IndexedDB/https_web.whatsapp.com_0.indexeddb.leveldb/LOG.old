@@ -1,0 +1,16 @@
+2026/05/12-18:39:06.322 730 Reusing MANIFEST C:\Users\Dell\Desktop\claude 1 - Copy - Copy - Copy\claude 1 - Copy - Copy - Copy\dental-clinic\whatsapp-service\.wwebjs_auth\session-u\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/05/12-18:39:06.323 730 Recovering log #28
+2026/05/12-18:39:06.323 730 Reusing old log C:\Users\Dell\Desktop\claude 1 - Copy - Copy - Copy\claude 1 - Copy - Copy - Copy\dental-clinic\whatsapp-service\.wwebjs_auth\session-u\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000028.log 
+2026/05/12-18:39:06.324 730 Delete type=2 #27
+2026/05/12-18:39:06.332 4e60 Level-0 table #33: started
+2026/05/12-18:39:06.337 4e60 Level-0 table #33: 11184 bytes OK
+2026/05/12-18:39:06.338 4e60 Delete type=0 #28
+2026/05/12-18:39:06.339 4e60 Manual compaction at level-0 from '\x00\x17\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x18\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/05/12-18:39:06.339 4e60 Manual compaction at level-1 from '\x00\x17\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x18\x00\x00\x00' @ 0 : 0; will stop at '\x00\x17\x06 \x03\x00\x00\x00\x00\x00\x80V@\x00\x01\x0b\x00I\x00d\x00T\x00t\x00l\x009\x000\x00D\x00a\x00y\x00s' @ 6927 : 1
+2026/05/12-18:39:06.339 4e60 Compacting 1@1 + 1@2 files
+2026/05/12-18:39:06.359 4e60 Generated table #34@1: 39 keys, 850 bytes
+2026/05/12-18:39:06.359 4e60 Compacted 1@1 + 1@2 files => 850 bytes
+2026/05/12-18:39:06.360 4e60 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/05/12-18:39:06.360 4e60 Delete type=2 #33
+2026/05/12-18:39:06.361 4e60 Manual compaction at level-1 from '\x00\x17\x06 \x03\x00\x00\x00\x00\x00\x80V@\x00\x01\x0b\x00I\x00d\x00T\x00t\x00l\x009\x000\x00D\x00a\x00y\x00s' @ 6927 : 1 .. '\x00\x18\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/05/12-18:39:06.954 4df0 Manual compaction at level-0 from '\x00\x18\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x19\x00\x00\x00' @ 0 : 0; will stop at (end)

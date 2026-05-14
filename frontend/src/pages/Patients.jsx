@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLanguage } from "../LanguageContext";
 import { getPatients, addPatient } from "../api";
 import { createPortal } from "react-dom";
+import { useSettings } from "../SettingsContext";
+
 const localDate = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -14,6 +16,7 @@ export default function Patients() {
 
 
   const { t } = useLanguage();
+  const { getDynamicList } = useSettings();
   const [patients, setPatients] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [q,        setQ]        = useState(searchParams.get("q") || "");
@@ -198,14 +201,14 @@ export default function Patients() {
 
               <div className="grid-2" style={{ marginTop: 10 }}>
                 {form.payment_system === "total" ? (
-                  <div><label style={lblStyle}>{t("السعر الكلي المتفق عليه")}</label><input type="number" step="500" className="glass-input" style={{ width: "100%" }} placeholder="IQD" value={form.total_agreed_price} onChange={e => setForm({ ...form, total_agreed_price: e.target.value })} /></div>
+                  <div><label style={lblStyle}>{t("السعر الكلي المتفق عليه")}</label><input type="text" className="glass-input" style={{ width: "100%" }} placeholder="IQD" value={form.total_agreed_price ? Number(form.total_agreed_price).toLocaleString() : ""} onChange={e => setForm({ ...form, total_agreed_price: e.target.value.replace(/\D/g, "") })} /></div>
                 ) : (
                   <div></div>
                 )}
                 <div>
                   <label style={lblStyle}>{t("الدفعة الأولى")}</label>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <input type="number" step="500" className="glass-input" style={{ flex: 1 }} placeholder="IQD" value={form.initial_payment} onChange={e => setForm({ ...form, initial_payment: e.target.value })} />
+                    <input type="text" className="glass-input" style={{ flex: 1 }} placeholder="IQD" value={form.initial_payment ? Number(form.initial_payment).toLocaleString() : ""} onChange={e => setForm({ ...form, initial_payment: e.target.value.replace(/\D/g, "") })} />
                     <select className="glass-input" style={{ width: 140 }} value={form.payment_method || "Cash"} onChange={e => setForm({ ...form, payment_method: e.target.value })}>
                       <option value="Cash">{t("Cash (الخزنة)")}</option>
                       <option value="Bank">{t("Bank (البنك)")}</option>
@@ -218,7 +221,9 @@ export default function Patients() {
                 <label style={lblStyle}>{t("نوع الحالة")}</label>
                 <select className="glass-input" style={{ width: "100%" }} value={form.case_category} onChange={e => setForm({ ...form, case_category: e.target.value })}>
                   <option value="">{t("اختر النوع...")}</option>
-                  {["Re Endodontic", "Filling", "Endodontic Treatment", "Extraction", "Surgery", "Implant Surgery", "Implant Prosthetic", "Removable Prosthetics", "Crown and Bridge", "Periodontic", "Pediatric", "Orthodontic", "Teeth Whitening", "Diagnosis", "X-Ray", "Item Purchase", "Other"].map(c => (
+                  {getDynamicList('treatment_types', [
+                    "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"
+                  ]).map(c => (
                     <option key={c} value={c}>{t(c)}</option>
                   ))}
                 </select>

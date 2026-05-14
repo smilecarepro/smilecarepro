@@ -1,0 +1,27 @@
+2026/05/13-03:59:04.508 359c Reusing MANIFEST C:\Users\Dell\Desktop\claude 1 - Copy - Copy - Copy\claude 1 - Copy - Copy - Copy\dental-clinic\whatsapp-service\tokens\u\Default\Local Storage\leveldb/MANIFEST-000001
+2026/05/13-03:59:04.526 359c Recovering log #7
+2026/05/13-03:59:04.532 359c Reusing old log C:\Users\Dell\Desktop\claude 1 - Copy - Copy - Copy\claude 1 - Copy - Copy - Copy\dental-clinic\whatsapp-service\tokens\u\Default\Local Storage\leveldb/000007.log 
+2026/05/13-04:29:05.500 6f68 Level-0 table #11: started
+2026/05/13-04:29:05.518 6f68 Level-0 table #11: 13207 bytes OK
+2026/05/13-04:29:05.525 6f68 Delete type=0 #7
+2026/05/13-06:33:05.494 6f68 Level-0 table #13: started
+2026/05/13-06:33:05.511 6f68 Level-0 table #13: 12371 bytes OK
+2026/05/13-06:33:05.518 6f68 Delete type=0 #10
+2026/05/13-08:26:05.496 6f68 Level-0 table #15: started
+2026/05/13-08:26:05.514 6f68 Level-0 table #15: 11361 bytes OK
+2026/05/13-08:26:05.519 6f68 Delete type=0 #12
+2026/05/13-10:00:05.494 6f68 Level-0 table #17: started
+2026/05/13-10:00:05.506 6f68 Level-0 table #17: 12855 bytes OK
+2026/05/13-10:00:05.509 6f68 Delete type=0 #14
+2026/05/13-10:00:05.510 6f68 Compacting 4@0 + 1@1 files
+2026/05/13-10:00:05.522 6f68 Generated table #18@0: 33 keys, 2609 bytes
+2026/05/13-10:00:05.522 6f68 Compacted 4@0 + 1@1 files => 2609 bytes
+2026/05/13-10:00:05.523 6f68 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/05/13-10:00:05.524 6f68 Delete type=2 #8
+2026/05/13-10:00:05.525 6f68 Delete type=2 #11
+2026/05/13-10:00:05.525 6f68 Delete type=2 #13
+2026/05/13-10:00:05.525 6f68 Delete type=2 #15
+2026/05/13-10:00:05.525 6f68 Delete type=2 #17
+2026/05/13-11:43:05.488 359c Level-0 table #20: started
+2026/05/13-11:43:05.498 359c Level-0 table #20: 12051 bytes OK
+2026/05/13-11:43:05.502 359c Delete type=0 #16

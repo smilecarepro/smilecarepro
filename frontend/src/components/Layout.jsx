@@ -9,12 +9,16 @@ const links = [
   { to: "/", label: "الرئيسية", icon: "🏠", mobile: true },
   { to: "/patients", label: "المرضى", icon: "👥", mobile: true },
   { to: "/appointments", label: "المواعيد", icon: "📅", mobile: true },
+  { to: "/booking-requests", label: "طلبات الحجز", icon: "📩", mobile: true },
   { to: "/invoices", label: "الفواتير", icon: "💰", mobile: true },
-  { to: "/reports", label: "التقارير", icon: "📈" },
   { to: "/prescriptions", label: "الوصفات", icon: "📝" },
-  { to: "/drugs", label: "الأدوية", icon: "💊" },
-  { to: "/expenses", label: "المصاريف", icon: "📉" },
-  { to: "/inventory", label: "المخزن", icon: "📦" },
+  { label: "المزيد", icon: "📂", isDropdown: true, children: [
+    { to: "/reports", label: "التقارير", icon: "📈" },
+    { to: "/drugs", label: "الأدوية", icon: "💊" },
+    { to: "/inventory", label: "المخزن", icon: "📦" },
+    { to: "/expenses", label: "المصاريف", icon: "📉" },
+    { to: "/purchases", label: "المشتريات", icon: "🛒" },
+  ]},
   { to: "/settings", label: "الإعدادات", icon: "⚙️" },
   { to: "/admin", label: "إدارة النظام", icon: "🛡️", adminOnly: true },
 ];
@@ -24,6 +28,7 @@ export default function Layout({ children }) {
   const { logout, user } = useAuth();
   const { settings } = useSettings();
   const [showMore, setShowMore] = useState(false);
+  const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [toast, setToast] = useState(null);
 
@@ -42,21 +47,59 @@ export default function Layout({ children }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const [requestCount, setRequestCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const { getBookingRequests } = await import("../api");
+        const data = await getBookingRequests();
+        if (Array.isArray(data)) {
+          setRequestCount(data.filter(r => r.status === 'pending').length);
+        }
+      } catch (e) {
+        console.error("Layout fetchCount error:", e);
+      }
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 60000); // تحديث كل دقيقة بدلاً من 30 ثانية لتخفيف الضغط
+    return () => clearInterval(interval);
+  }, []);
+
   const today = new Date().toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", {
     weekday: "short", day: "numeric", month: "short"
   });
 
-  const filteredLinks = links.filter(l => {
+  const filteredLinks = links.map(l => {
+    if (l.isDropdown) {
+      const filteredChildren = l.children.filter(child => {
+        if (child.adminOnly && user?.role !== "admin") return false;
+        if (user?.role === "secretary") {
+          const restricted = ["التقارير", "الأدوية"];
+          if (restricted.includes(child.label)) return false;
+        }
+        return true;
+      });
+      return { ...l, children: filteredChildren };
+    }
+    return l;
+  }).filter(l => {
     if (l.adminOnly && user?.role !== "admin") return false;
     if (user?.role === "secretary") {
       const restricted = ["التقارير", "الأدوية"];
       if (restricted.includes(l.label)) return false;
     }
+    if (l.isDropdown && l.children.length === 0) return false;
     return true;
   });
 
-  const mobilePrimaryLinks = filteredLinks.filter(l => l.mobile);
-  const mobileSecondaryLinks = filteredLinks.filter(l => !l.mobile);
+  const flattenedLinks = filteredLinks.reduce((acc, curr) => {
+    if (curr.isDropdown) return [...acc, ...curr.children];
+    return [...acc, curr];
+  }, []);
+
+  const mobilePrimaryLinks = flattenedLinks.filter(l => l.mobile);
+  const mobileSecondaryLinks = flattenedLinks.filter(l => !l.mobile);
 
   return (
     <div
@@ -87,15 +130,52 @@ export default function Layout({ children }) {
           </div>
 
           <nav className="custom-scrollbar" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, width: "100%", overflowY: "auto", paddingRight: 4 }}>
-            {filteredLinks.map(l => (
-              <NavLink key={l.to} to={l.to} end={l.to === "/"}
-                className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
-                style={{ padding: "10px 16px" }}
-              >
-                <span style={{ fontSize: 18 }}>{l.icon}</span>
-                {t(l.label)}
-              </NavLink>
-            ))}
+            {filteredLinks.map(l => {
+              if (l.isDropdown) {
+                return (
+                  <div key="dropdown-more">
+                    <div onClick={() => setDesktopMoreOpen(!desktopMoreOpen)} className="nav-link" style={{ padding: "10px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                        <span style={{ fontSize: 18 }}>{l.icon}</span>
+                        {t(l.label)}
+                      </div>
+                      <span style={{ fontSize: 10, opacity: 0.5 }}>{desktopMoreOpen ? "▲" : "▼"}</span>
+                    </div>
+                    {desktopMoreOpen && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingRight: 24, marginTop: 4, borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+                        {l.children.map(child => (
+                          <NavLink key={child.to} to={child.to}
+                            className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+                            style={{ padding: "8px 16px", fontSize: 13 }}
+                          >
+                            <span style={{ fontSize: 16 }}>{child.icon}</span>
+                            {t(child.label)}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              
+              return (
+                <NavLink key={l.to} to={l.to} end={l.to === "/"}
+                  className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+                  style={{ padding: "10px 16px", position: "relative" }}
+                >
+                  <span style={{ fontSize: 18 }}>{l.icon}</span>
+                  {t(l.label)}
+                  {l.label === "طلبات الحجز" && requestCount > 0 && (
+                    <span style={{
+                      position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                      background: "#ff4444", color: "white", borderRadius: "50%",
+                      minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 10, fontWeight: 800, border: "2px solid var(--bg-dark)", boxShadow: "0 4px 10px rgba(255, 68, 68, 0.4)"
+                    }}>{requestCount}</span>
+                  )}
+                </NavLink>
+              );
+            })}
           </nav>
         </aside>
       )}
@@ -241,9 +321,19 @@ export default function Layout({ children }) {
           <nav className="mobile-nav no-print">
             {mobilePrimaryLinks.map(l => (
               <NavLink key={l.to} to={l.to} end={l.to === "/"} onClick={() => setShowMore(false)}
-                className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+                className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+                style={{ position: "relative" }}
+              >
                 <span className="nav-icon">{l.icon}</span>
                 <span className="nav-label">{t(l.label)}</span>
+                {l.label === "طلبات الحجز" && requestCount > 0 && (
+                  <span style={{
+                    position: "absolute", right: "20%", top: 5,
+                    background: "#ff4444", color: "white", borderRadius: "50%",
+                    minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 9, fontWeight: 800, border: "2px solid #050810"
+                  }}>{requestCount}</span>
+                )}
               </NavLink>
             ))}
             <button

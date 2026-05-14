@@ -59,10 +59,12 @@ export default function Home() {
   const { user } = useAuth();
   const isSecretary = user?.role === "secretary";
 
+  const [dismissedLowStock, setDismissedLowStock] = useState(sessionStorage.getItem("dismissed_low_stock") === "true");
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* ⚠️ Low Stock Alert Panel */}
-      {lowStockItems.length > 0 && (
+      {lowStockItems.length > 0 && !dismissedLowStock && (
         <div className="glass-panel animate-fade" style={{ 
           background: "linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))",
           border: "1px solid rgba(239, 68, 68, 0.3)",
@@ -76,7 +78,20 @@ export default function Home() {
              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#ef4444", fontWeight: 800, fontSize: 16 }}>
                 <span>⚠️</span> {t("تنبيه المخزن: مواد أوشكت على النفاذ")}
              </div>
-             <button onClick={() => nav("/inventory")} className="view-all-btn" style={{ fontWeight: 700 }}>{t("اذهب للمخزن")} ←</button>
+             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => nav("/inventory")} className="view-all-btn" style={{ fontWeight: 700 }}>{t("اذهب للمخزن")} ←</button>
+                <button 
+                  onClick={() => {
+                    setDismissedLowStock(true);
+                    sessionStorage.setItem("dismissed_low_stock", "true");
+                  }} 
+                  style={{ 
+                    background: "rgba(255,255,255,0.1)", border: "none", color: "#ef4444", 
+                    width: 24, height: 24, borderRadius: "50%", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10
+                  }}
+                >✕</button>
+             </div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
              {lowStockItems.map(item => (

@@ -205,8 +205,8 @@ export default function Invoices() {
                 )}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div><label style={lblStyle}>{t("المبلغ المطلوب (الدين)")}</label><input type="number" readOnly className="glass-input" style={{ width: "100%", background: "rgba(255,255,255,0.02)" }} value={form.agreed_price} /></div>
-                <div><label style={lblStyle}>{t("الدفعة الحالية")}</label><input type="number" step="500" className="glass-input" style={{ width: "100%" }} value={form.paid} onChange={e => setForm({ ...form, paid: e.target.value })} /></div>
+                <div><label style={lblStyle}>{t("المبلغ المطلوب (الدين)")}</label><input type="text" readOnly className="glass-input" style={{ width: "100%", background: "rgba(255,255,255,0.02)" }} value={form.agreed_price ? Number(form.agreed_price).toLocaleString() : ""} /></div>
+                <div><label style={lblStyle}>{t("الدفعة الحالية")}</label><input type="text" className="glass-input" style={{ width: "100%" }} value={form.paid ? Number(form.paid).toLocaleString() : ""} onChange={e => setForm({ ...form, paid: e.target.value.replace(/\D/g, "") })} /></div>
               </div>
               <div>
                 <label style={lblStyle}>{t("طريقة الدفع")}</label>

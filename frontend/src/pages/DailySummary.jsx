@@ -6,10 +6,18 @@ import { getInvoices, getExpenses, getAppointments, getPatients, getAllTreatment
 
 const fmt = (n) => (n || 0).toLocaleString();
 
+const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
 export default function DailySummary() {
   const { t, lang } = useLanguage();
   const { user } = useAuth();
   const nav = useNavigate();
+  
+  const todayDate = new Date();
+  const [year, setYear] = useState(todayDate.getFullYear());
+  const [month, setMonth] = useState(todayDate.getMonth());
+  const [selDay, setSelDay] = useState(todayDate.getDate());
+  
   const [data, setData] = useState({
     invoices: [],
     expenses: [],
@@ -26,11 +34,14 @@ export default function DailySummary() {
   });
   const [loading, setLoading] = useState(true);
 
-  const getLocalDate = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  };
-  const today = getLocalDate();
+  const prevMonth = () => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); };
+  const nextMonth = () => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); };
+
+  const dateStr = (d = selDay) => `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const selectedDateStr = dateStr();
+
+  const daysInMonth  = new Date(year, month + 1, 0).getDate();
+  const firstWeekDay = new Date(year, month, 1).getDay();
 
   useEffect(() => {
     if (user?.role === 'secretary') {
@@ -38,18 +49,19 @@ export default function DailySummary() {
       return;
     }
     loadData();
-  }, []);
+  }, [year, month, selDay]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      const targetDate = dateStr();
       const [invRes, expRes, aptRes, patRes, treatRes, auditRes] = await Promise.all([
-        getInvoices("", "", today).catch(() => []),
-        getExpenses(today).catch(() => []),
-        getAppointments(today).catch(() => []),
-        getPatients("", "", today).catch(() => []),
-        getAllTreatments(today).catch(() => []),
-        getAuditLogs("", today).catch(() => [])
+        getInvoices("", "", targetDate).catch(() => []),
+        getExpenses(targetDate).catch(() => []),
+        getAppointments(targetDate).catch(() => []),
+        getPatients("", "", targetDate).catch(() => []),
+        getAllTreatments(targetDate).catch(() => []),
+        getAuditLogs("", targetDate).catch(() => [])
       ]);
 
       const income_cash = invRes.filter(i => (i.payment_method || "").toLowerCase() === 'cash').reduce((a, c) => a + (parseFloat(c.paid) || parseFloat(c.amount_paid) || 0), 0);
@@ -88,8 +100,6 @@ export default function DailySummary() {
     }
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>{t("جاري تحميل الملخص اليومي...")}</div>;
-
   return (
     <div className="animate-fade" style={{ direction: lang === "ar" ? "rtl" : "ltr" }}>
       <StyleTag />
@@ -99,10 +109,10 @@ export default function DailySummary() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div>
             <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>📊 {t("ملخص الجرد اليومي الشامل")}</h2>
-            <p style={{ color: "var(--text-muted)", marginTop: 4 }}>{t("بيانات العيادة ليوم")} {today}</p>
+            <p style={{ color: "var(--text-muted)", marginTop: 4 }}>{t("بيانات العيادة ليوم")} {selectedDateStr}</p>
           </div>
           <button onClick={async () => {
-            const url = getDailySummaryPDFUrl();
+            const url = getDailySummaryPDFUrl() + "?date=" + selectedDateStr;
             try {
               const user = JSON.parse(localStorage.getItem("clinic_user") || "{}");
               const res = await fetch(url, { headers: { "Authorization": `Bearer ${user.token}` } });
@@ -115,6 +125,47 @@ export default function DailySummary() {
           }} className="btn-secondary">🖨️ {t("طباعة التقرير الختامي")}</button>
         </div>
 
+        {/* ── Calendar Selection ── */}
+        <div className="glass-panel no-print" style={{ padding: 24, marginBottom: 32, maxWidth: 450, margin: "0 auto 32px auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ fontWeight: 600, fontSize: 16 }}>{t(MONTHS[month])} {year}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={prevMonth} className="btn-ghost" style={{ padding: "4px 12px", fontSize: 18 }}>‹</button>
+              <button onClick={nextMonth} className="btn-ghost" style={{ padding: "4px 12px", fontSize: 18 }}>›</button>
+            </div>
+          </div>
+
+          <div className="calendar-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 8 }}>
+            {["أح", "اث", "ثل", "أر", "خم", "جم", "سب"].map(d => (
+              <div key={d} style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", fontWeight: 600, padding: "4px 0" }}>{t(d)}</div>
+            ))}
+          </div>
+
+          <div className="calendar-grid" style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {Array(firstWeekDay).fill(null).map((_, i) => <div key={"e" + i} />)}
+            {Array(daysInMonth).fill(null).map((_, i) => {
+              const d = i + 1;
+              const isToday = d === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
+              const isSel = d === selDay;
+              return (
+                <div key={d} onClick={() => setSelDay(d)} style={{
+                  height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  borderRadius: 8, fontSize: 13, cursor: "pointer", position: "relative",
+                  background: isSel ? "var(--primary)" : isToday ? "rgba(24,95,165,0.2)" : "transparent",
+                  color: isSel ? "white" : isToday ? "var(--primary)" : "white",
+                  fontWeight: isSel || isToday ? 700 : 400,
+                  border: "1px solid transparent",
+                  transition: "all 0.15s"
+                }}>
+                  {d}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {loading ? <div style={{ padding: 40, textAlign: "center" }}>{t("جاري تحميل الملخص...")}</div> : (
+        <>
         {/* Main Stats Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginBottom: 40 }}>
           <FinanceCard 
@@ -217,13 +268,15 @@ export default function DailySummary() {
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* ── Print View (Tables) ── */}
       <div className="print-only">
         <div style={{ textAlign: "center", marginBottom: 40 }}>
            <h1 style={{ margin: 0, fontSize: 24 }}>{t("تقرير الجرد اليومي الختامي")}</h1>
-           <p style={{ margin: "5px 0" }}>{t("بيانات العيادة ليوم")}: {today}</p>
+           <p style={{ margin: "5px 0" }}>{t("بيانات العيادة ليوم")}: {selectedDateStr}</p>
            <hr />
         </div>
 

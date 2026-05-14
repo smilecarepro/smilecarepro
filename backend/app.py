@@ -17,6 +17,9 @@ from routes.drugs import drugs_bp
 from routes.prescriptions import prescriptions_bp
 from routes.inventory import inventory_bp
 from routes.messages import messages_bp
+from routes.whatsapp import whatsapp_bp
+from routes.purchases import purchases_bp
+
 
 from extensions import limiter
 from dotenv import load_dotenv
@@ -57,7 +60,7 @@ scheduler.add_job(func=cleanup_old_tokens, trigger="cron", hour=3, minute=0)
 scheduler.start()
 
 # 🔐 Strict CORS Configuration
-CORS_ALLOWED = os.getenv("CORS_ORIGINS", "https://smilecarepro.netlify.app").split(",")
+CORS_ALLOWED = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,https://smilecarepro.netlify.app").split(",")
 
 # Allow credentials for secure cookie/auth handling
 CORS(app, resources={r"/*": {"origins": CORS_ALLOWED}}, supports_credentials=True)
@@ -77,6 +80,9 @@ app.register_blueprint(drugs_bp,        url_prefix="/api/drugs")
 app.register_blueprint(prescriptions_bp,url_prefix="/api/prescriptions")
 app.register_blueprint(inventory_bp,    url_prefix="/api/inventory")
 app.register_blueprint(messages_bp,     url_prefix="/api/messages")
+app.register_blueprint(whatsapp_bp,     url_prefix="/api/whatsapp")
+app.register_blueprint(purchases_bp,    url_prefix="/api/purchases")
+
 
 @app.route('/api/health')
 def health():

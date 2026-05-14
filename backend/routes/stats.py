@@ -160,11 +160,12 @@ def download_daily_summary_pdf():
     from reportlab.lib.pagesizes import A4
     from datetime import datetime
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    from flask import request
+    target_date = request.args.get('date') or datetime.now().strftime("%Y-%m-%d")
     
     # Financial data
-    rev_rows = g.db.execute("SELECT i.*, p.first_name || ' ' || p.last_name as p_name FROM invoices i JOIN patients p ON i.patient_id = p.id WHERE i.date = ?", (today,)).fetchall()
-    exp_rows = g.db.execute("SELECT * FROM expenses WHERE date = ?", (today,)).fetchall()
+    rev_rows = g.db.execute("SELECT i.*, p.first_name || ' ' || p.last_name as p_name FROM invoices i JOIN patients p ON i.patient_id = p.id WHERE i.date = ?", (target_date,)).fetchall()
+    exp_rows = g.db.execute("SELECT * FROM expenses WHERE date = ?", (target_date,)).fetchall()
     
     total_rev = sum(r['paid_amount'] for r in rev_rows)
     total_exp = sum(r['amount'] for r in exp_rows)
@@ -177,7 +178,7 @@ def download_daily_summary_pdf():
     styles = get_pdf_styles()
     story = []
 
-    story.append(Paragraph(f"Daily Financial Summary - {today}", styles["title"]))
+    story.append(Paragraph(f"Daily Financial Summary - {target_date}", styles["title"]))
     story.append(Spacer(1, 10*mm))
 
     # Revenue Table
@@ -228,4 +229,4 @@ def download_daily_summary_pdf():
 
     doc.build(story, onFirstPage=lambda c, d: add_header_footer(c, d, clinic), onLaterPages=lambda c, d: add_header_footer(c, d, clinic))
     buf.seek(0)
-    return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=f"summary_{today}.pdf")
+    return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=f"summary_{target_date}.pdf")

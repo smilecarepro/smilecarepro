@@ -6,10 +6,23 @@ import { useSettings } from "../SettingsContext";
 import { useAuth } from "../AuthContext";
 import ConfirmModal from "../components/ConfirmModal";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 export default function Settings() {
   const { t, lang, toggleLanguage } = useLanguage();
-  const { refreshSettings } = useSettings();
+  const { refreshSettings, getDynamicList } = useSettings();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  const DEFAULT_LISTS = {
+    treatment_types: ["فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"],
+    inventory_categories: ["Composite & Filling", "Bonding & Etching", "Impression Materials", "Endodontic Supplies", "Disposable (Gloves/Masks)", "Sterilization", "Instruments", "Orthodontics", "General"],
+    payment_methods: ["نقدي (Cash)", "زين كاش", "مصرفي (Bank)"],
+    med_categories: ["مضاد حيوي (Antibiotic)", "مسكن آلام (Analgesic)", "مضاد التهاب", "فيتامينات", "أخرى"],
+    med_dosages: ["500 mg", "1 g", "250 mg", "5 ml", "10 ml", "Tab", "Cap"],
+    med_frequencies: ["مرتين يومياً (كل 12 ساعة)", "3 مرات يومياً (كل 8 ساعات)", "مرة واحدة يومياً", "عند اللزوم"],
+    med_durations: ["لمدة 3 أيام", "لمدة 5 أيام", "لمدة أسبوع", "لمدة 10 أيام", "لمدة أسبوعين"],
+    expense_categories: ["إيجار العيادة", "رواتب الموظفين", "كهرباء ومولد", "مشتريات طبية", "صيانة", "أخرى"]
+  };
   const [activeTab, setActiveTab] = useState(user?.role === 'secretary' ? "preferences" : "clinic");
   const [form, setForm] = useState({});
   const [secData, setSecData] = useState({ enabled: 0, password: "" });
@@ -18,6 +31,9 @@ export default function Settings() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [confirmData, setConfirmData] = useState({ show: false, title: "", message: "", onConfirm: null, danger: false });
   const [resetModal, setResetModal] = useState({ show: false, password: "" });
+  const [qrCode, setQrCode] = useState(null);
+  const [qrStatus, setQrStatus] = useState("loading");
+
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -33,6 +49,24 @@ export default function Settings() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    let interval;
+    if (activeTab === "automation" && qrStatus !== "ready") {
+      const fetchQR = async () => {
+        try {
+          const res = await fetch(`http://localhost:3001/qr/${user?.username}`);
+          const data = await res.json();
+          setQrStatus(data.status);
+          if (data.status === "qr") setQrCode(data.qr);
+        } catch (e) { console.error("WA Service not running"); }
+      };
+      fetchQR();
+      interval = setInterval(fetchQR, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTab, qrStatus]);
+
 
   const save = async () => {
     setSaving(true);
@@ -64,7 +98,9 @@ export default function Settings() {
   const tabs = [
     { id: "clinic", label: t("بيانات العيادة"), icon: "🏢", roles: ["doctor"] },
     { id: "medical", label: t("الوصفات والرسائل"), icon: "📄", roles: ["doctor"] },
+    { id: "lists", label: t("إدارة القوائم"), icon: "📋", roles: ["doctor"] },
     { id: "security", label: t("الأمان والنسخ"), icon: "🛡️", roles: ["doctor"] },
+    { id: "automation", label: t("الأتمتة والذكاء الاصطناعي"), icon: "🤖", roles: ["doctor"] },
     { id: "preferences", label: t("المظهر واللغة"), icon: "🌐", roles: ["doctor", "secretary"] },
   ].filter(tab => tab.roles.includes(user?.role));
 
@@ -318,7 +354,7 @@ export default function Settings() {
                      </button>
                   </div>
                   
-                  <button onClick={() => window.location.href="/audit-log"} className="btn-ghost" style={{ width: "100%", marginTop: 24, textAlign: "center" }}>🔍 {t("سجل حركات النظام الكامل")}</button>
+                  <button onClick={() => navigate("/audit-log")} className="btn-ghost" style={{ width: "100%", marginTop: 24, textAlign: "center" }}>🔍 {t("سجل حركات النظام الكامل")}</button>
                   <button onClick={() => {
                     setConfirmData({
                       show: true, title: t("تصفير بيانات العيادة نهائياً"), message: t("⚠️ تصفير كافة البيانات سيؤدي لحذف كل المرضى والمواعيد. هل تريد المتابعة؟"), danger: true,
@@ -329,6 +365,120 @@ export default function Settings() {
             </div>
           )}
 
+          {activeTab === "automation" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }} className="animate-fade">
+              {/* Gemini AI Settings */}
+              <div className="glass-panel" style={{ padding: 32 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>🤖 {t("إعدادات الذكاء الاصطناعي (Gemini)")}</h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 24 }}>{t("قم بإدخال مفتاح الـ API الخاص بـ Google Gemini لتفعيل السكرتيرة الذكية.")}</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                  <div>
+                    <label style={lblStyle}>{t("Gemini API Key")}</label>
+                    <input className="glass-input" type="password" style={{ width: "100%" }} 
+                      value={form.gemini_api_key || ""} onChange={e => setForm({ ...form, gemini_api_key: e.target.value })} 
+                      placeholder="AIzaSy..." />
+                  </div>
+                </div>
+              </div>
+
+              {/* Self-Hosted WhatsApp Settings */}
+              <div className="glass-panel" style={{ padding: 32 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>💬 {t("ربط الواتساب المجاني")}</h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 24 }}>{t("امسح الـ QR Code التالي لربط واتساب العيادة بالنظام مجاناً.")}</p>
+                
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: 32, background: "rgba(255,255,255,0.02)", borderRadius: 20, border: "1px dashed rgba(255,255,255,0.1)" }}>
+                   {qrStatus === "ready" ? (
+                     <div style={{ textAlign: "center", color: "var(--success)" }}>
+                        <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+                        <div style={{ fontWeight: 700 }}>{t("الواتساب مرتبط حالياً وجاهز للعمل")}</div>
+                        <button className="btn-ghost" style={{ marginTop: 16, color: "var(--danger)" }} onClick={() => setQrStatus("loading")}>{t("إلغاء الربط / ربط رقم جديد")}</button>
+                     </div>
+                   ) : qrStatus === "qr" && qrCode ? (
+                     <div style={{ textAlign: "center" }}>
+                        <img src={qrCode} alt="WA QR" style={{ width: 200, height: 200, borderRadius: 12, marginBottom: 16, border: "4px solid white" }} />
+                        <div style={{ fontSize: 14 }}>{t("افتح واتساب > الأجهزة المرتبطة > ربط جهاز")}</div>
+                     </div>
+                   ) : (
+                     <div style={{ textAlign: "center", opacity: 0.5 }}>
+                        <div className="spinner" style={{ marginBottom: 16 }}></div>
+                        <div>{t("جاري تشغيل محرك الواتساب...")}</div>
+                     </div>
+                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "lists" && (
+            <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+               <div className="glass-panel" style={{ padding: 32 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>📋 {t("إدارة القوائم الديناميكية")}</h3>
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 24 }}>{t("قم بتخصيص الخيارات التي تظهر في المواعيد والمخزن والحسابات.")}</p>
+                  
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+                     {[
+                       { k: "treatment_types", l: "أنواع العلاجات", icon: "🦷" },
+                       { k: "inventory_categories", l: "تصنيفات المخزن", icon: "📦" },
+                       { k: "payment_methods", l: "طرق الدفع", icon: "💰" },
+                       { k: "med_categories", l: "تصنيفات الأدوية", icon: "💊" },
+                       { k: "med_dosages", l: "جرعات الأدوية", icon: "⚖️" },
+                       { k: "med_frequencies", l: "تكرار الأدوية", icon: "🔄" },
+                       { k: "med_durations", l: "مدة الأدوية", icon: "⏳" },
+                       { k: "expense_categories", l: "فئات المصروفات", icon: "💸" },
+                     ].map(list => {
+                        const currentList = getDynamicList(list.k, DEFAULT_LISTS[list.k]);
+                        return (
+                          <div key={list.k} className="glass-panel" style={{ padding: 20, background: "rgba(255,255,255,0.02)" }}>
+                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                <div style={{ fontWeight: 700, fontSize: 14 }}>{list.icon} {t(list.l)}</div>
+                                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{currentList.length} {t("عنصر")}</div>
+                             </div>
+                             
+                             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                                {currentList.map((item, idx) => (
+                                  <div key={idx} style={{ 
+                                    background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 8, fontSize: 12,
+                                    display: "flex", alignItems: "center", gap: 6, border: "1px solid rgba(255,255,255,0.05)"
+                                  }}>
+                                     {item}
+                                     <span 
+                                       onClick={() => {
+                                         const newList = currentList.filter((_, i) => i !== idx);
+                                         const allLists = JSON.parse(form.dynamic_lists || "{}");
+                                         allLists[list.k] = newList;
+                                         setForm({ ...form, dynamic_lists: JSON.stringify(allLists) });
+                                       }}
+                                       style={{ cursor: "pointer", opacity: 0.5, fontSize: 14, color: "var(--danger)" }}
+                                     >×</span>
+                                  </div>
+                                ))}
+                             </div>
+                             
+                             <div style={{ display: "flex", gap: 8 }}>
+                                <input 
+                                  className="glass-input" 
+                                  placeholder={t("إضافة جديد...")} 
+                                  style={{ flex: 1, height: 36, fontSize: 12, padding: "0 12px" }} 
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" && e.target.value.trim()) {
+                                      const val = e.target.value.trim();
+                                      if (currentList.includes(val)) return;
+                                      const newList = [...currentList, val];
+                                      const allLists = JSON.parse(form.dynamic_lists || "{}");
+                                      allLists[list.k] = newList;
+                                      setForm({ ...form, dynamic_lists: JSON.stringify(allLists) });
+                                      e.target.value = "";
+                                    }
+                                  }}
+                                />
+                             </div>
+                          </div>
+                        );
+                     })}
+                  </div>
+               </div>
+            </div>
+          )}
           {activeTab === "preferences" && (
             <div className="glass-panel animate-fade" style={{ padding: 32 }}>
                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>🎨 {t("تفضيلات الواجهة واللغة")}</h3>

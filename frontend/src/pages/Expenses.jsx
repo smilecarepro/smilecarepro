@@ -4,11 +4,13 @@ import { useLanguage } from "../LanguageContext";
 import { useAuth } from "../AuthContext";
 import { getExpenses, addExpense, deleteExpense } from "../api";
 import ConfirmModal from "../components/ConfirmModal";
+import { useSettings } from "../SettingsContext";
 
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
 export default function Expenses() {
   const { t } = useLanguage();
+  const { getDynamicList } = useSettings();
   const { user } = useAuth();
   const isSecretary = user?.role === "secretary";
   const [list, setList] = useState([]);
@@ -46,7 +48,7 @@ export default function Expenses() {
     });
   };
 
-  const cats = ["إيجار", "مواد طبية", "كهرباء ومياه", "رواتب", "صيانة", "إعلان", "أخرى"];
+  const categories = getDynamicList('expense_categories', ["Clinic Rent", "Salaries", "Utilities", "Medical Supplies", "Maintenance", "Other"]);
 
   return (
     <div className="animate-fade">
@@ -106,7 +108,7 @@ export default function Expenses() {
               <div>
                 <label style={lblStyle}>{t("الفئة")}</label>
                 <select className="glass-input" style={{ width: "100%" }} value={form.category} onChange={v => setForm({ ...form, category: v.target.value })}>
-                  {cats.map(c => <option key={c} value={c}>{t(c)}</option>)}
+                  {categories.map(c => <option key={c} value={c}>{t(c)}</option>)}
                 </select>
               </div>
               <div className="grid-2">

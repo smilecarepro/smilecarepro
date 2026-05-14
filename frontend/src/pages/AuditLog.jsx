@@ -51,7 +51,16 @@ export default function AuditLog() {
       "PAY_INVOICE": "تسديد مبلغ",
       "DELETE_INVOICE": "حذف فاتورة",
       "UPDATE_TEETH": "تعديل خريطة الأسنان",
-      "ADD_TREATMENT": "إضافة إجراء علاجي"
+      "ADD_TREATMENT": "إضافة إجراء علاجي",
+      "ADD_EXPENSE": "إضافة مصروف",
+      "DELETE_EXPENSE": "حذف مصروف",
+      "ADD_INVENTORY": "إضافة للمخزن",
+      "UPDATE_INVENTORY": "تعديل في المخزن",
+      "DELETE_INVENTORY": "حذف من المخزن",
+      "CREATE_PURCHASE": "طلب شراء جديد",
+      "FINALIZE_PURCHASE": "إكمال عملية شراء",
+      "ADD_PRESCRIPTION": "إضافة وصفة طبية",
+      "UPDATE_SETTINGS": "تعديل الإعدادات"
     };
     return map[action] || action;
   };

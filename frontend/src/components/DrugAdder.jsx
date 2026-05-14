@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { getDrugs } from "../api";
 import { useLanguage } from "../LanguageContext";
 import ConfirmModal from "./ConfirmModal";
+import { useSettings } from "../SettingsContext";
 
 function calcDose(drug, patient) {
-// ...
-// (rest of the helper functions remain the same)
   const age = parseInt(patient.age) || 30;
   const weight = parseFloat(patient.weight) || 70;
   const special = patient.systemic_conditions || "none"; // changed to match target DB
@@ -52,6 +51,7 @@ function getWarnings(drug, patient) {
 
 export default function DrugAdder({ patient, onAdd }) {
   const { t } = useLanguage();
+  const { getDynamicList } = useSettings();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -175,8 +175,8 @@ export default function DrugAdder({ patient, onAdd }) {
 
   const favorites = allDrugs.filter(d => d.is_favorite && (filterCat === "" || d.category === filterCat));
   
-  // Dynamic categories based on actual database entries
-  const availableCategories = [...new Set(allDrugs.map(d => d.category).filter(Boolean))];
+  // Available categories now prioritize Settings list
+  const availableCategories = getDynamicList('med_categories', [...new Set(allDrugs.map(d => d.category).filter(Boolean))]);
 
   // Filter search results locally
   const searchResults = (query.trim() ? suggestions : []).filter(d => filterCat === "" || d.category === filterCat);
@@ -313,14 +313,13 @@ export default function DrugAdder({ patient, onAdd }) {
                  <div>
                    <label style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>{t("الجرعة")}</label>
                    <select className="glass-input" style={{ width: "100%", padding: "6px 10px", fontSize: 11 }} value={dose} onChange={e => setDose(e.target.value)}>
-                      {dosesOptions.map(o => <option key={o}>{o}</option>)}
-                      {!dosesOptions.includes(dose) && dose && <option>{dose}</option>}
+                      {getDynamicList('med_dosages', dosesOptions).map(o => <option key={o}>{o}</option>)}
                    </select>
                  </div>
                  <div>
                    <label style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4, display: "block" }}>{t("التكرار")}</label>
                    <select className="glass-input" style={{ width: "100%", padding: "6px 10px", fontSize: 11 }} value={timing} onChange={e => setTiming(e.target.value)}>
-                      {selected.timing?.map(t => <option key={t}>{t}</option>)}
+                      {getDynamicList('med_frequencies', selected.timing || []).map(t => <option key={t}>{t}</option>)}
                    </select>
                  </div>
               </div>

@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "../LanguageContext";
 import { useAuth } from "../AuthContext";
-import { getInventory, addInventoryItem, updateInventoryItem, updateInventoryStock, deleteInventoryItem } from "../api";
+import { useNavigate } from "react-router-dom";
+import { getInventory, addInventoryItem, updateInventoryItem, updateInventoryStock, deleteInventoryItem, getPurchases } from "../api";
 import ConfirmModal from "../components/ConfirmModal";
+import { useSettings } from "../SettingsContext";
 
 export default function Inventory() {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { getDynamicList } = useSettings();
   const isSecretary = user?.role === 'secretary';
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
+  const [pendingItems, setPendingItems] = useState({});
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -18,16 +23,26 @@ export default function Inventory() {
     name: "", category: "General", stock: 0, min_stock: 5, unit: "Piece", price: 0
   });
 
-  const categories = [
+  const categories = getDynamicList('inventory_categories', [
     "Composite & Filling", "Bonding & Etching", "Impression Materials", 
     "Endodontic Supplies", "Disposable (Gloves/Masks)", "Sterilization", "Instruments", "Orthodontics", "General"
-  ];
+  ]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await getInventory();
+      const [data, purch] = await Promise.all([getInventory(), getPurchases()]);
       setItems(data);
+      
+      const pending = {};
+      purch.filter(o => o.status === 'pending' || o.status === 'processing').forEach(o => {
+        o.items.forEach(i => {
+          if (i.inventory_item_id) {
+            pending[i.inventory_item_id] = (pending[i.inventory_item_id] || 0) + (i.requested_qty || 0);
+          }
+        });
+      });
+      setPendingItems(pending);
     } catch(e) { console.error(e); } finally { setLoading(false); }
   };
 
@@ -50,10 +65,20 @@ export default function Inventory() {
   };
 
   const handleStockChange = async (id, change) => {
+    // 🚀 Optimistic Update: تحديث الواجهة فوراً
+    setItems(prev => prev.map(item => 
+      item.id === id ? { ...item, stock: (item.stock || 0) + change } : item
+    ));
+
     try {
       await updateInventoryStock(id, change);
-      load();
-    } catch(e) { console.error(e); }
+      // لا حاجة لعمل load() بالكامل هنا لأننا حدثنا الحالة محلياً
+    } catch(e) { 
+      console.error(e);
+      // في حال الفشل، نعيد القيمة كما كانت
+      load(); 
+      alert("فشل تحديث المخزن، يرجى المحاولة مرة أخرى");
+    }
   };
 
   const handleEdit = (item) => {
@@ -148,13 +173,23 @@ export default function Inventory() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: 16, borderRadius: 16 }}>
                <div style={{ textAlign: "center", flex: 1 }}>
                   <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>{t("الرصيد الحالي")}</div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: item.stock <= item.min_stock ? "var(--danger)" : "var(--primary)" }}>
-                     {item.stock} <span style={{ fontSize: 12, fontWeight: 400 }}>{item.unit}</span>
-                  </div>
-                  <div style={{ fontSize: 11, marginTop: 4, color: "var(--text-muted)" }}>{t("السعر:")} {item.price} {t("د")}</div>
+                   <div style={{ fontSize: 24, fontWeight: 900, color: item.stock <= item.min_stock ? "var(--danger)" : "var(--primary)" }}>
+                      {item.stock} <span style={{ fontSize: 12, fontWeight: 400 }}>{item.unit}</span>
+                   </div>
+                   {pendingItems[item.id] > 0 && (
+                     <div style={{ fontSize: 10, color: "var(--warning-text)", fontWeight: 700, marginTop: 4 }}>
+                        📦 قيد الطلب: {pendingItems[item.id]}
+                     </div>
+                   )}
+                   <div style={{ fontSize: 11, marginTop: 4, color: "var(--text-muted)" }}>{t("السعر:")} {item.price} {t("د")}</div>
                </div>
 
                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => {
+                    const event = new CustomEvent('add-to-purchases', { detail: item });
+                    window.dispatchEvent(event);
+                    navigate('/purchases');
+                  }} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: 12, padding: 0, fontSize: 18, color: 'var(--primary-light)', borderColor: 'var(--primary-glow)' }} title="إضافة لقائمة المشتريات">🛒</button>
                   <button onClick={() => handleStockChange(item.id, -1)} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: 12, padding: 0, fontSize: 20 }}>-</button>
                   {!isSecretary && <button onClick={() => handleStockChange(item.id, 1)} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: 12, padding: 0, fontSize: 20 }}>+</button>}
                </div>

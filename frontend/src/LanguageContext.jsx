@@ -410,7 +410,15 @@ const translations = {
     "لم يتم تسجيل استهلاك مواد اليوم": "No inventory consumption recorded today",
     "حالة مواعيد اليوم": "Today's Appointments Status",
     "اكتملت": "Completed",
-    "لم تحضر": "No-Show"
+    "لم تحضر": "No-Show",
+    "الأتمتة والذكاء الاصطناعي": "Automation & AI",
+    "إعدادات الذكاء الاصطناعي (Gemini)": "AI Settings (Gemini)",
+    "قم بإدخال مفتاح الـ API الخاص بـ Google Gemini لتفعيل السكرتيرة الذكية.": "Enter your Google Gemini API Key to activate the smart secretary.",
+    "إعدادات بوابة الواتساب (UltraMsg)": "WhatsApp Gateway (UltraMsg)",
+    "اربط حساب UltraMsg الخاص بك لإرسال واستقبال الرسائل تلقائياً.": "Link your UltraMsg account to send and receive messages automatically.",
+    "WhatsApp Instance ID": "WhatsApp Instance ID",
+    "WhatsApp Token": "WhatsApp Token",
+    "رابط الـ Webhook الخاص بك للربط في UltraMsg هو:": "Your Webhook URL for UltraMsg is:"
   }
 };
 

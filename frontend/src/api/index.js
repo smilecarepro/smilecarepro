@@ -1,6 +1,6 @@
 import { localDB } from "./db";
 
-export const BASE = "https://big-production-f7ca.up.railway.app/api";
+export const BASE = "http://localhost:5050/api";
 
 async function req(path, method = "GET", body = null, isMultipart = false) {
   const isRead = method === "GET";
@@ -152,6 +152,9 @@ export const addAppointment = (data) => req("/appointments/", "POST", data);
 export const updateAppointment = (id, data) => req(`/appointments/${id}`, "PUT", data);
 export const deleteAppointment = (id) => req(`/appointments/${id}`, "DELETE");
 export const sendReminders = () => req("/appointments/reminders/send", "POST");
+export const getBookingRequests = () => req("/appointments/requests");
+export const confirmBookingRequest = (id, data) => req(`/appointments/requests/${id}/confirm`, "POST", data);
+export const deleteBookingRequest = (id) => req(`/appointments/requests/${id}`, "DELETE");
 
 // Finance & Invoices
 export const getInvoices = (q = "", status = "", date = "") => req(`/invoices/?q=${q}&status=${status}&date=${date}`);
@@ -179,6 +182,13 @@ export const addInventoryItem = (data) => req("/inventory/", "POST", data);
 export const updateInventoryItem = (id, data) => req(`/inventory/${id}`, "PUT", data);
 export const updateInventoryStock = (id, change) => req(`/inventory/${id}/stock`, "POST", { change });
 export const deleteInventoryItem = (id) => req(`/inventory/${id}`, "DELETE");
+
+// Purchases
+export const getPurchases = () => req("/purchases/");
+export const createPurchase = (data) => req("/purchases/", "POST", data);
+export const updatePurchase = (id, data) => req(`/purchases/${id}`, "PUT", data);
+export const finalizePurchase = (id) => req(`/purchases/${id}/finalize`, "POST");
+export const deletePurchase = (id) => req(`/purchases/${id}`, "DELETE");
 
 // Drugs & Smart Prescriptions
 export const getDrugs = (q = "") => req(`/drugs/?q=${q}`);

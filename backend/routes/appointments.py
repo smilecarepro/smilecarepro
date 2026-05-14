@@ -11,9 +11,11 @@ def get_appointments():
     date = request.args.get("date") # Optional filter for Home.jsx
     
     query = """
-        SELECT a.*, p.first_name || ' ' || p.last_name AS patient_name, p.phone AS patient_phone
+        SELECT a.*, 
+               COALESCE(NULLIF(a.patient_name, ''), p.first_name || ' ' || p.last_name) AS patient_name, 
+               p.phone AS patient_phone
         FROM appointments a
-        JOIN patients p ON a.patient_id = p.id
+        LEFT JOIN patients p ON a.patient_id = p.id
     """
     params = []
     
@@ -36,13 +38,20 @@ def add_appointment():
     if not p_id:
         return jsonify({"error": "Missing patient_id"}), 400
         
+    # Get patient name if only id is provided
+    p_name = d.get('patient_name')
+    if not p_name and p_id:
+        p = g.db.execute("SELECT first_name, last_name FROM patients WHERE id=?", (p_id,)).fetchone()
+        if p: p_name = f"{p['first_name']} {p['last_name']}"
+        
     g.db.execute(
-        "INSERT INTO appointments (patient_id, date, time, type, duration_min, status, notes) VALUES (?,?,?,?,?,?,?)",
-        (p_id, d.get('date'), d.get('time'), 
+        "INSERT INTO appointments (patient_id, patient_name, date, time, type, duration_min, status, notes, image_url) VALUES (?,?,?,?,?,?,?,?,?)",
+        (p_id, p_name, d.get('date'), d.get('time'), 
          d.get('type', d.get('treatment', '')),
          d.get('duration_min', d.get('duration', 30)),
          d.get('status', 'booked'),
-         d.get('notes', ''))
+         d.get('notes', ''),
+         d.get('image_url'))
     )
     
     # Audit Log - Safe way
@@ -102,7 +111,7 @@ def update_appointment(id):
     fields = []
     params = []
     for k, v in d.items():
-        if k in ['date', 'time', 'type', 'duration_min', 'status', 'notes', 'teeth_snapshot']:
+        if k in ['date', 'time', 'type', 'duration_min', 'status', 'notes', 'teeth_snapshot', 'image_url']:
             fields.append(f"{k} = ?")
             params.append(v)
     
@@ -131,5 +140,71 @@ def update_appointment(id):
     except Exception as e:
         print(f"--- APPOINTMENT_UPDATE_LOG_ERROR: {str(e)} ---")
         
+    g.db.commit()
+    return jsonify({"ok": True})
+
+@appointments_bp.route("/requests", methods=["GET"])
+@db_required
+def get_appointment_requests():
+    rows = g.db.execute("SELECT * FROM appointment_requests WHERE status = 'pending' ORDER BY created_at DESC").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@appointments_bp.route("/requests/<int:id>/confirm", methods=["POST"])
+@db_required
+def confirm_appointment_request(id):
+    d = request.json
+    req_id = id
+    
+    # Get request data
+    req = g.db.execute("SELECT * FROM appointment_requests WHERE id = ?", (id,)).fetchone()
+    if not req: return jsonify({"error": "Request not found"}), 404
+
+    # Search for patient: prioritize body patient_id, then phone search
+    p_id = d.get('patient_id')
+    if not p_id:
+        p = g.db.execute("SELECT id FROM patients WHERE phone = ?", (req['phone'],)).fetchone()
+        p_id = p['id'] if p else None
+    
+    # Create the actual appointment
+    g.db.execute(
+        "INSERT INTO appointments (patient_id, patient_name, date, time, type, duration_min, status, notes) VALUES (?,?,?,?,?,?,?,?)",
+        (p_id, req['patient_name'], d.get('date'), d.get('time'), 
+         d.get('type', 'كشف'), d.get('duration_min', 30), 'booked', d.get('notes', req['notes']))
+    )
+    
+    # Mark request as confirmed
+    g.db.execute("UPDATE appointment_requests SET status = 'confirmed' WHERE id = ?", (id,))
+    
+    # Send WhatsApp Confirmation
+    try:
+        clinic_info = g.db.execute("SELECT value FROM settings WHERE key = 'clinic_name'").fetchone()
+        clinic_name = clinic_info['value'] if clinic_info else "العيادة"
+        
+        # تنسيق الوقت ليكون جميلاً في الرسالة
+        msg = (
+            f"✅ تم تأكيد حجزك بنجاح في {clinic_name}\n\n"
+            f"👤 الاسم: {req['patient_name']}\n"
+            f"📅 التاريخ: {d.get('date')}\n"
+            f"⏰ الوقت: {d.get('time')}\n"
+            f"🦷 الخدمة: {d.get('type', 'كشف')}\n\n"
+            "نحن بانتظارك، يرجى الحضور قبل الموعد بـ 10 دقائق."
+        )
+        
+        import requests
+        requests.post("http://localhost:3001/send", json={
+            "clinicId": g.clinic_username,
+            "to": req['phone'],
+            "message": msg
+        })
+    except Exception as e:
+        print(f"WhatsApp Confirmation Error: {e}")
+
+    g.db.commit()
+    return jsonify({"ok": True})
+
+@appointments_bp.route("/requests/<int:id>", methods=["DELETE"])
+@db_required
+def delete_appointment_request(id):
+    g.db.execute("DELETE FROM appointment_requests WHERE id = ?", (id,))
     g.db.commit()
     return jsonify({"ok": True})

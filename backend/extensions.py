@@ -1,3 +1,4 @@
+from flask import request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -13,7 +14,11 @@ LIMITER_DB_URI = REDIS if REDIS else "memory://"
 
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["2000 per day", "500 per hour"],
+    default_limits=["10000 per day", "2000 per hour"],
     storage_uri=LIMITER_DB_URI,
-    strategy="fixed-window",
+    strategy="fixed-window"
 )
+
+@limiter.request_filter
+def exempt_options():
+    return request.method == "OPTIONS"

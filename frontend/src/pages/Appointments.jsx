@@ -1,18 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../LanguageContext";
-import { useNavigate } from "react-router-dom";
-import { getAppointments, getPatients, addAppointment, deleteAppointment, addPatient, sendReminders } from "../api";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getAppointments, getPatients, addAppointment, deleteAppointment, addPatient, sendReminders, confirmBookingRequest } from "../api";
 import { useSettings } from "../SettingsContext";
 import ConfirmModal from "../components/ConfirmModal";
 
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-const TREATMENT_TYPES = [
-  "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس",
-  "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان",
-  "زراعة", "أشعة", "استشارة", "أخرى"
-];
-
 const STATUS_ORDER = ["booked", "waiting", "treating", "finished", "postponed", "absent"];
 const STATUS_CONFIG = {
   "booked":    { ar: "محجوز", icon: "📅", color: "#185FA5", bg: "rgba(24, 95, 165, 0.15)" },
@@ -27,8 +21,9 @@ const lblStyle = { display: "block", fontSize: 12, color: "var(--text-muted)", m
 
 export default function Appointments() {
   const { lang, t } = useLanguage();
-  const { settings } = useSettings();
+  const { settings, getDynamicList } = useSettings();
   const nav = useNavigate();
+  const location = useLocation();
   const today = new Date();
   const searchRef = useRef(null);
   const [year,   setYear]   = useState(today.getFullYear());
@@ -40,7 +35,7 @@ export default function Appointments() {
   const [modal,  setModal]  = useState(false);
   const [saving, setSaving] = useState(false);
   const [form,   setForm]   = useState({
-    patient_id: "", date: "", time: "", type: "", duration_min: 30, status: "booked", notes: ""
+    patient_id: "", date: "", time: "", type: "", duration_min: 30, status: "booked", notes: "", whatsappRequestId: null
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [showResults, setShowResults] = useState(false);
@@ -50,12 +45,51 @@ export default function Appointments() {
   const [confirmData, setConfirmData] = useState({ show: false, message: "", onConfirm: null });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [dailyView, setDailyView] = useState(false);
+  const [archiveModal, setArchiveModal] = useState(false);
+  
+  // دالة لتنسيق التاريخ بشكل آمن
+  const getFormattedDate = (d) => {
+    const target = d || new Date();
+    return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-${String(target.getDate()).padStart(2, "0")}`;
+  };
+
+  const [archiveDate, setArchiveDate] = useState(getFormattedDate(new Date(new Date().setDate(new Date().getDate() - 1)))); // أمس
+  const [archiveApts, setArchiveApts] = useState([]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // جلب بيانات الأرشيف عند تغيير التاريخ أو فتح النافذة
+  useEffect(() => {
+    if (archiveModal) {
+      getAppointments(archiveDate).then(data => {
+        const mapped = data.map(a => ({ ...a, status: mapStatus(a.status) }));
+        setArchiveApts(mapped);
+      }).catch(console.error);
+    }
+  }, [archiveModal, archiveDate]);
+
+  const reBook = (apt) => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    setForm({
+      patient_id: apt.patient_id,
+      date: getFormattedDate(tomorrow),
+      time: apt.time,
+      type: apt.type,
+      duration_min: apt.duration_min,
+      status: "booked",
+      notes: `تنبيه: مريض متابعة. الحالة السابقة: (${STATUS_CONFIG[apt.status]?.ar || apt.status}) في يوم ${apt.date}`,
+      whatsappRequestId: null
+    });
+    setSearchTerm(apt.patient_name);
+    setArchiveModal(false);
+    setModal(true);
+  };
 
   const dateStr = (d = selDay) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -85,6 +119,52 @@ export default function Appointments() {
   useEffect(() => { load(); }, [year, month, selDay]);
   useEffect(() => { getPatients().then(setPatients).catch(console.error); }, []);
 
+  // Check for auto-open from BookingRequests (via Query Params or Hash Params)
+  useEffect(() => {
+    // محاولة قراءة البيانات من الرابط بكل الطرق الممكنة (عادي أو هاش)
+    const search = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : location.search;
+    const params = new URLSearchParams(search);
+    const autoOpen = params.get('autoOpen') === 'true';
+    
+    if (autoOpen) {
+      // تحديث قائمة المرضى أولاً للتأكد من وجود المريض الجديد
+      getPatients().then(updatedPatients => {
+        setPatients(updatedPatients);
+        
+        const patientName = params.get('patientName');
+        const date = params.get('date');
+        const whatsappRequestId = params.get('whatsappRequestId');
+        
+        console.log("--- FOUND REQUEST DATA (RELOADING PATIENTS) ---", { patientName, date });
+
+        // فتح النافذة
+        setModal(true);
+
+        // البحث عن المريض في القائمة المحدثة
+        const p = updatedPatients.find(p => 
+          p && `${p.first_name} ${p.last_name}`.toLowerCase().includes((patientName || "").toLowerCase())
+        );
+        
+        setForm(prev => ({ 
+          ...prev,
+          patient_id: p ? p.id : "", 
+          date: date || dateStr(), 
+          time: "16:00", 
+          type: "كشف", 
+          duration_min: 30, 
+          status: "booked", 
+          notes: "تم الحجز عبر الواتساب",
+          whatsappRequestId: whatsappRequestId 
+        }));
+        
+        setSearchTerm(patientName || "");
+      });
+      
+      // تنظيف الرابط
+      nav(location.pathname, { replace: true });
+    }
+  }, [location.search, window.location.hash, patients.length]);
+
   // Click outside search results to close
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -101,7 +181,7 @@ export default function Appointments() {
   const aptDays = new Set(allApts.filter(a => a.date && typeof a.date === 'string').map(a => parseInt(a.date.split("-")[2])));
 
   const openModal = () => {
-    setForm({ patient_id: "", date: dateStr(), time: "", type: "", duration_min: 30, status: "booked", notes: "" });
+    setForm({ patient_id: "", date: dateStr(), time: "", type: "", duration_min: 30, status: "booked", notes: "", whatsappRequestId: null });
     setSearchTerm("");
     setShowResults(false);
     setModal(true);
@@ -167,10 +247,30 @@ export default function Appointments() {
   const save = async () => {
     if (!form.patient_id || !form.date || !form.time) return alert(t("أدخل المريض والتاريخ والوقت"));
     setSaving(true);
-    await addAppointment({ ...form, patient_id: parseInt(form.patient_id) }).catch(console.error);
-    setSaving(false);
-    setModal(false);
-    load();
+    
+    try {
+        if (form.whatsappRequestId) {
+            console.log("--- CONFIRMING WHATSAPP REQUEST ---", form.whatsappRequestId, "FOR PATIENT:", form.patient_id);
+            await confirmBookingRequest(form.whatsappRequestId, {
+                patient_id: form.patient_id, // إضافة رقم المريض هنا
+                date: form.date,
+                time: form.time,
+                type: form.type,
+                duration_min: form.duration_min,
+                notes: form.notes
+            });
+        } else {
+            await addAppointment({ ...form, patient_id: parseInt(form.patient_id) });
+        }
+        
+        setSaving(false);
+        setModal(false);
+        load();
+    } catch (e) {
+        console.error("SAVE ERROR:", e);
+        alert(t("خطأ في الحفظ"));
+        setSaving(false);
+    }
   };
 
   const cycleStatus = async (id, current) => {
@@ -209,6 +309,9 @@ export default function Appointments() {
             setReminderModal(true);
           }} className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(34, 197, 94, 0.1)", color: "#22c55e", whiteSpace: "nowrap", flexShrink: 0 }}>
             <span>🔔</span> <span>{isMobile ? "" : t("إرسال تذكيرات الغد")}</span>
+          </button>
+          <button onClick={() => setArchiveModal(true)} className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255, 255, 255, 0.05)", color: "var(--text-light)", whiteSpace: "nowrap", flexShrink: 0 }}>
+            <span>📜</span> <span>{isMobile ? "" : t("سجل المتابعة")}</span>
           </button>
           <button onClick={openModal} className="btn-primary" style={{ whiteSpace: "nowrap", flexShrink: 0, flex: isMobile ? 1 : "none" }}>
             <span>+</span> {t("موعد جديد")}
@@ -321,8 +424,8 @@ export default function Appointments() {
                            ✔️
                          </button>
                        )}
-                       <button onClick={(e) => { e.stopPropagation(); nav(`/patients/${v.patient_id}`); }} className="btn-ghost" style={{ padding: "8px 12px", background: "rgba(255,255,255,0.05)", borderRadius: 10, border: "none", cursor: "pointer" }}>👤</button>
-                    </div>
+                        <button onClick={(e) => { e.stopPropagation(); nav(`/patients/${v.patient_id}`); }} className="btn-ghost" style={{ padding: "8px 12px", background: "rgba(255,255,255,0.05)", borderRadius: 10, border: "none", cursor: "pointer" }}>👤</button>
+                     </div>
                  </div>
                </div>
              ))}
@@ -663,7 +766,9 @@ export default function Appointments() {
                   <select className="glass-input" style={{ width: "100%" }}
                     value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
                     <option value="">{t("اختر النوع...")}</option>
-                    {TREATMENT_TYPES.map(typ => <option key={typ} value={typ}>{t(typ)}</option>)}
+                    {getDynamicList('treatment_types', [
+                      "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"
+                    ]).map(typ => <option key={typ} value={typ}>{t(typ)}</option>)}
                   </select>
                 </div>
                 <div>
@@ -722,6 +827,72 @@ export default function Appointments() {
         .mobile-mode .desktop-only { display: none; }
       `}</style>
       
+      {archiveModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div className="glass-panel animate-fade" style={{ width: "100%", maxWidth: 1000, padding: 32, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <div>
+                <h3 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>📜 {t("سجل متابعة المواعيد")}</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>تابع الحالات السابقة وأعد جدولة المواعيد الضائعة</p>
+              </div>
+              <button onClick={() => setArchiveModal(false)} className="btn-secondary" style={{ minWidth: 44, padding: 0 }}>✕</button>
+            </div>
+
+            <div style={{ background: "rgba(255,255,255,0.03)", padding: 16, borderRadius: 16, marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 600 }}>إظهار حالات يوم:</label>
+              <input 
+                type="date" 
+                className="glass-input" 
+                value={archiveDate} 
+                onChange={(e) => setArchiveDate(e.target.value)}
+                style={{ minHeight: 40, width: 200 }}
+              />
+              <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
+                 {STATUS_ORDER.filter(s => ["absent", "postponed", "finished"].includes(s)).map(s => (
+                   <div key={s} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                      <span style={{ color: STATUS_CONFIG[s].color }}>{STATUS_CONFIG[s].icon}</span>
+                      <span>{STATUS_CONFIG[s].ar}:</span>
+                      <span style={{ fontWeight: 800 }}>{archiveApts.filter(a => a.status === s).length}</span>
+                   </div>
+                 ))}
+              </div>
+            </div>
+
+            <div className="custom-scrollbar" style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 20 }}>
+              {["absent", "postponed", "booked", "finished"].map(statusKey => (
+                <div key={statusKey} className="glass-panel" style={{ padding: 16, background: "rgba(255,255,255,0.01)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 10 }}>
+                    <span style={{ fontSize: 18 }}>{STATUS_CONFIG[statusKey].icon}</span>
+                    <span style={{ fontWeight: 800, color: STATUS_CONFIG[statusKey].color }}>{STATUS_CONFIG[statusKey].ar}</span>
+                    <span style={{ background: STATUS_CONFIG[statusKey].bg, color: STATUS_CONFIG[statusKey].color, fontSize: 10, padding: "2px 8px", borderRadius: 10, marginLeft: "auto" }}>
+                      {archiveApts.filter(a => a.status === statusKey).length}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {archiveApts.filter(a => a.status === statusKey).length === 0 ? (
+                      <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "10px 0" }}>لا يوجد مرضى</div>
+                    ) : archiveApts.filter(a => a.status === statusKey).map(apt => (
+                      <div key={apt.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: 10, borderRadius: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>{apt.patient_name}</div>
+                          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{apt.type} - {apt.time}</div>
+                        </div>
+                        {statusKey !== "finished" && (
+                          <button onClick={() => reBook(apt)} className="btn-primary" style={{ minHeight: 32, padding: "0 12px", fontSize: 11 }}>
+                            موعد جديد
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmModal 
         show={confirmData.show} 
         title={t("تأكيد الحذف")} 
