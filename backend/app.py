@@ -19,6 +19,7 @@ from routes.inventory import inventory_bp
 from routes.messages import messages_bp
 from routes.whatsapp import whatsapp_bp
 from routes.purchases import purchases_bp
+from routes.center import center_bp
 
 
 from extensions import limiter
@@ -82,6 +83,7 @@ app.register_blueprint(inventory_bp,    url_prefix="/api/inventory")
 app.register_blueprint(messages_bp,     url_prefix="/api/messages")
 app.register_blueprint(whatsapp_bp,     url_prefix="/api/whatsapp")
 app.register_blueprint(purchases_bp,    url_prefix="/api/purchases")
+app.register_blueprint(center_bp,       url_prefix="/api/center")
 
 
 @app.route('/api/health')
@@ -126,4 +128,4 @@ def serve(path):
 # Port handled by env or default
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5050))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)

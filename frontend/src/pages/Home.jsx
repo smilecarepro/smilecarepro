@@ -113,11 +113,41 @@ export default function Home() {
         </div>
       )}
 
-      <div className="stats-grid">
+      <div className="stats-grid" style={{ gridTemplateColumns: fin.commission_amount > 0 ? "repeat(auto-fit, minmax(200px, 1fr))" : undefined }}>
         <StatCard icon="📅" color="#185FA5" lbl={t("مواعيد اليوم")} val={stats.total_today || "0"} subMobile="من أمس +2" subDesktop="+12%" />
-        <StatCard icon="💰" color="#10b981" lbl={isSecretary ? t("إيرادات اليوم") : t("إجمالي الإيرادات")} val={`${(isSecretary ? (fin.collected_today || 0) : (fin.revenue || 0)).toLocaleString()} ${t("د")}`} subMobile="د.ع" subDesktop="+5.4%" />
+        
+        <StatCard 
+          icon="💰" 
+          color="#10b981" 
+          lbl={isSecretary ? t("إيرادات اليوم") : t("إجمالي الإيرادات")} 
+          val={`${(isSecretary ? (fin.collected_today || 0) : (fin.revenue || 0)).toLocaleString()} ${t("د")}`} 
+          subMobile="Gross" 
+          subDesktop={fin.commission_amount > 0 ? `Rate: %${user.commission_rate}` : "+5.4%"} 
+        />
+
+        {fin.commission_amount > 0 && !isSecretary && (
+          <StatCard 
+            icon="🤝" 
+            color="#f59e0b" 
+            lbl={t("عمولة المركز")} 
+            val={`${(fin.commission_amount || 0).toLocaleString()} ${t("د")}`} 
+            subMobile="Center Share" 
+            subDesktop={`-%${user.commission_rate}`}
+          />
+        )}
+
         <StatCard icon="💸" color="#ef4444" lbl={isSecretary ? t("صرفيات اليوم") : t("المصاريف")} val={`${(isSecretary ? (fin.expenses_today || 0) : (fin.expenses || 0)).toLocaleString()} ${t("د")}`} subMobile="د.ع" />
-        {!isSecretary && <StatCard icon="💎" color="#00D2FF" lbl={t("صافي الربح")} val={`${(fin.net_profit || 0).toLocaleString()} ${t("د")}`} subMobile="د.ع" subDesktop="Stable" />}
+        
+        {!isSecretary && (
+          <StatCard 
+            icon="💎" 
+            color="#00D2FF" 
+            lbl={t("صافي الربح")} 
+            val={`${(fin.net_profit || 0).toLocaleString()} ${t("د")}`} 
+            subMobile={fin.commission_amount > 0 ? "After Commission" : "Net"} 
+            subDesktop="Stable" 
+          />
+        )}
       </div>
 
       <div className="home-main-grid">
@@ -194,107 +224,47 @@ export default function Home() {
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
+          gap: 20px;
         }
-        .stat-card-container {
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          border-radius: 20px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.04);
-        }
-        .stat-card-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 20px;
-        }
-        .stat-card-icon {
-          width: 40px; height: 40px;
-          border-radius: 12px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 18px;
-        }
-        .stat-card-badge {
-          padding: 3px 10px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-        .stat-card-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-        .stat-card-val { font-size: 28px; font-weight: 700; color: white; line-height: 1; }
-        .stat-card-sub { font-size: 11px; margin-top: 6px; }
 
         .home-main-grid {
           display: grid;
           grid-template-columns: 1.6fr 1fr;
-          gap: 16px;
+          gap: 20px;
           align-items: start;
         }
+
         .home-section-card {
-          padding: 20px;
-          border-radius: 18px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.04);
+          padding: 24px;
         }
+
         .home-section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
-        }
-        .section-title { font-size: 16px; font-weight: 700; margin: 0; }
-        .view-all-btn {
-          font-size: 12px; color: var(--accent);
-          background: transparent; border: none; cursor: pointer; padding: 0;
+          margin-bottom: 20px;
         }
 
-        .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .quick-action-btn {
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.05);
-          border-radius: 14px;
-          padding: 16px 12px;
-          cursor: pointer;
-          display: flex; flex-direction: column; align-items: center; gap: 10px;
-          transition: all 0.2s; width: 100%;
+        .quick-grid { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 12px; 
         }
-        .quick-action-btn:hover { background: rgba(255,255,255,0.05); transform: translateY(-2px); }
-        .quick-icon-box {
-          width: 40px; height: 40px; border-radius: 12px;
-          display: flex; align-items: center; justify-content: center; font-size: 18px;
-        }
-        .quick-label { font-size: 13px; font-weight: 600; color: white; text-align: center; }
-
-        .tip-card {
-          padding: 18px 20px; border-radius: 16px;
-          background: linear-gradient(135deg, rgba(24,95,165,0.18), rgba(0,210,255,0.08));
-          border: 1px solid rgba(24,95,165,0.2);
-        }
-        .appointment-row { border-radius: 10px; transition: background 0.15s; }
-        .appointment-row:hover { background: rgba(255,255,255,0.04); }
 
         /* ═══ MOBILE ═══ */
-        .mobile-mode .stats-grid {
-          grid-template-columns: 1fr 1fr !important;
-          gap: 10px;
+        @media (max-width: 1024px) {
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+          }
+          .home-main-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+          .quick-grid {
+            grid-template-columns: 1fr;
+          }
         }
-        .mobile-mode .stat-card-container { padding: 14px; border-radius: 16px; }
-        .mobile-mode .stat-card-top { margin-bottom: 10px; }
-        .mobile-mode .stat-card-icon { width: 34px; height: 34px; font-size: 16px; border-radius: 10px; }
-        .mobile-mode .stat-card-val { font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .mobile-mode .stat-card-label { font-size: 10px; }
-
-        .mobile-mode .home-main-grid { grid-template-columns: 1fr; gap: 12px; }
-        .mobile-mode .home-section-card { padding: 14px; border-radius: 16px; }
-
-        .mobile-mode .quick-action-btn {
-          flex-direction: row; padding: 12px 14px; gap: 12px; border-radius: 12px; align-items: center;
-        }
-        .mobile-mode .quick-icon-box { width: 34px; height: 34px; font-size: 16px; border-radius: 10px; flex-shrink: 0; }
-        .mobile-mode .quick-label { font-size: 13px; text-align: right; }
-        .mobile-mode .tip-card { padding: 14px 16px; border-radius: 14px; }
       `}</style>
     </div>
   );

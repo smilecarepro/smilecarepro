@@ -244,7 +244,8 @@ class ClinicAIAgent:
         clinic_phone = self.clinic_info.get('phone')
         if clinic_phone:
             try:
-                requests.post("http://localhost:3001/send", json={
+                whatsapp_url = os.getenv("WHATSAPP_SERVICE_URL", "http://localhost:3001")
+                requests.post(f"{whatsapp_url.rstrip('/')}/send", json={
                     "clinicId": self.clinic_username,
                     "to": clinic_phone,
                     "message": f"🔔 طلب حجز جديد:\n👤 المريض: {name}\n📱 الهاتف: {phone}\n📅 اليوم المطلوب: {day}\n\nيرجى مراجعة صفحة 'طلبات الحجز' في لوحة التحكم."

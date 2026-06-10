@@ -23,10 +23,16 @@ import TodaySchedule from "./pages/TodaySchedule";
 import AuditLog from "./pages/AuditLog";
 import Inventory from "./pages/Inventory";
 import Purchases from "./pages/Purchases";
+import Messages from "./pages/Messages";
+import CenterAnnouncements from "./pages/CenterAnnouncements";
 import DailySummary from "./pages/DailySummary";
 import BookingRequests from "./pages/BookingRequests";
 import Landing from "./pages/Landing";
-import Chat from "./components/Chat";
+import CenterDashboard from "./pages/CenterDashboard";
+import CenterDoctors from "./pages/CenterDoctors";
+import CenterSecretaries from "./pages/CenterSecretaries";
+import CenterExpenses from "./pages/CenterExpenses";
+import CenterReports from "./pages/CenterReports";
 import { lazy, Suspense as ReactSuspense } from "react";
 
 function ProtectedApp() {
@@ -37,6 +43,12 @@ function ProtectedApp() {
   
   // If an admin somehow lands in the clinic layout, redirect them immediately to their dashboard
   if (user.role === 'admin') return <Navigate to="/admin" replace />;
+  
+  // If a center manager logs in, make sure they are on the center dashboard (unless they are viewing a specific doctor's clinic)
+  const isViewingClinic = !!localStorage.getItem("activeDoctor");
+  if (user.account_type === 'center_manager' && !isViewingClinic && !window.location.hash.includes('#/center') && !window.location.hash.includes('#/settings') && !window.location.hash.includes('#/inventory') && !window.location.hash.includes('#/purchases') && !window.location.hash.includes('#/messages')) {
+     return <Navigate to="/center" replace />;
+  }
 
   // Check subscription/status (Only for non-admin)
   const isInactive = user?.role !== 'admin' && user?.status === 'inactive';
@@ -66,7 +78,10 @@ function ProtectedApp() {
   return (
     <Layout>
       <Routes>
-        <Route path="/home"           element={<Home />} />
+        <Route path="/home"           element={(user?.account_type === 'center_manager' && !isViewingClinic) ? <Navigate to="/center" /> : <Home />} />
+        <Route path="/center"         element={user?.account_type === 'center_manager' ? <CenterDashboard /> : <Navigate to="/home" />} />
+        <Route path="/center/doctors" element={user?.account_type === 'center_manager' ? <CenterDoctors /> : <Navigate to="/home" />} />
+        <Route path="/center/secretaries" element={user?.account_type === 'center_manager' ? <CenterSecretaries /> : <Navigate to="/home" />} />
         <Route path="/patients"       element={<Patients />} />
         <Route path="/patients/:id"   element={<PatientProfile />} />
         <Route path="/appointments"   element={<Appointments />} />
@@ -80,6 +95,10 @@ function ProtectedApp() {
         <Route path="/settings"       element={<Settings />} />
         <Route path="/inventory"      element={<Inventory />} />
         <Route path="/purchases"      element={<Purchases />} />
+        <Route path="/center/expenses"    element={user?.account_type === 'center_manager' ? <CenterExpenses /> : <Navigate to="/home" />} />
+        <Route path="/center/reports"     element={user?.account_type === 'center_manager' ? <CenterReports /> : <Navigate to="/home" />} />
+        <Route path="/center/announcements" element={user?.account_type === 'center_manager' ? <CenterAnnouncements /> : <Navigate to="/home" />} />
+        <Route path="/messages"       element={<Messages />} />
         <Route path="/daily-summary"  element={user?.role === 'secretary' ? <Navigate to="/home" /> : <DailySummary />} />
         <Route path="/audit-log"      element={user?.role === 'secretary' ? <Navigate to="/home" /> : <AuditLog />} />
         <Route path="/booking-requests" element={<BookingRequests />} />
@@ -95,10 +114,10 @@ function AuthRoutes() {
   return (
     <Routes>
       {/* Guest Entrance */}
-      <Route path="/" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : "/home"} replace /> : <Landing />} />
+      <Route path="/" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : (user.account_type === 'center_manager' ? "/center" : "/home")} replace /> : <Landing />} />
       
-      <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : "/home"} replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : "/home"} replace /> : <Register />} />
+      <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : (user.account_type === 'center_manager' ? "/center" : "/home")} replace /> : <Login />} />
+      <Route path="/register" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : (user.account_type === 'center_manager' ? "/center" : "/home")} replace /> : <Register />} />
       
       <Route path="/admin" element={
         <ProtectedAdmin>
@@ -189,7 +208,6 @@ export default function App() {
             )}
             <HashRouter>
               <AuthRoutes />
-              <Chat />
             </HashRouter>
           </div>
         </SettingsProvider>

@@ -43,7 +43,7 @@ export default function Settings() {
 
   useEffect(() => {
     getSettings().then(setForm).catch(console.error);
-    if (user?.role === 'doctor') {
+    if (user?.role === 'doctor' && user?.account_type !== 'center_manager') {
       import("../api").then(api => {
         api.getSecretarySettings().then(setSecData).catch(console.error);
       });
@@ -95,14 +95,18 @@ export default function Settings() {
     setSaving(false);
   };
 
-  const tabs = [
+  const tabs = user?.account_type === 'center_manager' ? [
+    { id: "clinic", label: t("بيانات المركز"), icon: "🏢", roles: ["center_manager"] },
+    { id: "security", label: t("الأمان والنسخ"), icon: "🛡️", roles: ["center_manager"] },
+    { id: "preferences", label: t("المظهر واللغة"), icon: "🌐", roles: ["center_manager"] },
+  ] : [
     { id: "clinic", label: t("بيانات العيادة"), icon: "🏢", roles: ["doctor"] },
     { id: "medical", label: t("الوصفات والرسائل"), icon: "📄", roles: ["doctor"] },
     { id: "lists", label: t("إدارة القوائم"), icon: "📋", roles: ["doctor"] },
     { id: "security", label: t("الأمان والنسخ"), icon: "🛡️", roles: ["doctor"] },
     { id: "automation", label: t("الأتمتة والذكاء الاصطناعي"), icon: "🤖", roles: ["doctor"] },
     { id: "preferences", label: t("المظهر واللغة"), icon: "🌐", roles: ["doctor", "secretary"] },
-  ].filter(tab => tab.roles.includes(user?.role));
+  ].filter(tab => tab.roles.includes(user?.role) || (user?.account_type === 'center_manager' && tab.roles.includes('center_manager')));
 
   const sidebarTabStyle = (id) => ({
     display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderRadius: 14, cursor: "pointer",
@@ -164,10 +168,10 @@ export default function Settings() {
 
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
                 {[
-                  { k: "clinic_name",  l: "اسم العيادة" },
-                  { k: "doctor_name",  l: "اسم الطبيب" },
+                  { k: "clinic_name",  l: user?.account_type === 'center_manager' ? "اسم المركز" : "اسم العيادة" },
+                  { k: "doctor_name",  l: user?.account_type === 'center_manager' ? "اسم المدير المسئول" : "اسم الطبيب" },
                   { k: "phone",        l: "رقم الهاتف" },
-                  { k: "address",      l: "عنوان العيادة" },
+                  { k: "address",      l: user?.account_type === 'center_manager' ? "عنوان المركز الرئيسي" : "عنوان العيادة" },
                 ].map(f => (
                   <div key={f.k}>
                     <label style={lblStyle}>{t(f.l)}</label>

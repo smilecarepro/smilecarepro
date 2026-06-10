@@ -103,7 +103,9 @@ export default function Inventory() {
   return (
     <div className="animate-fade">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>📦 {t("مخزن مواد العيادة")}</h2>
+        <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>
+          📦 {user?.account_type === 'center_manager' ? t("المخزن المركزي للمركز") : t("مخزن مواد العيادة")}
+        </h2>
         {!isSecretary && (
           <button className="btn-primary" onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); setNewItem({ name: "", category: "General", stock: 0, min_stock: 5, unit: "Piece", price: 0 }); }}>
              {showAddForm ? t("إغلاق") : `+ ${t("إضافة مادة جديدة")}`}

@@ -191,7 +191,8 @@ def confirm_appointment_request(id):
         )
         
         import requests
-        requests.post("http://localhost:3001/send", json={
+        whatsapp_url = os.getenv("WHATSAPP_SERVICE_URL", "http://localhost:3001")
+        requests.post(f"{whatsapp_url.rstrip('/')}/send", json={
             "clinicId": g.clinic_username,
             "to": req['phone'],
             "message": msg

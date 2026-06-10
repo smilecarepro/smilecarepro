@@ -8,7 +8,9 @@ whatsapp_bp = Blueprint("whatsapp", __name__)
 
 def send_whatsapp_message(to_phone, message, clinic_username):
     """Utility to send message via Local Node.js Service."""
-    url = "http://localhost:3001/send"
+    import os
+    whatsapp_url = os.getenv("WHATSAPP_SERVICE_URL", "http://localhost:3001")
+    url = f"{whatsapp_url.rstrip('/')}/send"
     payload = {
         "clinicId": clinic_username,
         "to": to_phone,

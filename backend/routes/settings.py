@@ -4,6 +4,7 @@ import os
 import shutil
 import sqlite3
 from werkzeug.security import check_password_hash
+from routes.auth import token_required
 
 settings_bp = Blueprint("settings", __name__)
 
@@ -109,8 +110,8 @@ def backup_db():
 @settings_bp.route("/audit-logs", methods=["GET"])
 @db_required
 def get_audit_logs():
-    # SECURITY: Only doctors can see audit logs
-    if g.user.get('role') != 'doctor':
+    # SECURITY: Only doctors or center managers can see audit logs
+    if g.user.get('role') != 'doctor' and g.user.get('account_type') != 'center_manager':
         return jsonify({"error": "Unauthorized Access"}), 403
         
     role_filter = request.args.get("role", "")
@@ -138,59 +139,78 @@ def get_audit_logs():
     return jsonify([dict(r) for r in rows])
 
 @settings_bp.route("/restore", methods=["POST"])
-@db_required
+@token_required
 def restore_db():
     from database import get_clinic_db_path, log_action
+    from flask import g
     import os
-    import shutil
+    import sqlite3
+    
+    g.user = request.user
     
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
         
     file = request.files['file']
     if not file.filename.endswith('.db'):
-        return jsonify({"error": "Invalid file format. Please upload a .db file."}), 400
+        return jsonify({"error": "Invalid file format."}), 400
         
     username = g.user.get('username')
     db_path = get_clinic_db_path(username)
-    
-    # Save to temp first to verify
     temp_path = db_path + ".tmp"
+    
+    if os.path.exists(temp_path):
+        try: os.remove(temp_path)
+        except: pass
     file.save(temp_path)
     
-    # Basic Validation: Try to connect to the uploaded file
     try:
-        import sqlite3
-        test_conn = sqlite3.connect(temp_path)
-        # Check if it has a known table
-        test_conn.execute("SELECT 1 FROM patients LIMIT 1")
-        test_conn.close()
-    except Exception as e:
-        if os.path.exists(temp_path): os.remove(temp_path)
-        return jsonify({"error": "The uploaded file is not a valid SmileCare database."}), 400
+        # 1. Open Source
+        src_conn = sqlite3.connect(temp_path)
+        # Verify
+        src_conn.execute("SELECT 1 FROM patients LIMIT 1")
         
-    # BACKUP the current one before overwriting!
-    bak_path = db_path + ".bak"
-    if os.path.exists(db_path):
-        shutil.copy2(db_path, bak_path)
+        # 2. Open Destination and DISABLE WAL temporarily to force sync
+        dest_conn = sqlite3.connect(db_path, timeout=30)
+        dest_conn.execute("PRAGMA journal_mode=DELETE") # Disables WAL and merges everything
         
-    # OVERWRITE
-    try:
-        # Crucial for Windows: Close the connection and clear g.db
-        if hasattr(g, 'db'):
-            try:
-                g.db.close()
-            except:
-                pass
+        # 3. Perform Backup
+        src_conn.backup(dest_conn)
+        
+        src_conn.close()
+        dest_conn.close()
+        
+        # 4. CRITICAL: Delete WAL/SHM files if they still exist for some reason
+        for ext in ['-wal', '-shm']:
+            side_file = db_path + ext
+            if os.path.exists(side_file):
+                try: os.remove(side_file)
+                except: pass
+        
+        # 5. Re-enable WAL in the NEW database for performance
+        try:
+            final_conn = sqlite3.connect(db_path)
+            final_conn.execute("PRAGMA journal_mode=WAL")
+            final_conn.close()
+        except: pass
+
+        # Cleanup
+        if os.path.exists(temp_path):
+            try: os.remove(temp_path)
+            except: pass
             
-        # Use os.replace for a more atomic operation on Windows
-        os.replace(temp_path, db_path)
+        # Log success
+        from database import get_db
+        try:
+            g.db = get_db(username)
+            log_action("DB_RESTORED", description="تم استعادة قاعدة البيانات بنجاح (وضع المزامنة الكاملة)")
+            g.db.close()
+        except: pass
         
-        return jsonify({"ok": True, "message": "Database restored successfully."})
+        return jsonify({"ok": True, "message": "Database restored and synchronized."})
     except Exception as e:
-        # Revert from .bak if failed
-        if os.path.exists(bak_path): 
-            try: shutil.copy2(bak_path, db_path)
+        if os.path.exists(temp_path):
+            try: os.remove(temp_path)
             except: pass
         return jsonify({"error": f"Restore failed: {str(e)}"}), 500
 
@@ -250,7 +270,7 @@ def google_callback():
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
     
-    # Direct request to Google to exchange code for token (Bypasses PKCE issues)
+    # Direct request to Google to exchange code for token
     import requests
     token_url = "https://oauth2.googleapis.com/token"
     payload = {
@@ -265,8 +285,6 @@ def google_callback():
     token_data = response.json()
     
     if "refresh_token" not in token_data:
-        # If no refresh token, it might be because the user already authorized.
-        # But we used prompt='consent', so it should be there.
         if "error" in token_data:
             return f"Google Error: {token_data.get('error_description', token_data['error'])}", 400
         return "Failed to get refresh token. Please try unlinking and linking again.", 400

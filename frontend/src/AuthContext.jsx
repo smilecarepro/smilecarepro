@@ -22,6 +22,12 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  const switchActiveDoctor = (docUsername) => {
+    const updated = { ...user, activeDoctor: docUsername };
+    setUser(updated);
+    localStorage.setItem("clinic_user", JSON.stringify(updated));
+  };
+
   const login = async (username, password) => {
     try {
       // 1. تحاول الدخول عبر السيرفر أولاً
@@ -72,7 +78,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, role: user?.role, clinic_id: user?.clinic_id }}>
+    <AuthContext.Provider value={{ user, login, logout, role: user?.role, clinic_id: user?.clinic_id, switchActiveDoctor }}>
       {!loading && children}
     </AuthContext.Provider>
   );

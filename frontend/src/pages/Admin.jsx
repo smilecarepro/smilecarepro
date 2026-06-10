@@ -15,6 +15,7 @@ export default function Admin() {
   const [formData, setFormData] = useState({
     username: "", password: "", clinic_name: "", expiry_date: "", status: "active",
     secretary_enabled: 0, secretary_password: "",
+    account_type: "single_doctor",
     settings: { currency: "IQD", doctor_name: "" }
   });
   const [editingId, setEditingId] = useState(null);
@@ -78,6 +79,7 @@ export default function Admin() {
     setFormData({
       username: "", password: "", clinic_name: "", expiry_date: nextYear.toISOString().split('T')[0],
       status: "active", secretary_enabled: 0, secretary_password: "",
+      account_type: "single_doctor",
       settings: { currency: "IQD", doctor_name: "" }
     });
   };
@@ -88,6 +90,7 @@ export default function Admin() {
       username: doc.username, password: "", clinic_name: doc.clinic_name,
       expiry_date: doc.expiry_date || "", status: doc.status || "active",
       secretary_enabled: doc.secretary_enabled || 0, secretary_password: doc.secretary_password || "",
+      account_type: doc.account_type || "single_doctor",
       settings: { currency: "IQD", doctor_name: doc.clinic_name }
     });
     setTab("clinics");
@@ -186,6 +189,17 @@ export default function Admin() {
                   <label>تاريخ انتهاء الاشتراك</label>
                   <input type="date" value={formData.expiry_date} onChange={e => setFormData({...formData, expiry_date: e.target.value})} />
                 </div>
+                <div className="form-group">
+                  <label>نوع الحساب</label>
+                  <select 
+                    value={formData.account_type} 
+                    onChange={e => setFormData({...formData, account_type: e.target.value})}
+                    style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(15, 23, 42, 0.4)", color: "white" }}
+                  >
+                    <option value="single_doctor">🏥 عيادة منفردة (طبيب)</option>
+                    <option value="center_manager">🏢 مركز طبي (مدير)</option>
+                  </select>
+                </div>
                 <div className="form-actions">
                   <button type="submit" className="btn-save" disabled={loading}>{loading ? "جاري المعالجة..." : (editingId ? "تحديث الحساب" : "إنشاء العيادة")}</button>
                   {editingId && <button type="button" className="btn-cancel" onClick={resetForm}>إلغاء</button>}
@@ -200,6 +214,7 @@ export default function Admin() {
                     <th>اسم العيادة</th>
                     <th>المستخدم</th>
                     <th>انتهاء الاشتراك</th>
+                    <th>نوع الحساب</th>
                     <th>الحالة</th>
                     <th>الإجراءات</th>
                   </tr>
@@ -210,6 +225,11 @@ export default function Admin() {
                       <td className="bold">{doc.clinic_name}</td>
                       <td><span className="username-badge">{doc.username}</span></td>
                       <td style={{ color: new Date(doc.expiry_date) < new Date() ? "#ff4d4d" : "inherit" }}>{doc.expiry_date}</td>
+                      <td>
+                        <span style={{ fontSize: 12, padding: "4px 8px", borderRadius: 8, background: doc.account_type === 'center_manager' ? "rgba(124, 58, 237, 0.2)" : "rgba(56, 189, 248, 0.1)", color: doc.account_type === 'center_manager' ? "#a78bfa" : "#38bdf8" }}>
+                          {doc.account_type === 'center_manager' ? "🏢 مركز" : "🏥 عيادة"}
+                        </span>
+                      </td>
                       <td>
                          <span className={`status-pill ${doc.status}`}>{doc.status === 'active' ? 'نشط' : 'معطل'}</span>
                       </td>

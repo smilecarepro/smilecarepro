@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import { useLanguage } from "../LanguageContext";
-import { getAuditLogs } from "../api";
+import { getAuditLogs, getGlobalAuditLogs } from "../api";
 import { useNavigate } from "react-router-dom";
 
 export default function AuditLog() {
@@ -12,18 +12,16 @@ export default function AuditLog() {
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState("");
 
+  const isManager = user?.account_type === 'center_manager';
+
   useEffect(() => {
-    if (user?.role !== "doctor") {
-      navigate("/");
-      return;
-    }
     load();
   }, [roleFilter]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await getAuditLogs(roleFilter);
+      const data = isManager ? await getGlobalAuditLogs() : await getAuditLogs(roleFilter);
       setLogs(data);
     } catch (e) {
       console.error(e);
@@ -106,7 +104,7 @@ export default function AuditLog() {
     );
   };
 
-  if (user?.role !== "doctor") return null;
+  if (user?.role !== "doctor" && user?.account_type !== 'center_manager') return null;
 
   return (
     <div className="animate-fade" style={{ direction: "rtl", textAlign: "right", position: "relative" }}>
@@ -136,6 +134,7 @@ export default function AuditLog() {
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                 <th style={{ padding: "16px 24px", textAlign: "right", fontSize: 13, color: "var(--text-muted)" }}>الوقت</th>
+                {isManager && <th style={{ padding: "16px 24px", textAlign: "right", fontSize: 13, color: "var(--text-muted)" }}>العيادة</th>}
                 <th style={{ padding: "16px 24px", textAlign: "right", fontSize: 13, color: "var(--text-muted)" }}>المستخدم</th>
                 <th style={{ padding: "16px 24px", textAlign: "right", fontSize: 13, color: "var(--text-muted)" }}>العملية</th>
                 <th style={{ padding: "16px 24px", textAlign: "right", fontSize: 13, color: "var(--text-muted)" }}>الهدف</th>
@@ -143,9 +142,9 @@ export default function AuditLog() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="4" style={{ padding: 40, textAlign: "center" }}>جاري تحميل السجلات...</td></tr>
+                <tr><td colSpan={isManager ? "5" : "4"} style={{ padding: 40, textAlign: "center" }}>جاري تحميل السجلات...</td></tr>
               ) : logs.length === 0 ? (
-                <tr><td colSpan="4" style={{ padding: 40, textAlign: "center" }}>لا توجد حركات مسجلة بعد.</td></tr>
+                <tr><td colSpan={isManager ? "5" : "4"} style={{ padding: 40, textAlign: "center" }}>لا توجد حركات مسجلة بعد.</td></tr>
               ) : logs.map((log) => (
                 <tr 
                   key={log.id} 
@@ -163,6 +162,11 @@ export default function AuditLog() {
                     <div style={{ color: "var(--text-light)" }}>{new Date(log.timestamp + " UTC").toLocaleTimeString("ar-IQ", { hour: '2-digit', minute: '2-digit' })}</div>
                     <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{new Date(log.timestamp + " UTC").toLocaleDateString("ar-IQ")}</div>
                   </td>
+                  {isManager && (
+                    <td style={{ padding: "16px 24px", fontSize: 13, fontWeight: 700, color: "var(--primary)" }}>
+                       {log.source_clinic}
+                    </td>
+                  )}
                   <td style={{ padding: "16px 24px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 18 }}>{log.role === 'doctor' ? '👨‍⚕️' : '👩‍💻'}</span>

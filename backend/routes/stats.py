@@ -79,6 +79,17 @@ def get_financial():
     # Collection Rate
     collection_rate = (total_revenue / agreed_total * 100) if agreed_total > 0 else 100
 
+    # NEW: Center Commission Calculation for affiliated doctors
+    commission_amount = 0
+    center_id = g.user.get("center_id")
+    commission_rate = g.user.get("commission_rate", 0)
+    
+    if center_id and commission_rate > 0:
+        commission_amount = (total_revenue * commission_rate) / 100
+
+    # Adjusted Net Profit: Revenue - Expenses - Commission (if applicable)
+    net_profit = total_revenue - total_expenses - commission_amount
+
     # Monthly Growth (Last 6 Months)
     monthly_growth = []
     current_m = datetime.now().month
@@ -100,7 +111,8 @@ def get_financial():
         "expenses_today": expenses_today,
         "revenue": total_revenue,
         "expenses": total_expenses,
-        "net_profit": total_revenue - total_expenses,
+        "net_profit": net_profit,
+        "commission_amount": commission_amount,
         "total_debt": total_debt,
         "cash_revenue": cash_balance,
         "bank_revenue": bank_balance,

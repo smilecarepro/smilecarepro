@@ -1,8 +1,8 @@
 import { localDB } from "./db";
 
-export const BASE = import.meta.env.VITE_API_URL || "https://big-production-b648.up.railway.app/api";
+export const BASE = import.meta.env.VITE_API_URL || "/api";
 
-async function req(path, method = "GET", body = null, isMultipart = false) {
+export async function req(path, method = "GET", body = null, isMultipart = false) {
   const isRead = method === "GET";
   
   // Helper for offline logic
@@ -31,10 +31,16 @@ async function req(path, method = "GET", body = null, isMultipart = false) {
   let user = null;
   try { user = JSON.parse(localStorage.getItem("clinic_user") || "null"); } catch {}
   
+  const activeDoctor = localStorage.getItem("activeDoctor");
+  
   const headers = {
     "Authorization": user?.token ? `Bearer ${user.token}` : ""
   };
   
+  if (activeDoctor) {
+    headers["X-Active-Doctor"] = activeDoctor;
+  }
+
   if (!isMultipart) {
     headers["Content-Type"] = "application/json";
   }
@@ -146,6 +152,33 @@ export const getAllTreatments = (date = "") => req(`/patients/treatments/all?dat
 export const addTreatment = (pid, data) => req(`/patients/${pid}/treatments`, "POST", data);
 export const deleteTreatment = (tid) => req(`/patients/treatments/${tid}`, "DELETE");
 
+// Center Management
+export const getCenterDoctors = () => req("/center/doctors");
+export const addDoctorToCenter = (data) => req("/center/doctors", "POST", data);
+export const updateDoctorSettings = (id, data) => req(`/center/doctors/${id}`, "PUT", data);
+export const deleteDoctorFromCenter = (id) => req(`/center/doctors/${id}`, "DELETE");
+export const getCenterFinancialReport = (params = {}) => {
+  let query = "";
+  if (params.start_date) query += `?start_date=${params.start_date}`;
+  if (params.end_date) query += (query ? "&" : "?") + `end_date=${params.end_date}`;
+  return req(`/center/reports/financial${query}`);
+};
+export const getCenterStats = () => req("/center/stats");
+export const getCenterSecretaries = () => req("/center/secretaries");
+export const addCenterSecretary = (data) => req("/center/secretaries", "POST", data);
+export const deleteSecretaryFromCenter = (id) => req(`/center/secretaries/${id}`, "DELETE");
+export const mapSecretaryToDoctor = (data) => req("/center/secretaries/map", "POST", data);
+export const getCenterLowStock = () => req("/center/low-stock");
+export const updateAnnouncement = (data) => req("/center/announcement", "POST", data);
+export const getAnnouncement = () => req("/auth/announcement");
+
+// Messages
+export const getChatContacts = () => req("/messages/contacts");
+export const getChatHistory = (username) => req(`/messages/history/${username}`);
+export const sendChatMessage = (data) => req("/messages/", "POST", data);
+export const getUnreadMessagesCount = () => req("/messages/unread");
+export const getGlobalAuditLogs = () => req("/center/audit-logs");
+
 // Appointments
 export const getAppointments = (date = "") => req(`/appointments/?date=${date}`);
 export const addAppointment = (data) => req("/appointments/", "POST", data);
@@ -202,11 +235,11 @@ export const getInvoicePDFUrl = (id) => `${BASE}/invoices/${id}/pdf`;
 export const getPatientReportPDFUrl = (id) => `${BASE}/patients/${id}/report-pdf`;
 export const getDailySummaryPDFUrl = () => `${BASE}/stats/daily-summary/pdf`;
 
-// Internal Messages
-export const getMessages = () => req("/messages/");
-export const sendMessage = (content, image_url) => req("/messages/", "POST", { content, image_url });
-export const markMessagesRead = () => req("/messages/mark-read", "POST");
-export const uploadChatImage = (formData) => req("/messages/upload", "POST", formData, true);
+// Internal Messages (Legacy/Unused)
+// export const getMessages = () => req("/messages/");
+// export const sendMessage = (content, image_url) => req("/messages/", "POST", { content, image_url });
+// export const markMessagesRead = () => req("/messages/mark-read", "POST");
+// export const uploadChatImage = (formData) => req("/messages/upload", "POST", formData, true);
 
 // Settings Extras
 export const getGoogleAuth = () => req("/settings/google-auth");
