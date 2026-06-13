@@ -24,10 +24,12 @@ from routes.center import center_bp
 
 from extensions import limiter
 from dotenv import load_dotenv
+from flask_compress import Compress
 
 load_dotenv()
 
 app = Flask(__name__, static_folder="static")
+Compress(app)
 
 # --- INITIALIZE DATABASE FIRST ---
 try:
