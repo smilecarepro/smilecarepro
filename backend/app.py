@@ -115,7 +115,9 @@ def uploaded_file(filename):
 @app.route('/')
 def index():
     if os.path.exists(os.path.join(app.static_folder, 'index.html')):
-        return send_from_directory(app.static_folder, 'index.html')
+        response = send_from_directory(app.static_folder, 'index.html')
+        response.headers["Cache-Control"] = "no-cache"
+        return response
     return "<h1>SmileCare Backend is UP and Running!</h1><p>API is available at /api/health</p>", 200
 
 # --- CATCH-ALL FOR FRONTEND ---
@@ -124,10 +126,26 @@ def serve(path):
     if path.startswith("api/"):
         return jsonify({"error": f"API endpoint '{path}' not found"}), 404
     
-    if path != "" and os.path.exists(app.static_folder + '/' + path):
-        return send_from_directory(app.static_folder, path)
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        response = send_from_directory(app.static_folder, path)
+        # HTTP Caching Strategy for Performance Optimization
+        if path.startswith("assets/"):
+            # Vite built assets (JS/CSS) contain unique content hashes and never change
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif path.endswith((".glb", ".png", ".PNG", ".jpg", ".jpeg", ".svg", ".ico", ".webmanifest")):
+            # Heavy media, 3D models, and images cached for 30 days
+            response.headers["Cache-Control"] = "public, max-age=2592000"
+        elif path.endswith(".js") or path.endswith(".css"):
+            # Other JS/CSS cached for 1 day
+            response.headers["Cache-Control"] = "public, max-age=86400"
+        else:
+            response.headers["Cache-Control"] = "no-cache"
+        return response
         
-    return send_from_directory(app.static_folder, 'index.html')
+    response = send_from_directory(app.static_folder, 'index.html')
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
 
 # Port handled by env or default
 if __name__ == "__main__":

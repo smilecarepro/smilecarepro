@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense as ReactSuspense } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BASE } from "./api";
 import { AuthProvider, useAuth }  from "./AuthContext";
@@ -6,34 +6,35 @@ import { LanguageProvider, useLanguage } from "./LanguageContext";
 import { SettingsProvider }       from "./SettingsContext";
 import Layout        from "./components/Layout";
 import Login         from "./pages/Login";
-import Home          from "./pages/Home";
-import Patients      from "./pages/Patients";
-import PatientProfile from "./pages/PatientProfile";
-import Appointments  from "./pages/Appointments";
-import Invoices      from "./pages/Invoices";
-import Reports       from "./pages/Reports";
-import Settings      from "./pages/Settings";
-import Expenses      from "./pages/Expenses";
-import Debts         from "./pages/Debts";
-import Prescriptions from "./pages/Prescriptions";
-import Admin         from "./pages/Admin";
 import Register      from "./pages/Register";
-import DrugStore     from "./pages/DrugStore";
-import TodaySchedule from "./pages/TodaySchedule";
-import AuditLog from "./pages/AuditLog";
-import Inventory from "./pages/Inventory";
-import Purchases from "./pages/Purchases";
-import Messages from "./pages/Messages";
-import CenterAnnouncements from "./pages/CenterAnnouncements";
-import DailySummary from "./pages/DailySummary";
-import BookingRequests from "./pages/BookingRequests";
-import Landing from "./pages/Landing";
-import CenterDashboard from "./pages/CenterDashboard";
-import CenterDoctors from "./pages/CenterDoctors";
-import CenterSecretaries from "./pages/CenterSecretaries";
-import CenterExpenses from "./pages/CenterExpenses";
-import CenterReports from "./pages/CenterReports";
-import { lazy, Suspense as ReactSuspense } from "react";
+import Landing       from "./pages/Landing";
+
+const Home = lazy(() => import("./pages/Home"));
+const Patients = lazy(() => import("./pages/Patients"));
+const PatientProfile = lazy(() => import("./pages/PatientProfile"));
+const Appointments = lazy(() => import("./pages/Appointments"));
+const Invoices = lazy(() => import("./pages/Invoices"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const Debts = lazy(() => import("./pages/Debts"));
+const Prescriptions = lazy(() => import("./pages/Prescriptions"));
+const Admin = lazy(() => import("./pages/Admin"));
+const DrugStore = lazy(() => import("./pages/DrugStore"));
+const TodaySchedule = lazy(() => import("./pages/TodaySchedule"));
+const AuditLog = lazy(() => import("./pages/AuditLog"));
+const Inventory = lazy(() => import("./pages/Inventory"));
+const Purchases = lazy(() => import("./pages/Purchases"));
+const Messages = lazy(() => import("./pages/Messages"));
+const CenterAnnouncements = lazy(() => import("./pages/CenterAnnouncements"));
+const DailySummary = lazy(() => import("./pages/DailySummary"));
+const BookingRequests = lazy(() => import("./pages/BookingRequests"));
+const CenterDashboard = lazy(() => import("./pages/CenterDashboard"));
+const CenterDoctors = lazy(() => import("./pages/CenterDoctors"));
+const CenterSecretaries = lazy(() => import("./pages/CenterSecretaries"));
+const CenterExpenses = lazy(() => import("./pages/CenterExpenses"));
+const CenterReports = lazy(() => import("./pages/CenterReports"));
+
 
 function ProtectedApp() {
   const { user, logout } = useAuth();
@@ -207,7 +208,9 @@ export default function App() {
               </div>
             )}
             <HashRouter>
-              <AuthRoutes />
+              <ReactSuspense fallback={<PageLoader />}>
+                <AuthRoutes />
+              </ReactSuspense>
             </HashRouter>
           </div>
         </SettingsProvider>
@@ -215,6 +218,36 @@ export default function App() {
     </LanguageProvider>
   );
 }
+
+const PageLoader = () => (
+  <div style={{
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "60vh",
+    width: "100%",
+    color: "var(--text-main)",
+    gap: "16px"
+  }}>
+    <div style={{
+      width: "40px",
+      height: "40px",
+      border: "3px solid rgba(0, 210, 255, 0.1)",
+      borderTop: "3px solid var(--primary, #00D2FF)",
+      borderRadius: "50%",
+      animation: "spin 1s linear infinite"
+    }} />
+    <span style={{ fontSize: "14px", fontWeight: "600", opacity: 0.8 }}>جاري التحميل...</span>
+    <style>{`
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
+
 
 function ProtectedAdmin({ children }) {
   const { user } = useAuth();
