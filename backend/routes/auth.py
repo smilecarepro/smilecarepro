@@ -390,3 +390,23 @@ def get_admin_stats():
         "centers": managers_count,
         "revenue": 0 # Placeholder
     })
+
+@auth_bp.route("/admin/settings", methods=["GET"])
+@admin_required
+def get_admin_settings():
+    master_conn = get_master_db()
+    rows = master_conn.execute("SELECT * FROM master_settings").fetchall()
+    master_conn.close()
+    return jsonify({r['key']: r['value'] for r in rows})
+
+@auth_bp.route("/admin/settings", methods=["POST"])
+@admin_required
+def update_admin_settings():
+    data = request.json or {}
+    master_conn = get_master_db()
+    for k, v in data.items():
+        master_conn.execute("INSERT OR REPLACE INTO master_settings (key, value) VALUES (?, ?)", (k, str(v)))
+    master_conn.commit()
+    master_conn.close()
+    return jsonify({"ok": True})
+
