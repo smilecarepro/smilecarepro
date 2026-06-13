@@ -112,6 +112,8 @@ def uploaded_file(filename):
 # --- DEBUG ROOT ROUTE ---
 @app.route('/')
 def index():
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
     return "<h1>SmileCare Backend is UP and Running!</h1><p>API is available at /api/health</p>", 200
 
 # --- CATCH-ALL FOR FRONTEND ---
