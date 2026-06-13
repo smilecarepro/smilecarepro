@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'SmileCare',
   webDir: 'dist',
   server: {
-    url: 'https://smilecarepro.netlify.app',
+    url: 'https://big-production-b648.up.railway.app',
     cleartext: true
   }
 };

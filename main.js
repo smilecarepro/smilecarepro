@@ -20,9 +20,10 @@ function createWindow() {
   // Open Developer Tools automatically
   mainWindow.webContents.openDevTools();
 
-  // Load the live URL from Netlify for instant updates
-  const LIVE_URL = "https://smilecarepro.netlify.app"; 
+  // Load the live URL from Railway directly to avoid CORS issues and load optimized chunks
+  const LIVE_URL = "https://big-production-b648.up.railway.app"; 
   mainWindow.loadURL(LIVE_URL);
+
 
   mainWindow.maximize();
 

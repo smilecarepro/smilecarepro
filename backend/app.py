@@ -63,13 +63,24 @@ scheduler.add_job(func=cleanup_old_tokens, trigger="cron", hour=3, minute=0)
 scheduler.start()
 
 # 🔐 Strict CORS Configuration
-CORS_ALLOWED = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,https://smilecarepro.netlify.app,https://big-production-b648.up.railway.app").split(",")
+cors_origins_env = os.getenv("CORS_ORIGINS")
+if cors_origins_env:
+    CORS_ALLOWED = [orig.strip() for orig in cors_origins_env.split(",") if orig.strip()]
+else:
+    CORS_ALLOWED = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://smilecarepro.netlify.app",
+        "https://big-production-b648.up.railway.app"
+    ]
 
 # Allow credentials for secure cookie/auth handling
-CORS(app, resources={r"/*": {"origins": CORS_ALLOWED}}, supports_credentials=True)
+CORS(app, resources={r"/*": {
+    "origins": CORS_ALLOWED,
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "X-Active-Doctor"]
+}}, supports_credentials=True)
 
-if os.getenv("CORS_ORIGINS") == "*":
-    print("SECURITY WARNING: CORS is open to all origins (*). Set CORS_ORIGINS in Railway!")
 
 # --- API BLUEPRINTS ---
 app.register_blueprint(auth_bp,         url_prefix="/api/auth")
