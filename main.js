@@ -21,7 +21,7 @@ function createWindow() {
   mainWindow.webContents.openDevTools();
 
   // Load the live URL from Railway directly to avoid CORS issues and load optimized chunks
-  const LIVE_URL = "https://big-production-b648.up.railway.app"; 
+  const LIVE_URL = "https://smilecarepro-production.up.railway.app"; 
   mainWindow.loadURL(LIVE_URL);
 
 

@@ -71,7 +71,7 @@ else:
         "http://localhost:5173",
         "http://localhost:3000",
         "https://smilecarepro.netlify.app",
-        "https://big-production-b648.up.railway.app"
+        "https://smilecarepro-production.up.railway.app"
     ]
 
 # Allow credentials for secure cookie/auth handling
