@@ -255,13 +255,16 @@ def secretary_settings():
                     "username": "secretary", # Virtual username for UI
                     "full_name": "Secretary",
                     "secretary_enabled": row["secretary_enabled"],
+                    "enabled": row["secretary_enabled"],
                     "password": row["secretary_password"]
                 })
             return jsonify({"error": "Doctor not found"}), 404
             
         if request.method == "POST":
-            data = request.json
-            enabled = data.get("secretary_enabled", 0)
+            data = request.json or {}
+            enabled = data.get("secretary_enabled")
+            if enabled is None:
+                enabled = data.get("enabled", 0)
             password = data.get("password")
             
             # Use hashing for security if it looks like a new password
