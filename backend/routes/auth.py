@@ -410,3 +410,56 @@ def update_admin_settings():
     master_conn.close()
     return jsonify({"ok": True})
 
+@auth_bp.route("/admin/backups", methods=["GET"])
+@admin_required
+def get_admin_backups():
+    master_conn = get_master_db()
+    doctors = master_conn.execute("SELECT username, clinic_name FROM doctors").fetchall()
+    master_conn.close()
+    
+    results = []
+    for doc in doctors:
+        username = doc["username"]
+        clinic_name = doc["clinic_name"]
+        
+        if username == "doctor":
+            legacy_root = os.path.join(DB_FOLDER, "clinic.db")
+            db_path = legacy_root if os.path.exists(legacy_root) else os.path.join(DB_FOLDER, f"clinic_{username}.db")
+        else:
+            db_path = os.path.join(DB_FOLDER, f"clinic_{username}.db")
+            
+        if os.path.exists(db_path):
+            size_mb = os.path.getsize(db_path) / (1024 * 1024)
+            mtime = os.path.getmtime(db_path)
+            last_modified = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+            status = "Available"
+        else:
+            size_mb = 0
+            last_modified = "N/A"
+            status = "Missing"
+            
+        results.append({
+            "username": username,
+            "clinic_name": clinic_name,
+            "size_mb": round(size_mb, 2),
+            "last_modified": last_modified,
+            "status": status
+        })
+        
+    return jsonify(results)
+
+@auth_bp.route("/admin/backups/download/<username>", methods=["GET"])
+@admin_required
+def download_admin_backup(username):
+    if username == "doctor":
+        legacy_root = os.path.join(DB_FOLDER, "clinic.db")
+        db_path = legacy_root if os.path.exists(legacy_root) else os.path.join(DB_FOLDER, f"clinic_{username}.db")
+    else:
+        db_path = os.path.join(DB_FOLDER, f"clinic_{username}.db")
+        
+    if os.path.exists(db_path):
+        return send_file(db_path, as_attachment=True, download_name=f"clinic_{username}_backup_{datetime.date.today()}.db")
+    else:
+        return jsonify({"error": "Database file not found"}), 404
+
+
