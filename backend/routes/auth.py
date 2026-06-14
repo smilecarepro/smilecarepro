@@ -262,9 +262,9 @@ def secretary_settings():
             
         if request.method == "POST":
             data = request.json or {}
-            enabled = data.get("secretary_enabled")
+            enabled = data.get("enabled")
             if enabled is None:
-                enabled = data.get("enabled", 0)
+                enabled = data.get("secretary_enabled", 0)
             password = data.get("password")
             
             # Use hashing for security if it looks like a new password
