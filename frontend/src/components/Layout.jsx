@@ -363,7 +363,7 @@ export default function Layout({ children }) {
           )}
         </div>
       </main>
-      {user?.account_type !== 'single_doctor' && <ChatWidget />}
+      <ChatWidget />
 
       {/* ── Bottom Nav (Mobile only) ── */}
       {isMobile && (
