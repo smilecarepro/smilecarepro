@@ -181,7 +181,7 @@ export default function ChatWidget() {
                     return (
                       <div key={idx} style={{ 
                         display: "flex", flexDirection: "column", 
-                        alignItems: isMe ? "flex-end" : "flex-start" 
+                        alignItems: isMe ? (isRTL ? "flex-start" : "flex-end") : (isRTL ? "flex-end" : "flex-start") 
                       }}>
                         <div style={{
                           maxWidth: "85%", padding: "8px 14px", borderRadius: 16,

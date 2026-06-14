@@ -178,8 +178,12 @@ def login():
                 pass
 
     # 3. Create Token
+    username_in_token = u
+    if role == "secretary" and user_data.get("account_type", "single_doctor") == "single_doctor":
+        username_in_token = f"{u}_sec"
+
     token_payload = {
-        "username": u,
+        "username": username_in_token,
         "role": role,
         "clinic_id": user_data.get("id"),
         "account_type": user_data.get("account_type", "single_doctor"),
@@ -199,7 +203,7 @@ def login():
 
     res = {
         "token": token,
-        "username": u,
+        "username": username_in_token,
         "role": role,
         "full_name": user_data.get("full_name") or user_data.get("doctor_name") or u,
         "clinic_name": user_data.get("clinic_name", ""),

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap');
+
 /* ═══════════════════════════════════════════════════════════════
    EasyClinic — Luxury Dark Theme v2.0
    اضف هذا الملف في index.css أو App.css بعد المتغيرات الحالية
@@ -30,7 +32,6 @@
 }
 
 /* 1. GOOGLE FONT — Cairo (Arabic-first, elegant) */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap');
 
 /* ─────────────────────────────────────────
    2. CSS VARIABLES (يُضاف على الـ :root الموجود)

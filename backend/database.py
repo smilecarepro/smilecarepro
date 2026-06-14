@@ -34,6 +34,8 @@ def get_master_db():
     return conn
 
 def get_clinic_db_path(username):
+    if username.endswith("_sec"):
+        username = username[:-4]
     if username == "doctor":
         legacy_root = os.path.join(DB_FOLDER, "clinic.db")
         if os.path.exists(legacy_root): return legacy_root
