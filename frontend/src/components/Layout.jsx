@@ -120,6 +120,9 @@ export default function Layout({ children }) {
   }).filter(l => {
     if (l.adminOnly && user?.role !== "admin") return false;
 
+    // Hide Messaging for Single Doctor accounts
+    if (user?.account_type === 'single_doctor' && l.label === "المراسلات") return false;
+
     const restrictedForCenterStaff = ["المشتريات", "التقارير"];
     if (user?.account_type === 'single_doctor' && user?.center_id && restrictedForCenterStaff.includes(l.label)) return false;
     if (user?.role === "secretary" && restrictedForCenterStaff.includes(l.label)) return false;
@@ -360,7 +363,7 @@ export default function Layout({ children }) {
           )}
         </div>
       </main>
-      <ChatWidget />
+      {user?.account_type !== 'single_doctor' && <ChatWidget />}
 
       {/* ── Bottom Nav (Mobile only) ── */}
       {isMobile && (
