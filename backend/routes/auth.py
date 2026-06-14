@@ -367,6 +367,17 @@ def delete_doctor(id):
             os.remove(db_path)
     except: pass
     return jsonify({"ok": True})
+@auth_bp.route("/debug-db", methods=["GET"])
+def debug_db_route():
+    try:
+        conn = get_master_db()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT id, username, clinic_name, secretary_enabled, secretary_password, account_type FROM doctors").fetchall()
+        conn.close()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @auth_bp.route("/announcement", methods=["GET"])
 def get_announcement():
     try:
