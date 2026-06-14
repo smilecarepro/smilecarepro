@@ -105,9 +105,16 @@ def health():
         "status": "healthy",
         "env_check": {
             "secret_key_set": os.getenv("SECRET_KEY") is not None,
-            "admin_pass_set": os.getenv("ADMIN_PASSWORD") is not None
+            "admin_pass_set": os.getenv("ADMIN_PASSWORD") is not None,
+            "google_client_id_set": os.getenv("GOOGLE_CLIENT_ID") is not None,
+            "google_client_secret_set": os.getenv("GOOGLE_CLIENT_SECRET") is not None,
+            "r2_access_key_id_set": os.getenv("R2_ACCESS_KEY_ID") is not None,
+            "r2_secret_access_key_set": os.getenv("R2_SECRET_ACCESS_KEY") is not None,
+            "r2_account_id_set": os.getenv("R2_ACCOUNT_ID") is not None,
+            "r2_bucket_name_set": os.getenv("R2_BUCKET_NAME") is not None
         }
     }), 200
+
 
 from werkzeug.exceptions import HTTPException
 
