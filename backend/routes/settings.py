@@ -224,6 +224,12 @@ import json
 # Scopes required: Ability to see and manage files we created
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
+def get_google_redirect_uri():
+    host_url = request.host_url
+    if "localhost" not in host_url and "127.0.0.1" not in host_url:
+        host_url = host_url.replace("http://", "https://")
+    return host_url.rstrip('/') + "/api/settings/google-callback"
+
 @settings_bp.route("/google-auth", methods=["GET"])
 @db_required
 def google_auth():
@@ -232,7 +238,7 @@ def google_auth():
     if not client_id:
         return jsonify({"error": "Google OAuth credentials not configured on server"}), 500
 
-    redirect_uri = request.host_url.rstrip('/') + "/api/settings/google-callback"
+    redirect_uri = get_google_redirect_uri()
     state_data = {"username": g.user.get('username')}
     
     params = {
@@ -277,7 +283,7 @@ def google_callback():
         "code": code,
         "client_id": client_id,
         "client_secret": client_secret,
-        "redirect_uri": request.host_url.rstrip('/') + "/api/settings/google-callback",
+        "redirect_uri": get_google_redirect_uri(),
         "grant_type": "authorization_code"
     }
     
@@ -315,3 +321,60 @@ def google_callback():
         </body>
     </html>
     """
+
+@settings_bp.route("/backup/test-diagnostics", methods=["POST"])
+@db_required
+def test_backup_diagnostics():
+    """Manually triggers cloud backup diagnostic checks for the clinic."""
+    from database import get_clinic_db_path
+    from cloud_backup import get_r2_client, upload_database_to_r2, upload_to_personal_drive
+    
+    username = g.user.get('username')
+    db_path = get_clinic_db_path(username)
+    
+    if not os.path.exists(db_path):
+        return jsonify({"error": "Database file not found"}), 404
+        
+    r2_status = "Skipped"
+    r2_error = None
+    drive_status = "Skipped"
+    drive_error = None
+    
+    # 1. Check R2 connection
+    try:
+        s3 = get_r2_client()
+        if s3:
+            r2_success = upload_database_to_r2(db_path, username)
+            r2_status = "Success" if r2_success else "Failed"
+        else:
+            r2_status = "Failed"
+            r2_error = "Cloudflare R2 credentials missing on server env"
+    except Exception as e:
+        r2_status = "Failed"
+        r2_error = str(e)
+        
+    # 2. Check Google Drive connection
+    try:
+        # Get refresh token
+        row = g.db.execute("SELECT value FROM settings WHERE key = 'google_refresh_token'").fetchone()
+        if row and row['value']:
+            drive_success = upload_to_personal_drive(db_path, username, row['value'])
+            drive_status = "Success" if drive_success else "Failed"
+        else:
+            drive_status = "Not Linked"
+    except Exception as e:
+        drive_status = "Failed"
+        drive_error = str(e)
+        
+    return jsonify({
+        "ok": True,
+        "r2": {
+            "status": r2_status,
+            "error": r2_error
+        },
+        "google_drive": {
+            "status": drive_status,
+            "error": drive_error
+        }
+    })
+

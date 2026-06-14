@@ -33,6 +33,21 @@ export default function Settings() {
   const [resetModal, setResetModal] = useState({ show: false, password: "" });
   const [qrCode, setQrCode] = useState(null);
   const [qrStatus, setQrStatus] = useState("loading");
+  const [testingBackup, setTestingBackup] = useState(false);
+  const [backupDiagResults, setBackupDiagResults] = useState(null);
+
+  const handleTestBackup = async () => {
+    setTestingBackup(true);
+    setBackupDiagResults(null);
+    try {
+      const api = await import("../api");
+      const res = await api.testBackupDiagnostics();
+      setBackupDiagResults(res);
+    } catch (e) {
+      alert("حدث خطأ أثناء إجراء فحص النسخ الاحتياطي: " + e.message);
+    }
+    setTestingBackup(false);
+  };
 
 
   useEffect(() => {
@@ -329,7 +344,37 @@ export default function Settings() {
                           }}>🔗 {t("ربط الحساب")}</button>
                         )}
                       </div>
-                   </div>
+                    </div>
+
+                    {/* Cloud Backups Diagnostic Panel */}
+                    <div style={{ marginBottom: 24, padding: 24, background: "rgba(16, 185, 129, 0.03)", borderRadius: 16, border: "1px solid rgba(16, 185, 129, 0.1)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: backupDiagResults ? 16 : 0, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0, textAlign: isMobile ? "center" : "right" }}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>🔗 {t("فحص وتشخيص الاتصال السحابي")}</div>
+                          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>{t("التحقق من اتصال النسخ الاحتياطي لـ R2 و Google Drive")}</div>
+                        </div>
+                        <button className="btn-primary" disabled={testingBackup} style={{ background: "#10b981", minWidth: 160 }} onClick={handleTestBackup}>
+                          {testingBackup ? t("جاري الفحص والرفع...") : `⚡ ${t("فحص الآن")}`}
+                        </button>
+                      </div>
+
+                      {backupDiagResults && (
+                        <div style={{ fontSize: 13, background: "rgba(0,0,0,0.2)", padding: 16, borderRadius: 12, display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 8, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 4 : 0 }}>
+                            <span style={{ fontWeight: 600 }}>☁️ Cloudflare R2 (النسخ الاحتياطي المركزي للشركة):</span>
+                            <span style={{ fontWeight: 700, color: backupDiagResults.r2?.status === "Success" ? "#10b981" : "#ef4444" }}>
+                              {backupDiagResults.r2?.status === "Success" ? "✅ ناجح ومؤمن" : `❌ فشل (${backupDiagResults.r2?.error || "خطأ في الاتصال"})`}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 4 : 0 }}>
+                            <span style={{ fontWeight: 600 }}>📁 Google Drive (النسخ الاحتياطي الشخصي للطبيب):</span>
+                            <span style={{ fontWeight: 700, color: backupDiagResults.google_drive?.status === "Success" ? "#10b981" : (backupDiagResults.google_drive?.status === "Not Linked" ? "#64748b" : "#ef4444") }}>
+                              {backupDiagResults.google_drive?.status === "Success" ? "✅ ناجح ومؤمن" : (backupDiagResults.google_drive?.status === "Not Linked" ? "⚠️ غير مرتبط بعد" : `❌ فشل (${backupDiagResults.google_drive?.error || "خطأ في التفويض"})`)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                      <button onClick={() => window.open(downloadBackup())} 

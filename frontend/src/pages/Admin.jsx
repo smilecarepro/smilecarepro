@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getDoctors, createDoctor, deleteDoctor, updateDoctor, getAdminSettings, updateAdminSettings, getAdminStats, getAdminBackups, getAdminBackupUrl } from "../api";
+import { getDoctors, createDoctor, deleteDoctor, updateDoctor, getAdminSettings, updateAdminSettings, getAdminStats, getAdminBackups, getAdminBackupUrl, runAdminBackupsDiagnostics } from "../api";
 
 import { useLanguage } from "../LanguageContext";
 import { useAuth } from "../AuthContext";
@@ -12,6 +12,7 @@ export default function Admin() {
   const [supportPhone, setSupportPhone] = useState("");
   const [broadcast, setBroadcast] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [syncingBackups, setSyncingBackups] = useState(false);
   const [formData, setFormData] = useState({
     username: "", password: "", clinic_name: "", expiry_date: "", status: "active",
     secretary_enabled: 0, secretary_password: "",
@@ -22,6 +23,21 @@ export default function Admin() {
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("clinics"); 
   const { language, setLanguage } = useLanguage();
+
+  const handleTriggerSync = async () => {
+    setSyncingBackups(true);
+    try {
+      const res = await runAdminBackupsDiagnostics();
+      if (res.ok) {
+        alert(`${res.message}\nاتصال R2 السحابي: ${res.r2_connected ? "✅ ناجح" : "❌ فاشل"}\nإجمالي نسخ R2 الاحتياطية المتوفرة: ${res.r2_files_count}`);
+        fetchData();
+      }
+    } catch (e) {
+      alert("حدث خطأ أثناء مزامنة النسخ الاحتياطي: " + e.message);
+    }
+    setSyncingBackups(false);
+  };
+
 
   const fetchData = async () => {
     try {
@@ -270,11 +286,19 @@ export default function Admin() {
 
         {tab === 'backups' && (
           <div className="tab-pane animate-in">
-            <div className="pane-header glass">
-              <h2>☁️ السحابة المركزية لقواعد البيانات</h2>
-              <div className="search-bar" style={{ opacity: 0.5 }}>
-                <span style={{ color: "white", fontSize: 13 }}>تحديث تلقائي لحجم الملفات</span>
+            <div className="pane-header glass" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 style={{ margin: 0 }}>☁️ السحابة المركزية لقواعد البيانات</h2>
+                <span style={{ color: "#94a3b8", fontSize: 12, marginTop: 4, display: "block" }}>تحديث تلقائي لحجم الملفات محلياً وسحابياً</span>
               </div>
+              <button 
+                onClick={handleTriggerSync} 
+                disabled={syncingBackups} 
+                className="btn-save" 
+                style={{ width: "auto", minWidth: 200, padding: "12px 24px", background: "#10b981" }}
+              >
+                {syncingBackups ? "جاري تشغيل المزامنة..." : "⚡ تشغيل المزامنة والنسخ السحابي"}
+              </button>
             </div>
 
             <div className="clinics-table-container glass">

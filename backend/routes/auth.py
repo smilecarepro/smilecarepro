@@ -480,4 +480,37 @@ def download_admin_backup(username):
     else:
         return jsonify({"error": "Database file not found"}), 404
 
+@auth_bp.route("/admin/backups/run-diagnostics", methods=["POST"])
+@admin_required
+def run_admin_backups_diagnostics():
+    """Triggers central backup sync for all clinics and checks R2 storage."""
+    from cloud_backup import get_r2_client, R2_BUCKET_NAME, run_daily_company_backup
+    
+    try:
+        # Run the daily company backup process for all clinics
+        run_daily_company_backup()
+        
+        # Test connection to R2 and list contents
+        s3 = get_r2_client()
+        r2_connected = False
+        r2_files_count = 0
+        if s3:
+            r2_connected = True
+            try:
+                response = s3.list_objects_v2(Bucket=R2_BUCKET_NAME)
+                if 'Contents' in response:
+                    r2_files_count = len(response['Contents'])
+            except Exception as e:
+                print(f"R2 count error: {e}")
+                
+        return jsonify({
+            "ok": True,
+            "message": "تم تشغيل المزامنة وحفظ النسخ السحابية بنجاح.",
+            "r2_connected": r2_connected,
+            "r2_files_count": r2_files_count
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 

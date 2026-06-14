@@ -164,8 +164,7 @@ def run_daily_company_backup():
     """Finds all clinic databases and backs them up to R2 and Personal Drive."""
     logger.info("Starting automated daily cloud backup...")
     
-    base_dir = os.path.dirname(__file__)
-    db_folder = os.path.abspath(os.path.join(base_dir, "..", "databases"))
+    from database import DB_FOLDER as db_folder
     
     if not os.path.exists(db_folder):
         logger.warning(f"Databases folder not found at {db_folder}")

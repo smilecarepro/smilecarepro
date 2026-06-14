@@ -247,7 +247,9 @@ export const downloadBackup = () => `${BASE}/settings/backup`;
 export const restoreBackup = (fd) => req("/settings/restore", "POST", fd, true);
 export const uploadClinicLogo = (fd) => req("/settings/upload-logo", "POST", fd, true);
 export const resetClinic = (pass) => req("/settings/reset", "POST", { password: pass });
+export const testBackupDiagnostics = () => req("/settings/backup/test-diagnostics", "POST");
 
 // System Admin Backups
 export const getAdminBackups = () => req("/auth/admin/backups");
 export const getAdminBackupUrl = (username) => `${BASE}/auth/admin/backups/download/${username}`;
+export const runAdminBackupsDiagnostics = () => req("/auth/admin/backups/run-diagnostics", "POST");
