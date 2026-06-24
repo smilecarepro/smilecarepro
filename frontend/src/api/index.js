@@ -137,7 +137,13 @@ export const getPatients = (q = "", status = "", date = "") => req(`/patients/?q
 export const getPatient = (id) => req(`/patients/${id}`);
 export const addPatient = (data) => req("/patients/", "POST", data);
 export const updatePatient = (id, data) => req(`/patients/${id}`, "PUT", data);
-export const deletePatient = (id) => req(`/patients/${id}`, "DELETE");
+export const deletePatient = (id) => req(`/patients/${id}`, "DELETE");         // Soft delete → سلة المحذوفات
+export const getTrashPatients = () => req("/patients/trash");                   // جلب سلة المحذوفات
+export const restorePatient = (id) => req(`/patients/${id}/restore`, "POST");   // استرجاع
+export const permanentDeletePatient = (id) => req(`/patients/${id}/permanent`, "DELETE"); // حذف نهائي
+export const getLatestSession = (id) => req(`/patients/${id}/latest-session`);
+export const addFine = (id, amount, notes) => req(`/patients/${id}/fine`, "POST", { amount, notes });
+
 
 // Teeth & Medical
 export const saveTeeth = (id, data) => req(`/patients/${id}/teeth`, "POST", data);
@@ -151,6 +157,7 @@ export const updatePrescription = (id, data) => req(`/patients/prescriptions/${i
 export const getAllTreatments = (date = "") => req(`/patients/treatments/all?date=${date}`);
 export const addTreatment = (pid, data) => req(`/patients/${pid}/treatments`, "POST", data);
 export const deleteTreatment = (tid) => req(`/patients/treatments/${tid}`, "DELETE");
+export const updateTreatment = (tid, data) => req(`/patients/treatments/${tid}`, "PUT", data);
 
 // Center Management
 export const getCenterDoctors = () => req("/center/doctors");
@@ -180,25 +187,26 @@ export const getUnreadMessagesCount = () => req("/messages/unread");
 export const getGlobalAuditLogs = () => req("/center/audit-logs");
 
 // Appointments
-export const getAppointments = (date = "") => req(`/appointments/?date=${date}`);
+export const getAppointments = (date = "") => req(`/appointments/?date=${date}&_t=${Date.now()}`);
 export const addAppointment = (data) => req("/appointments/", "POST", data);
 export const updateAppointment = (id, data) => req(`/appointments/${id}`, "PUT", data);
 export const deleteAppointment = (id) => req(`/appointments/${id}`, "DELETE");
 export const sendReminders = () => req("/appointments/reminders/send", "POST");
-export const getBookingRequests = () => req("/appointments/requests");
-export const confirmBookingRequest = (id, data) => req(`/appointments/requests/${id}/confirm`, "POST", data);
-export const deleteBookingRequest = (id) => req(`/appointments/requests/${id}`, "DELETE");
 
 // Finance & Invoices
 export const getInvoices = (q = "", status = "", date = "") => req(`/invoices/?q=${q}&status=${status}&date=${date}`);
 export const addInvoice = (data) => req("/invoices/", "POST", data);
 export const payInvoice = (id, amount) => req(`/invoices/${id}/pay`, "POST", { amount });
+export const updateInvoice = (id, data) => req(`/invoices/${id}`, "PUT", data);   // تعديل فاتورة
+export const deleteInvoice = (id) => req(`/invoices/${id}`, "DELETE");             // حذف فاتورة
 export const getInvoiceSummary = () => req("/stats/invoices/summary");
 
 // Expenses
 export const getExpenses = (date = "") => req(`/expenses/?date=${date}`);
 export const addExpense = (data) => req("/expenses/", "POST", data);
 export const deleteExpense = (id) => req(`/expenses/${id}`, "DELETE");
+export const updateExpense = (id, data) => req(`/expenses/${id}`, "PUT", data);    // تعديل مصروف
+
 
 // Stats & Settings
 export const getStats = () => req("/stats/summary");
@@ -215,6 +223,8 @@ export const addInventoryItem = (data) => req("/inventory/", "POST", data);
 export const updateInventoryItem = (id, data) => req(`/inventory/${id}`, "PUT", data);
 export const updateInventoryStock = (id, change) => req(`/inventory/${id}/stock`, "POST", { change });
 export const deleteInventoryItem = (id) => req(`/inventory/${id}`, "DELETE");
+export const addInventoryBatch = (itemId, data) => req(`/inventory/${itemId}/batches`, "POST", data);
+export const deleteInventoryBatch = (batchId) => req(`/inventory/batches/${batchId}`, "DELETE");
 
 // Purchases
 export const getPurchases = () => req("/purchases/");
@@ -230,10 +240,28 @@ export const deleteDrug = (id) => req(`/drugs/${id}`, "DELETE");
 export const updateDrug = (id, data) => req(`/drugs/${id}`, "PUT", data);
 export const toggleFavoriteDrug = (id) => req(`/drugs/${id}/toggle-favorite`, "POST");
 export const createSmartPrescription = (data) => req("/prescriptions/", "POST", data);
-export const getPrescriptionPDFUrl = (id) => `${BASE}/prescriptions/${id}/pdf`;
-export const getInvoicePDFUrl = (id) => `${BASE}/invoices/${id}/pdf`;
-export const getPatientReportPDFUrl = (id) => `${BASE}/patients/${id}/report-pdf`;
-export const getDailySummaryPDFUrl = () => `${BASE}/stats/daily-summary/pdf`;
+
+const appendAuthParams = (url) => {
+  let user = null;
+  try { user = JSON.parse(localStorage.getItem("clinic_user") || "null"); } catch {}
+  const token = user?.token || "";
+  const activeDoctor = localStorage.getItem("activeDoctor") || "";
+  
+  const separator = url.includes("?") ? "&" : "?";
+  let newUrl = url;
+  if (token) {
+    newUrl += `${separator}token=${encodeURIComponent(token)}`;
+  }
+  if (activeDoctor) {
+    newUrl += `&active_doctor=${encodeURIComponent(activeDoctor)}`;
+  }
+  return newUrl;
+};
+
+export const getPrescriptionPDFUrl = (id) => appendAuthParams(`${BASE}/prescriptions/${id}/pdf`);
+export const getInvoicePDFUrl = (id) => appendAuthParams(`${BASE}/invoices/${id}/pdf`);
+export const getPatientReportPDFUrl = (id) => appendAuthParams(`${BASE}/patients/${id}/report-pdf`);
+export const getDailySummaryPDFUrl = () => appendAuthParams(`${BASE}/stats/daily-summary/pdf`);
 
 // Internal Messages (Legacy/Unused)
 // export const getMessages = () => req("/messages/");

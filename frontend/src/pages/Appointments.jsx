@@ -2,11 +2,28 @@ import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../LanguageContext";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getAppointments, getPatients, addAppointment, deleteAppointment, addPatient, sendReminders, confirmBookingRequest } from "../api";
+import { getAppointments, getPatients, addAppointment, deleteAppointment, addPatient, sendReminders, updateAppointment } from "../api";
 import { useSettings } from "../SettingsContext";
+import { useAuth } from "../AuthContext";
 import ConfirmModal from "../components/ConfirmModal";
+import TimePicker from "../components/TimePicker";
 
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+// Convert 24h time string to 12h format (e.g. "14:30" → "2:30 م")
+const format12h = (timeStr, lang = "ar") => {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const isPm = hours >= 12;
+  const ampm = isPm ? (lang === "ar" ? "م" : "PM") : (lang === "ar" ? "ص" : "AM");
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${hours}:${minutes} ${ampm}`;
+};
+
 const STATUS_ORDER = ["booked", "waiting", "treating", "finished", "postponed", "absent"];
 const STATUS_CONFIG = {
   "booked":    { ar: "محجوز", icon: "📅", color: "#185FA5", bg: "rgba(24, 95, 165, 0.15)" },
@@ -22,6 +39,8 @@ const lblStyle = { display: "block", fontSize: 12, color: "var(--text-muted)", m
 export default function Appointments() {
   const { lang, t } = useLanguage();
   const { settings, getDynamicList } = useSettings();
+  const { user } = useAuth();
+  const canViewDailySchedule = user?.role !== "secretary";
   const nav = useNavigate();
   const location = useLocation();
   const today = new Date();
@@ -35,9 +54,14 @@ export default function Appointments() {
   const [modal,  setModal]  = useState(false);
   const [saving, setSaving] = useState(false);
   const [form,   setForm]   = useState({
-    patient_id: "", date: "", time: "", type: "", duration_min: 30, status: "booked", notes: "", whatsappRequestId: null
+    patient_id: "", date: "", time: "", type: "", duration_min: 30, status: "booked", notes: "", cost: "", paid: ""
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [patientForm, setPatientForm] = useState({
+    first_name: "", last_name: "", phone: "", gender: "Male", age: "", address: "", case_category: "",
+    total_agreed_price: "", initial_payment: "", payment_method: "Cash", notes: ""
+  });
+  const [showPatientModal, setShowPatientModal] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [patientSaving, setPatientSaving] = useState(false);
   const [reminderModal, setReminderModal] = useState(false);
@@ -46,6 +70,38 @@ export default function Appointments() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [dailyView, setDailyView] = useState(false);
   const [archiveModal, setArchiveModal] = useState(false);
+  const [editingAptId, setEditingAptId] = useState(null);
+
+  const canEditAppointment = (apt) => {
+    if (!apt || !apt.date) return false;
+    
+    const now = new Date();
+    
+    // Parse appointment date and time
+    const [yr, mn, dy] = apt.date.split("-").map(Number);
+    const [hr, min] = (apt.time || "00:00").split(":").map(Number);
+    
+    // Create Date object for appointment
+    const aptDate = new Date(yr, mn - 1, dy, hr, min);
+    
+    // Check if date is today or tomorrow
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const aptDay = new Date(yr, mn - 1, dy, 0, 0, 0, 0);
+    const isTodayOrTomorrow = aptDay.getTime() === today.getTime() || aptDay.getTime() === tomorrow.getTime();
+    
+    if (!isTodayOrTomorrow) return false;
+    
+    // check if passed by more than 24 hours
+    const diffMs = now.getTime() - aptDate.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    
+    return diffHours <= 24;
+  };
   
   // دالة لتنسيق التاريخ بشكل آمن
   const getFormattedDate = (d) => {
@@ -53,7 +109,14 @@ export default function Appointments() {
     return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-${String(target.getDate()).padStart(2, "0")}`;
   };
 
-  const [archiveDate, setArchiveDate] = useState(getFormattedDate(new Date(new Date().setDate(new Date().getDate() - 1)))); // أمس
+  const [archiveMode, setArchiveMode] = useState("month"); // "month" or "day"
+  const [archiveMonth, setArchiveMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [archiveDay, setArchiveDay] = useState(getFormattedDate(new Date()));
+  const [archiveStatusFilter, setArchiveStatusFilter] = useState("all");
+  const [archiveSearch, setArchiveSearch] = useState("");
   const [archiveApts, setArchiveApts] = useState([]);
 
   useEffect(() => {
@@ -62,15 +125,16 @@ export default function Appointments() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // جلب بيانات الأرشيف عند تغيير التاريخ أو فتح النافذة
+  // جلب بيانات الأرشيف عند تغيير الفلاتر أو فتح النافذة
   useEffect(() => {
     if (archiveModal) {
-      getAppointments(archiveDate).then(data => {
+      const queryDate = archiveMode === "month" ? archiveMonth : archiveDay;
+      getAppointments(queryDate).then(data => {
         const mapped = data.map(a => ({ ...a, status: mapStatus(a.status) }));
         setArchiveApts(mapped);
       }).catch(console.error);
     }
-  }, [archiveModal, archiveDate]);
+  }, [archiveModal, archiveMode, archiveMonth, archiveDay]);
 
   const reBook = (apt) => {
     const tomorrow = new Date();
@@ -83,8 +147,9 @@ export default function Appointments() {
       type: apt.type,
       duration_min: apt.duration_min,
       status: "booked",
-      notes: `تنبيه: مريض متابعة. الحالة السابقة: (${STATUS_CONFIG[apt.status]?.ar || apt.status}) في يوم ${apt.date}`,
-      whatsappRequestId: null
+      cost: "",
+      paid: "",
+      notes: `تنبيه: مريض متابعة. الحالة السابقة: (${STATUS_CONFIG[apt.status]?.ar || apt.status}) في يوم ${apt.date}`
     });
     setSearchTerm(apt.patient_name);
     setArchiveModal(false);
@@ -119,51 +184,7 @@ export default function Appointments() {
   useEffect(() => { load(); }, [year, month, selDay]);
   useEffect(() => { getPatients().then(setPatients).catch(console.error); }, []);
 
-  // Check for auto-open from BookingRequests (via Query Params or Hash Params)
-  useEffect(() => {
-    // محاولة قراءة البيانات من الرابط بكل الطرق الممكنة (عادي أو هاش)
-    const search = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : location.search;
-    const params = new URLSearchParams(search);
-    const autoOpen = params.get('autoOpen') === 'true';
-    
-    if (autoOpen) {
-      // تحديث قائمة المرضى أولاً للتأكد من وجود المريض الجديد
-      getPatients().then(updatedPatients => {
-        setPatients(updatedPatients);
-        
-        const patientName = params.get('patientName');
-        const date = params.get('date');
-        const whatsappRequestId = params.get('whatsappRequestId');
-        
-        console.log("--- FOUND REQUEST DATA (RELOADING PATIENTS) ---", { patientName, date });
 
-        // فتح النافذة
-        setModal(true);
-
-        // البحث عن المريض في القائمة المحدثة
-        const p = updatedPatients.find(p => 
-          p && `${p.first_name} ${p.last_name}`.toLowerCase().includes((patientName || "").toLowerCase())
-        );
-        
-        setForm(prev => ({ 
-          ...prev,
-          patient_id: p ? p.id : "", 
-          date: date || dateStr(), 
-          time: "16:00", 
-          type: "كشف", 
-          duration_min: 30, 
-          status: "booked", 
-          notes: "تم الحجز عبر الواتساب",
-          whatsappRequestId: whatsappRequestId 
-        }));
-        
-        setSearchTerm(patientName || "");
-      });
-      
-      // تنظيف الرابط
-      nav(location.pathname, { replace: true });
-    }
-  }, [location.search, window.location.hash, patients.length]);
 
   // Click outside search results to close
   useEffect(() => {
@@ -181,9 +202,28 @@ export default function Appointments() {
   const aptDays = new Set(allApts.filter(a => a.date && typeof a.date === 'string').map(a => parseInt(a.date.split("-")[2])));
 
   const openModal = () => {
-    setForm({ patient_id: "", date: dateStr(), time: "", type: "", duration_min: 30, status: "booked", notes: "", whatsappRequestId: null });
+    setForm({ patient_id: "", date: dateStr(), time: "", type: "", duration_min: 30, status: "booked", notes: "", cost: "", paid: "" });
     setSearchTerm("");
     setShowResults(false);
+    setEditingAptId(null);
+    setModal(true);
+  };
+
+  const openEditModal = (apt) => {
+    setForm({
+      patient_id: apt.patient_id,
+      date: apt.date,
+      time: apt.time,
+      type: apt.type || "",
+      duration_min: apt.duration_min || 30,
+      status: apt.status || "booked",
+      cost: "",
+      paid: "",
+      notes: apt.notes || ""
+    });
+    setSearchTerm(apt.patient_name || "");
+    setShowResults(false);
+    setEditingAptId(apt.id);
     setModal(true);
   };
 
@@ -202,7 +242,7 @@ export default function Appointments() {
       if (exists) {
         console.log("Patient exists:", exists);
         alert(t("المريض موجود بالفعل"));
-        setForm(f => ({ ...f, patient_id: exists.id }));
+        setForm(f => ({ ...f, patient_id: exists.id, type: exists.case_category || "" }));
         setSearchTerm(`${exists.first_name} ${exists.last_name}`.trim());
         setShowResults(false);
         setPatientSaving(false);
@@ -249,22 +289,14 @@ export default function Appointments() {
     setSaving(true);
     
     try {
-        if (form.whatsappRequestId) {
-            console.log("--- CONFIRMING WHATSAPP REQUEST ---", form.whatsappRequestId, "FOR PATIENT:", form.patient_id);
-            await confirmBookingRequest(form.whatsappRequestId, {
-                patient_id: form.patient_id, // إضافة رقم المريض هنا
-                date: form.date,
-                time: form.time,
-                type: form.type,
-                duration_min: form.duration_min,
-                notes: form.notes
-            });
+        if (editingAptId) {
+            await updateAppointment(editingAptId, { ...form, patient_id: parseInt(form.patient_id) });
         } else {
             await addAppointment({ ...form, patient_id: parseInt(form.patient_id) });
         }
-        
         setSaving(false);
         setModal(false);
+        setEditingAptId(null);
         load();
     } catch (e) {
         console.error("SAVE ERROR:", e);
@@ -291,15 +323,81 @@ export default function Appointments() {
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
+  const sendFollowUpWhatsApp = (apt) => {
+    const finalPhone = apt.patient_phone ? (apt.patient_phone.startsWith('964') ? apt.patient_phone : `964${apt.patient_phone.replace(/^0+/, '')}`) : '';
+    if (!finalPhone || finalPhone === '964') {
+      alert(t("رقم الهاتف غير صحيح"));
+      return;
+    }
+    
+    let template = `مرحباً {patient}، نود التواصل معكم بخصوص موعدكم يوم {date} الساعة {time}.`;
+    if (apt.status === "absent") {
+      template = `مرحباً {patient}، نلاحظ عدم تمكنكم من الحضور لموعدكم اليوم ({date}) الساعة {time}. هل ترغبون بجدولة موعد بديل؟`;
+    } else if (apt.status === "postponed") {
+      template = `مرحباً {patient}، لتذكيركم بجدولة موعد بديل لموعدكم المؤجل اليوم ({date}) الساعة {time}. يرجى التواصل معنا لتحديد وقت مناسب.`;
+    } else if (apt.status === "finished") {
+      template = `مرحباً {patient}، نتمنى أن تكونوا بخير بعد جلستكم العلاجية اليوم ({date}). شكراً لثقتكم بنا وبمجمع SmileCare الطبي.`;
+    }
+    
+    const message = template
+      .replace(/{patient}/g, apt.patient_name || "")
+      .replace(/{date}/g, apt.date || "")
+      .replace(/{time}/g, format12h(apt.time, lang) || "");
+      
+    window.open(`https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const getFilteredArchiveApts = () => {
+    return archiveApts
+      .filter(a => {
+        if (archiveStatusFilter !== "all" && a.status !== archiveStatusFilter) return false;
+        if (archiveSearch) {
+          const search = archiveSearch.toLowerCase();
+          const name = (a.patient_name || "").toLowerCase();
+          const phone = (a.patient_phone || "").toLowerCase();
+          if (!name.includes(search) && phone && !phone.includes(search)) return false;
+          if (!name.includes(search) && !phone) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const dateCompare = (b.date || "").localeCompare(a.date || "");
+        if (dateCompare !== 0) return dateCompare;
+        return (b.time || "").localeCompare(a.time || "");
+      });
+  };
+
+  const getStatusBadge = (status) => {
+    const config = STATUS_CONFIG[status] || { ar: status, color: "#fff", bg: "rgba(255,255,255,0.1)" };
+    return (
+      <span style={{
+        color: config.color,
+        background: config.bg,
+        padding: "4px 10px",
+        borderRadius: "20px",
+        fontSize: "11px",
+        fontWeight: "700",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4
+      }}>
+        <span>{config.icon}</span>
+        <span>{t(config.ar)}</span>
+      </span>
+    );
+  };
+
   return (
     <div className="animate-fade">
       {/* Header */}
       <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 16, marginBottom: 24 }}>
         <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{t("إدارة المواعيد")}</h2>
         <div style={{ display: "flex", gap: 8, width: isMobile ? "100%" : "auto", overflowX: isMobile ? "auto" : "visible", paddingBottom: isMobile ? 8 : 0 }}>
-          <button onClick={() => setDailyView(true)} className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(24, 95, 165, 0.1)", color: "var(--primary)", whiteSpace: "nowrap", flexShrink: 0 }}>
-            <span>🖥️</span> <span>{isMobile ? "" : t("عرض الجدول اليومي")}</span>
-          </button>
+          {canViewDailySchedule && (
+            <button onClick={() => setDailyView(true)} className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(24, 95, 165, 0.1)", color: "var(--primary)", whiteSpace: "nowrap", flexShrink: 0 }}>
+              <span>🖥️</span> <span>{isMobile ? "" : t("عرض الجدول اليومي")}</span>
+            </button>
+          )}
           <button onClick={async () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
@@ -319,7 +417,7 @@ export default function Appointments() {
         </div>
       </div>
       
-      {dailyView && (
+      {dailyView && canViewDailySchedule && (
         <div className="animate-fade" style={{ position: "absolute", inset: 0, background: "var(--bg-dark)", zIndex: 100, padding: isMobile ? 12 : 32, overflowY: "auto" }}>
            <div style={{ 
              display: "flex", 
@@ -342,7 +440,7 @@ export default function Appointments() {
                  <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
                  <div>{t("لا توجد مواعيد مسجلة لهذا اليوم")}</div>
                </div>
-             ) : [...apts].sort((a,b) => a.time.localeCompare(b.time)).map(v => (
+             ) : [...apts].filter(app => app.status !== "completed").sort((a,b) => (a.time || "").localeCompare(b.time || "")).map(v => (
                <div key={v.id} className="glass-panel animate-fade" style={{ 
                  padding: isMobile ? 16 : 24, 
                  display: "flex", 
@@ -406,6 +504,21 @@ export default function Appointments() {
                     </div>
 
                     <div style={{ display: "flex", gap: 8 }}>
+                       {canEditAppointment(v) && (
+                         <button 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             openEditModal(v);
+                           }}
+                           className="btn-ghost"
+                           style={{ 
+                             width: 36, height: 36, borderRadius: 10, border: "none", 
+                             background: "rgba(24, 95, 165, 0.15)", color: "var(--primary)",
+                             fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
+                           }}
+                           title={t("تعديل")}
+                         >✏️</button>
+                       )}
                        {["finished", "postponed", "absent"].includes(v.status) && (
                          <button 
                            onClick={(e) => {
@@ -597,6 +710,18 @@ export default function Appointments() {
                     </button>
                   )}
 
+                  {canEditAppointment(a) && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(a);
+                      }}
+                      className="btn-ghost"
+                      style={{ padding: "6px 10px", fontSize: 14, color: "var(--primary)" }}
+                      title={t("تعديل")}
+                    >✏️</button>
+                  )}
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -672,7 +797,9 @@ export default function Appointments() {
             overflowY: "auto",
             position: "relative"
           }}>
-            <h3 style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, marginBottom: 24, textAlign: "center" }}>{t("إضافة موعد جديد")}</h3>
+            <h3 style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, marginBottom: 24, textAlign: "center" }}>
+              {editingAptId ? t("تعديل الموعد") : t("إضافة موعد جديد")}
+            </h3>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
@@ -722,7 +849,7 @@ export default function Appointments() {
                         filteredPatients.map(p => (
                           <div key={p.id} 
                             onClick={() => {
-                              setForm({ ...form, patient_id: p.id });
+                              setForm({ ...form, patient_id: p.id, type: p.case_category || "" });
                               setSearchTerm(`${p.first_name} ${p.last_name}`);
                               setShowResults(false);
                             }}
@@ -755,8 +882,10 @@ export default function Appointments() {
                 </div>
                 <div>
                   <label style={lblStyle}>{t("الوقت *")}</label>
-                  <input type="time" className="glass-input" style={{ width: "100%" }}
-                    value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} />
+                  <TimePicker
+                    value={form.time}
+                    onChange={timeVal => setForm({ ...form, time: timeVal })}
+                  />
                 </div>
               </div>
 
@@ -825,70 +954,351 @@ export default function Appointments() {
         .mobile-mode .calendar-grid { gap: 1px !important; }
         .desktop-only { display: inline; }
         .mobile-mode .desktop-only { display: none; }
-      `}</style>
+      `}
+      {showPatientModal && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", overflowY: "auto", padding: "40px 10px" }}>
+          <div className="glass-panel animate-fade" style={{ width: "100%", maxWidth: 650, padding: 32, maxHeight: "95vh", overflowY: "auto" }}>
+            <h3 style={{ fontSize: 24, fontWeight: 700, marginBottom: 32, textAlign: "center" }}>{t("إضافة مريض جديد")}</h3>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div><label className="input-label">{t("الاسم الأول")}</label><input className="glass-input" style={{ width: "100%" }} value={patientForm.first_name} onChange={e => setPatientForm({ ...patientForm, first_name: e.target.value })} /></div>
+                <div><label className="input-label">{t("اسم العائلة")}</label><input className="glass-input" style={{ width: "100%" }} value={patientForm.last_name} onChange={e => setPatientForm({ ...patientForm, last_name: e.target.value })} /></div>
+              </div>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div><label className="input-label">{t("رقم الهاتف")}</label><input className="glass-input" style={{ width: "100%" }} value={patientForm.phone} onChange={e => setPatientForm({ ...patientForm, phone: e.target.value })} /></div>
+                <div><label className="input-label">{t("العمر")}</label><input type="number" className="glass-input" style={{ width: "100%" }} value={patientForm.age} onChange={e => setPatientForm({ ...patientForm, age: e.target.value })} /></div>
+              </div>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div><label className="input-label">{t("العنوان")}</label><input className="glass-input" style={{ width: "100%" }} value={patientForm.address} onChange={e => setPatientForm({ ...patientForm, address: e.target.value })} /></div>
+                <div>
+                  <label className="input-label">{t("الجنس")}</label>
+                  <select className="glass-input" style={{ width: "100%", height: 44 }} value={patientForm.gender} onChange={e => setPatientForm({ ...patientForm, gender: e.target.value })}>
+                    <option value="Male">{t("ذكر")}</option>
+                    <option value="Female">{t("أنثى")}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="input-label">{t("نوع الحالة")}</label>
+                <select className="glass-input" style={{ width: "100%", height: 44 }} value={patientForm.case_category} onChange={e => setPatientForm({ ...patientForm, case_category: e.target.value })}>
+                  <option value="">{t("اختر النوع...")}</option>
+                  {getDynamicList('treatment_types', [
+                    "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"
+                  ]).map(c => (
+                    <option key={c} value={c}>{t(c)}</option>
+                  ))}
+                </select>
+              </div>
+
+              
+
+              <div style={{ marginTop: 4 }}>
+                <label className="input-label">{t("ملاحظات طبية / عامة")}</label>
+                <textarea className="glass-input" style={{ width: "100%", minHeight: 80 }} value={patientForm.notes} onChange={e => setPatientForm({ ...patientForm, notes: e.target.value })} />
+              </div>
+
+              <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 40 }}>
+                <button onClick={() => setShowPatientModal(false)} className="btn-ghost" style={{ width: 120 }}>{t("إلغاء")}</button>
+                <button onClick={handleAddPatientSubmit} disabled={patientSaving} className="btn-primary" style={{ width: 200 }}>{patientSaving ? t("جاري الحفظ...") : t("إضافة المريض")}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+
+      </style>
       
       {archiveModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div className="glass-panel animate-fade" style={{ width: "100%", maxWidth: 1000, padding: 32, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? 10 : 20 }}>
+          <div className="glass-panel animate-fade" style={{ width: "100%", maxWidth: 1000, padding: isMobile ? 16 : 32, maxHeight: "95vh", display: "flex", flexDirection: "column" }}>
+            
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? 16 : 24 }}>
               <div>
-                <h3 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>📜 {t("سجل متابعة المواعيد")}</h3>
-                <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>تابع الحالات السابقة وأعد جدولة المواعيد الضائعة</p>
+                <h3 style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, margin: 0 }}>📜 {t("سجل متابعة المواعيد")}</h3>
+                <p style={{ color: "var(--text-muted)", fontSize: isMobile ? 11 : 13, marginTop: 4 }}>تابع الحالات السابقة وأعد جدولة المواعيد الضائعة</p>
               </div>
-              <button onClick={() => setArchiveModal(false)} className="btn-secondary" style={{ minWidth: 44, padding: 0 }}>✕</button>
+              <button onClick={() => setArchiveModal(false)} className="btn-secondary" style={{ minWidth: 40, height: 40, padding: 0, borderRadius: 10 }}>✕</button>
             </div>
 
-            <div style={{ background: "rgba(255,255,255,0.03)", padding: 16, borderRadius: 16, marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
-              <label style={{ fontSize: 14, fontWeight: 600 }}>إظهار حالات يوم:</label>
+            {/* Filter Control Bar */}
+            <div style={{ 
+              background: "rgba(255,255,255,0.02)", 
+              padding: isMobile ? 12 : 16, 
+              borderRadius: 16, 
+              marginBottom: 16, 
+              display: "flex", 
+              flexDirection: isMobile ? "column" : "row", 
+              alignItems: isMobile ? "stretch" : "center", 
+              gap: 12 
+            }}>
+              {/* Mode Toggle */}
+              <div style={{ display: "flex", gap: 6, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10, alignSelf: isMobile ? "stretch" : "center" }}>
+                <button 
+                  onClick={() => setArchiveMode("month")} 
+                  style={{
+                    flex: 1, padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "none", cursor: "pointer",
+                    background: archiveMode === "month" ? "var(--primary)" : "transparent",
+                    color: archiveMode === "month" ? "white" : "var(--text-muted)",
+                    fontWeight: 600, transition: "all 0.2s"
+                  }}
+                >
+                  {t("شهر كامل")}
+                </button>
+                <button 
+                  onClick={() => setArchiveMode("day")} 
+                  style={{
+                    flex: 1, padding: "6px 12px", borderRadius: 8, fontSize: 12, border: "none", cursor: "pointer",
+                    background: archiveMode === "day" ? "var(--primary)" : "transparent",
+                    color: archiveMode === "day" ? "white" : "var(--text-muted)",
+                    fontWeight: 600, transition: "all 0.2s"
+                  }}
+                >
+                  {t("يوم محدد")}
+                </button>
+              </div>
+
+              {/* Date Input */}
+              {archiveMode === "month" ? (
+                <input 
+                  type="month" 
+                  className="glass-input" 
+                  value={archiveMonth} 
+                  onChange={(e) => setArchiveMonth(e.target.value)}
+                  style={{ minHeight: 40, width: isMobile ? "100%" : 160 }}
+                />
+              ) : (
+                <input 
+                  type="date" 
+                  className="glass-input" 
+                  value={archiveDay} 
+                  onChange={(e) => setArchiveDay(e.target.value)}
+                  style={{ minHeight: 40, width: isMobile ? "100%" : 160 }}
+                />
+              )}
+
+              {/* Search input */}
               <input 
-                type="date" 
+                type="text" 
                 className="glass-input" 
-                value={archiveDate} 
-                onChange={(e) => setArchiveDate(e.target.value)}
-                style={{ minHeight: 40, width: 200 }}
+                placeholder={t("ابحث بالاسم أو الهاتف...")} 
+                value={archiveSearch} 
+                onChange={(e) => setArchiveSearch(e.target.value)}
+                style={{ minHeight: 40, width: isMobile ? "100%" : 220, marginLeft: lang === "ar" ? "auto" : 0, marginRight: lang === "en" ? "auto" : 0 }}
               />
-              <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
-                 {STATUS_ORDER.filter(s => ["absent", "postponed", "finished"].includes(s)).map(s => (
-                   <div key={s} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                      <span style={{ color: STATUS_CONFIG[s].color }}>{STATUS_CONFIG[s].icon}</span>
-                      <span>{STATUS_CONFIG[s].ar}:</span>
-                      <span style={{ fontWeight: 800 }}>{archiveApts.filter(a => a.status === s).length}</span>
-                   </div>
-                 ))}
-              </div>
             </div>
 
-            <div className="custom-scrollbar" style={{ flex: 1, overflowY: "auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 20 }}>
-              {["absent", "postponed", "booked", "finished"].map(statusKey => (
-                <div key={statusKey} className="glass-panel" style={{ padding: 16, background: "rgba(255,255,255,0.01)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 10 }}>
-                    <span style={{ fontSize: 18 }}>{STATUS_CONFIG[statusKey].icon}</span>
-                    <span style={{ fontWeight: 800, color: STATUS_CONFIG[statusKey].color }}>{STATUS_CONFIG[statusKey].ar}</span>
-                    <span style={{ background: STATUS_CONFIG[statusKey].bg, color: STATUS_CONFIG[statusKey].color, fontSize: 10, padding: "2px 8px", borderRadius: 10, marginLeft: "auto" }}>
-                      {archiveApts.filter(a => a.status === statusKey).length}
-                    </span>
-                  </div>
-                  
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {archiveApts.filter(a => a.status === statusKey).length === 0 ? (
-                      <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "10px 0" }}>لا يوجد مرضى</div>
-                    ) : archiveApts.filter(a => a.status === statusKey).map(apt => (
-                      <div key={apt.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: 10, borderRadius: 12 }}>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600 }}>{apt.patient_name}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{apt.type} - {apt.time}</div>
-                        </div>
-                        {statusKey !== "finished" && (
-                          <button onClick={() => reBook(apt)} className="btn-primary" style={{ minHeight: 32, padding: "0 12px", fontSize: 11 }}>
-                            موعد جديد
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            {/* Status Pills */}
+            <div style={{ 
+              display: "flex", 
+              flexWrap: "wrap", 
+              gap: 6, 
+              marginBottom: 16, 
+              borderBottom: "1px solid rgba(255,255,255,0.05)", 
+              paddingBottom: 12 
+            }}>
+              {[
+                { key: "all", label: "الكل", color: "#ccc", bg: "rgba(255,255,255,0.05)" },
+                ...STATUS_ORDER.map(s => ({
+                  key: s,
+                  label: STATUS_CONFIG[s].ar,
+                  color: STATUS_CONFIG[s].color,
+                  bg: STATUS_CONFIG[s].bg,
+                  icon: STATUS_CONFIG[s].icon
+                }))
+              ].map(item => {
+                const count = item.key === "all" 
+                  ? archiveApts.length 
+                  : archiveApts.filter(a => a.status === item.key).length;
+                const isActive = archiveStatusFilter === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setArchiveStatusFilter(item.key)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 11,
+                      border: isActive ? `1px solid ${item.color}` : "1px solid rgba(255,255,255,0.04)",
+                      background: isActive ? item.bg : "rgba(255,255,255,0.01)",
+                      color: isActive ? "#fff" : "var(--text-muted)",
+                      cursor: "pointer", fontWeight: isActive ? 700 : 500, transition: "all 0.15s ease"
+                    }}
+                  >
+                    {item.icon && <span>{item.icon}</span>}
+                    <span>{t(item.label)}</span>
+                    <span style={{ 
+                      fontSize: 9, background: "rgba(0,0,0,0.3)", padding: "1px 6px", borderRadius: 10,
+                      color: isActive ? item.color : "var(--text-dim)", fontWeight: 700
+                    }}>{count}</span>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* List / Table Area */}
+            {(() => {
+              const list = getFilteredArchiveApts();
+              
+              if (isMobile) {
+                return (
+                  <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 }} className="custom-scrollbar">
+                    {list.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
+                        <div style={{ fontSize: 30, marginBottom: 12 }}>📭</div>
+                        <div style={{ fontSize: 13 }}>{t("لا توجد مواعيد")}</div>
+                      </div>
+                    ) : (
+                      list.map(apt => (
+                        <div 
+                          key={apt.id} 
+                          className="glass-panel" 
+                          style={{ 
+                            padding: 14, 
+                            background: "rgba(255,255,255,0.01)", 
+                            border: "1px solid rgba(255,255,255,0.05)",
+                            borderRadius: 14 
+                          }}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: 14 }}>{apt.patient_name}</div>
+                              {apt.patient_phone && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>📞 {apt.patient_phone}</div>}
+                            </div>
+                            <div>{getStatusBadge(apt.status)}</div>
+                          </div>
+
+                          <div style={{ 
+                            display: "flex", 
+                            flexWrap: "wrap", 
+                            gap: 8, 
+                            color: "var(--text-dim)", 
+                            fontSize: 11, 
+                            margin: "8px 0", 
+                            padding: "6px 0", 
+                            borderTop: "1px solid rgba(255,255,255,0.03)", 
+                            borderBottom: "1px solid rgba(255,255,255,0.03)" 
+                          }}>
+                            <span>📅 {apt.date}</span>
+                            <span>⏰ {format12h(apt.time, lang)}</span>
+                            <span>🦷 {t(apt.type) || t("فحص عام")}</span>
+                          </div>
+
+                          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                            {apt.status !== "finished" && (
+                              <button 
+                                onClick={() => reBook(apt)} 
+                                className="btn-primary" 
+                                style={{ flex: 1, minHeight: 34, fontSize: 11, fontWeight: 700, padding: 0 }}
+                              >
+                                {t("موعد جديد")}
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => sendFollowUpWhatsApp(apt)} 
+                              className="btn-ghost" 
+                              style={{ 
+                                flex: 1, 
+                                minHeight: 34, 
+                                fontSize: 11, 
+                                background: "rgba(34, 197, 94, 0.1)", 
+                                color: "#22c55e",
+                                border: "1px solid rgba(34, 197, 94, 0.2)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 4,
+                                padding: 0
+                              }}
+                            >
+                              <span>💬</span> <span>{t("واتساب")}</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                );
+              }
+
+              // Desktop view (Table)
+              return (
+                <div style={{ flex: 1, overflowY: "auto" }} className="custom-scrollbar">
+                  {list.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-muted)" }}>
+                      <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+                      <div>{t("لا توجد مواعيد تطابق البحث أو الفلترة")}</div>
+                    </div>
+                  ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: lang === "ar" ? "right" : "left" }}>
+                      <thead>
+                        <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", color: "var(--text-muted)", fontSize: 13 }}>
+                          <th style={{ padding: "12px 8px" }}>{t("اليوم والتاريخ")}</th>
+                          <th style={{ padding: "12px 8px" }}>{t("الوقت")}</th>
+                          <th style={{ padding: "12px 8px" }}>{t("المريض")}</th>
+                          <th style={{ padding: "12px 8px" }}>{t("الإجراء")}</th>
+                          <th style={{ padding: "12px 8px" }}>{t("الحالة")}</th>
+                          <th style={{ padding: "12px 8px", textAlign: "center" }}>{t("إجراء")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {list.map(apt => (
+                          <tr 
+                            key={apt.id} 
+                            style={{ 
+                              borderBottom: "1px solid rgba(255,255,255,0.04)", 
+                              fontSize: 14, 
+                              transition: "background 0.2s" 
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.01)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                          >
+                            <td style={{ padding: "14px 8px", fontWeight: 600 }}>{apt.date}</td>
+                            <td style={{ padding: "14px 8px", color: "var(--accent)" }}>{format12h(apt.time, lang)}</td>
+                            <td style={{ padding: "14px 8px" }}>
+                              <div style={{ fontWeight: 600 }}>{apt.patient_name}</div>
+                              {apt.patient_phone && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>📞 {apt.patient_phone}</div>}
+                            </td>
+                            <td style={{ padding: "14px 8px", fontSize: 13 }}>{t(apt.type) || t("فحص عام")}</td>
+                            <td style={{ padding: "14px 8px" }}>{getStatusBadge(apt.status)}</td>
+                            <td style={{ padding: "14px 8px" }}>
+                              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                                {apt.status !== "finished" && (
+                                  <button 
+                                    onClick={() => reBook(apt)} 
+                                    className="btn-primary" 
+                                    style={{ minHeight: 32, padding: "0 12px", fontSize: 11, fontWeight: 700 }}
+                                  >
+                                    {t("موعد جديد")}
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => sendFollowUpWhatsApp(apt)} 
+                                  className="btn-ghost" 
+                                  style={{ 
+                                    minHeight: 32, 
+                                    padding: "0 12px", 
+                                    fontSize: 11, 
+                                    background: "rgba(34, 197, 94, 0.1)", 
+                                    color: "#22c55e",
+                                    border: "1px solid rgba(34, 197, 94, 0.2)"
+                                  }}
+                                >
+                                  💬 {t("واتساب")}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+            })()}
+
           </div>
         </div>
       )}

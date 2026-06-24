@@ -23,8 +23,12 @@ def get_appointments():
         query += " WHERE a.patient_id = ?"
         params.append(pid)
     elif date:
-        query += " WHERE a.date = ?"
-        params.append(date)
+        if len(date) == 7: # YYYY-MM
+            query += " WHERE a.date LIKE ?"
+            params.append(f"{date}%")
+        else:
+            query += " WHERE a.date = ?"
+            params.append(date)
         
     query += " ORDER BY a.date DESC, a.time DESC"
     rows = g.db.execute(query, params).fetchall()
@@ -53,6 +57,34 @@ def add_appointment():
          d.get('notes', ''),
          d.get('image_url'))
     )
+    
+    # Financials directly from Central Page
+    cost = float(d.get('cost') or 0)
+    paid = float(d.get('paid') or 0)
+    
+    if cost > 0:
+        p_sys = g.db.execute("SELECT total_agreed_price FROM patients WHERE id=?", (p_id,)).fetchone()
+        if p_sys:
+            new_total = float(p_sys['total_agreed_price'] or 0) + cost
+            g.db.execute("UPDATE patients SET total_agreed_price = ? WHERE id=?", (new_total, p_id))
+            g.db.execute(
+                "INSERT INTO treatment_logs (patient_id, date, tooth_number, treatment, cost, is_prescription, notes) VALUES (?, ?, ?, ?, 0, 0, ?)",
+                (p_id, d.get('date'), '', d.get('type', 'جلسة'), 'أضيف من لوحة المواعيد')
+            )
+        
+    if paid > 0:
+        # Also need to recalculate patient debt via _recalc_patient_debt from invoices logic, but the DB triggers handle basic debt.
+        # Wait, the DB trigger on invoices handles patient debt updates automatically!
+        g.db.execute(
+            "INSERT INTO invoices (patient_id, total_amount, paid_amount, payment_method, date, notes) VALUES (?, 0, ?, ?, ?, ?)",
+            (p_id, paid, 'cash', d.get('date'), 'دفعة من لوحة المواعيد')
+        )
+        # Recalculate debt
+        try:
+            from backend.routes.invoices import _recalc_patient_debt
+            _recalc_patient_debt(p_id)
+        except Exception as e:
+            print("Failed to recalc debt manually:", e)
     
     # Audit Log - Safe way
     try:
@@ -140,72 +172,5 @@ def update_appointment(id):
     except Exception as e:
         print(f"--- APPOINTMENT_UPDATE_LOG_ERROR: {str(e)} ---")
         
-    g.db.commit()
-    return jsonify({"ok": True})
-
-@appointments_bp.route("/requests", methods=["GET"])
-@db_required
-def get_appointment_requests():
-    rows = g.db.execute("SELECT * FROM appointment_requests WHERE status = 'pending' ORDER BY created_at DESC").fetchall()
-    return jsonify([dict(r) for r in rows])
-
-@appointments_bp.route("/requests/<int:id>/confirm", methods=["POST"])
-@db_required
-def confirm_appointment_request(id):
-    d = request.json
-    req_id = id
-    
-    # Get request data
-    req = g.db.execute("SELECT * FROM appointment_requests WHERE id = ?", (id,)).fetchone()
-    if not req: return jsonify({"error": "Request not found"}), 404
-
-    # Search for patient: prioritize body patient_id, then phone search
-    p_id = d.get('patient_id')
-    if not p_id:
-        p = g.db.execute("SELECT id FROM patients WHERE phone = ?", (req['phone'],)).fetchone()
-        p_id = p['id'] if p else None
-    
-    # Create the actual appointment
-    g.db.execute(
-        "INSERT INTO appointments (patient_id, patient_name, date, time, type, duration_min, status, notes) VALUES (?,?,?,?,?,?,?,?)",
-        (p_id, req['patient_name'], d.get('date'), d.get('time'), 
-         d.get('type', 'كشف'), d.get('duration_min', 30), 'booked', d.get('notes', req['notes']))
-    )
-    
-    # Mark request as confirmed
-    g.db.execute("UPDATE appointment_requests SET status = 'confirmed' WHERE id = ?", (id,))
-    
-    # Send WhatsApp Confirmation
-    try:
-        clinic_info = g.db.execute("SELECT value FROM settings WHERE key = 'clinic_name'").fetchone()
-        clinic_name = clinic_info['value'] if clinic_info else "العيادة"
-        
-        # تنسيق الوقت ليكون جميلاً في الرسالة
-        msg = (
-            f"✅ تم تأكيد حجزك بنجاح في {clinic_name}\n\n"
-            f"👤 الاسم: {req['patient_name']}\n"
-            f"📅 التاريخ: {d.get('date')}\n"
-            f"⏰ الوقت: {d.get('time')}\n"
-            f"🦷 الخدمة: {d.get('type', 'كشف')}\n\n"
-            "نحن بانتظارك، يرجى الحضور قبل الموعد بـ 10 دقائق."
-        )
-        
-        import requests
-        whatsapp_url = os.getenv("WHATSAPP_SERVICE_URL", "http://localhost:3001")
-        requests.post(f"{whatsapp_url.rstrip('/')}/send", json={
-            "clinicId": g.clinic_username,
-            "to": req['phone'],
-            "message": msg
-        })
-    except Exception as e:
-        print(f"WhatsApp Confirmation Error: {e}")
-
-    g.db.commit()
-    return jsonify({"ok": True})
-
-@appointments_bp.route("/requests/<int:id>", methods=["DELETE"])
-@db_required
-def delete_appointment_request(id):
-    g.db.execute("DELETE FROM appointment_requests WHERE id = ?", (id,))
     g.db.commit()
     return jsonify({"ok": True})

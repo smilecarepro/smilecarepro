@@ -3,25 +3,20 @@ import { NavLink } from "react-router-dom";
 import { useLanguage } from "../LanguageContext";
 import { useAuth } from "../AuthContext";
 import { useSettings } from "../SettingsContext";
+import { useSession } from "../SessionContext";
 import { BASE } from "../api";
 
 const links = [
   { to: "/", label: "الرئيسية", icon: "🏠", mobile: true },
   { to: "/patients", label: "المرضى", icon: "👥", mobile: true },
   { to: "/appointments", label: "المواعيد", icon: "📅", mobile: true },
-  { to: "/booking-requests", label: "طلبات الحجز", icon: "📩", mobile: true },
   { to: "/invoices", label: "الفواتير", icon: "💰", mobile: true },
   { to: "/prescriptions", label: "الوصفات", icon: "📝" },
   { to: "/messages", label: "المراسلات", icon: "💬", mobile: true },
-  {
-    label: "المزيد", icon: "📂", isDropdown: true, children: [
-      { to: "/reports", label: "التقارير", icon: "📈" },
-      { to: "/drugs", label: "الأدوية", icon: "💊" },
-      { to: "/inventory", label: "المخزن", icon: "📦" },
-      { to: "/expenses", label: "المصاريف", icon: "📉" },
-      { to: "/purchases", label: "المشتريات", icon: "🛒" },
-    ]
-  },
+  { to: "/reports", label: "التقارير", icon: "📈" },
+  { to: "/drugs", label: "الأدوية", icon: "💊" },
+  { to: "/inventory", label: "المخزن", icon: "📦" },
+  { to: "/expenses", label: "المصاريف", icon: "📉" },
   { to: "/settings", label: "الإعدادات", icon: "⚙️" },
   { to: "/admin", label: "إدارة النظام", icon: "🛡️", adminOnly: true },
 ];
@@ -41,7 +36,6 @@ const centerLinks = [
   { to: "/center/announcements", label: "إعلانات النظام", icon: "📢", mobile: true },
   { to: "/center/audit-log", label: "سجل العمليات", icon: "🔎" },
   { to: "/inventory", label: "المخزن المركزي", icon: "📦", mobile: true },
-  { to: "/purchases", label: "المشتريات المركزية", icon: "🛒", mobile: true },
   { to: "/center/expenses", label: "المصاريف العامة", icon: "📉" },
   { to: "/messages", label: "المراسلات", icon: "💬", mobile: true },
   { to: "/settings", label: "الإعدادات", icon: "⚙️" },
@@ -53,6 +47,7 @@ export default function Layout({ children }) {
   const { t, toggleLanguage, lang } = useLanguage();
   const { logout, user, switchActiveDoctor } = useAuth();
   const { settings } = useSettings();
+  const { activeSession, clearSession } = useSession() || {};
   const [showMore, setShowMore] = useState(false);
   const [desktopMoreOpen, setDesktopMoreOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -73,18 +68,13 @@ export default function Layout({ children }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const [requestCount, setRequestCount] = useState(0);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const api = await import("../api");
-        const [reqData, unreadData] = await Promise.all([
-          api.getBookingRequests(),
-          api.getUnreadMessagesCount()
-        ]);
-        if (Array.isArray(reqData)) setRequestCount(reqData.filter(r => r.status === 'pending').length);
+        const unreadData = await api.getUnreadMessagesCount();
         if (unreadData && typeof unreadData.count === 'number') setUnreadMsgCount(unreadData.count);
       } catch (e) {
         console.error("Layout fetchData error:", e);
@@ -107,10 +97,13 @@ export default function Layout({ children }) {
       const filteredChildren = l.children.filter(child => {
         if (child.adminOnly && user?.role !== "admin") return false;
 
-        // Hide Purchases/Reports from Center Doctors/Secretaries
         const restrictedForCenterStaff = ["المشتريات", "التقارير"];
         if (user?.account_type === 'single_doctor' && user?.center_id && restrictedForCenterStaff.includes(child.label)) return false;
-        if (user?.role === "secretary" && restrictedForCenterStaff.includes(child.label)) return false;
+        
+        if (user?.role === "secretary") {
+          if (child.label === "التقارير" && (!settings?.sec_perm_reports || settings?.sec_perm_reports === "none")) return false;
+          if (child.label === "المشتريات") return false;
+        }
 
         return true;
       });
@@ -125,7 +118,15 @@ export default function Layout({ children }) {
 
     const restrictedForCenterStaff = ["المشتريات", "التقارير"];
     if (user?.account_type === 'single_doctor' && user?.center_id && restrictedForCenterStaff.includes(l.label)) return false;
-    if (user?.role === "secretary" && restrictedForCenterStaff.includes(l.label)) return false;
+
+    if (user?.role === "secretary") {
+      if (l.label === "التقارير" && (!settings?.sec_perm_reports || settings?.sec_perm_reports === "none")) return false;
+      if (l.label === "الفواتير" && settings?.sec_perm_invoices === "none") return false;
+      if (l.label === "المصاريف" && settings?.sec_perm_expenses === "none") return false;
+      if (l.label === "المخزن" && settings?.sec_perm_inventory === "none") return false;
+      if (l.label === "المراسلات" && settings?.sec_perm_messages === "0") return false;
+      if (l.label === "الأدوية") return false;
+    }
 
     if (l.isDropdown && l.children.length === 0) return false;
     return true;
@@ -203,9 +204,6 @@ export default function Layout({ children }) {
                 >
                   <span style={{ fontSize: 18 }}>{l.icon}</span>
                   {t(l.label)}
-                  {l.label === "طلبات الحجز" && requestCount > 0 && (
-                    <span style={badgeStyle}>{requestCount}</span>
-                  )}
                   {l.label === "المراسلات" && unreadMsgCount > 0 && (
                     <span style={badgeStyle}>{unreadMsgCount}</span>
                   )}
@@ -330,20 +328,45 @@ export default function Layout({ children }) {
             )}
 
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
-              {!isMobile && (
-                <button onClick={() => setIsMobile(true)} className="glass-panel" style={{
-                  width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 16, border: "1px solid var(--glass-border)",
-                  background: "hsla(0, 0%, 100%, 0.03)", color: "white",
-                  cursor: "pointer", borderRadius: 12, transition: "var(--transition)"
-                }}>📱</button>
+              {activeSession && (
+                <button 
+                  onClick={() => {
+                    if (window.confirm(lang === "ar" ? "هل أنت متأكد من إنهاء جلسة العلاج الحالية والرجوع للجدول اليومي؟" : "Are you sure you want to end the current treatment session and return to the daily schedule?")) {
+                      clearSession();
+                      window.location.hash = "#/home";
+                    }
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    height: 40,
+                    padding: isMobile ? "0 12px" : "0 16px",
+                    borderRadius: "12px",
+                    fontSize: "13px",
+                    fontWeight: "750",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease-in-out",
+                    border: "1px solid rgba(239, 68, 68, 0.4)",
+                    background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                    color: "white",
+                    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)"
+                  }}
+                >
+                  <span>✕</span>
+                  {!isMobile && <span>{lang === "ar" ? "إنهاء الجلسة" : "End Session"}</span>}
+                </button>
               )}
 
-              <button onClick={logout} className="glass-panel" style={{
-                width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 18, border: "1px solid hsla(0, 85%, 60%, 0.2)",
-                background: "hsla(0, 85%, 60%, 0.05)", cursor: "pointer", borderRadius: 12, color: "#ff4444", transition: "var(--transition)"
-              }}>🚪</button>
+              <button onClick={logout} className="logout-btn" style={{ padding: isMobile ? "0" : "0 16px", width: isMobile ? 40 : "auto" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: lang === "ar" ? "rotate(180deg)" : "none" }}>
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                {!isMobile && <span>{t("تسجيل الخروج")}</span>}
+              </button>
             </div>
           </header>
 
@@ -411,14 +434,6 @@ export default function Layout({ children }) {
               >
                 <span className="nav-icon">{l.icon}</span>
                 <span className="nav-label">{t(l.label)}</span>
-                {l.label === "طلبات الحجز" && requestCount > 0 && (
-                  <span style={{
-                    position: "absolute", right: "20%", top: 5,
-                    background: "#ff4444", color: "white", borderRadius: "50%",
-                    minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 9, fontWeight: 800, border: "2px solid #050810"
-                  }}>{requestCount}</span>
-                )}
               </NavLink>
             ))}
             <button
@@ -537,6 +552,32 @@ export default function Layout({ children }) {
         .mobile-nav .nav-link.active .nav-icon {
           transform: translateY(-6px) scale(1.15);
           filter: drop-shadow(0 4px 12px var(--primary-glow));
+        }
+
+        .logout-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          height: 40px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease-in-out;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          background: rgba(239, 68, 68, 0.05);
+          color: #ff4444;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.05);
+        }
+        .logout-btn:hover {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.4);
+          box-shadow: 0 6px 16px rgba(239, 68, 68, 0.15);
+          transform: translateY(-1px);
+        }
+        .logout-btn:active {
+          transform: translateY(1px);
         }
       `}</style>
     </div>

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getPatient, saveTeeth, addInvoice, uploadPrescription, updatePatient, addTreatment, deleteTreatment, createSmartPrescription, addAppointment, updateAppointment, getPrescriptionPDFUrl, getPatientReportPDFUrl, BASE } from "../api";
+import { getPatient, saveTeeth, addInvoice, uploadPrescription, updatePatient, addTreatment, deleteTreatment, createSmartPrescription, addAppointment, updateAppointment, getPrescriptionPDFUrl, getPatientReportPDFUrl, BASE, deletePatient, updateTreatment, updatePrescription } from "../api";
+import { useAuth } from "../AuthContext";
 import { useLanguage } from "../LanguageContext";
 import { createPortal } from "react-dom";
 import { useSettings } from "../SettingsContext";
+import { useSession } from "../SessionContext";
 // CasePresentation removed as unused
 import PrescriptionModal from "../components/PrescriptionModal";
 import TeethMap from "../components/TeethMap";
@@ -11,6 +13,19 @@ import TeethMap3D from "../components/TeethMap3D";
 import AdvancedMap from "./AdvancedMap";
 
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+
+const format12h = (timeStr, lang = "ar") => {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const isPm = hours >= 12;
+  const ampm = isPm ? (lang === "ar" ? "م" : "PM") : (lang === "ar" ? "ص" : "AM");
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${hours}:${minutes} ${ampm}`;
+};
 
 const ReportRow = ({ label, val, unit, color, bold }) => (
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -27,8 +42,17 @@ export default function PatientProfile() {
   const location = useLocation();
   const { lang, t } = useLanguage();
   const { settings, getDynamicList } = useSettings();
+  const { user } = useAuth();
+  const { startSession } = useSession() || {};
+  const isDoctor = user?.role !== "secretary";
+  const canEditPatient = user?.role !== "secretary" || settings?.sec_perm_patients !== "view_only";
+  const showMedicalTabs = user?.role !== "secretary" || settings?.sec_perm_medical_history === "1";
+  const showFinancials = user?.role !== "secretary" || settings?.sec_perm_invoices !== "none";
+  const canAddPayment = user?.role !== "secretary" || settings?.sec_perm_invoices === "today_add" || settings?.sec_perm_invoices === "all_add";
   const [patient, setPatient] = useState(null);
   const [tab, setTab] = useState(null);
+  const [trashModal, setTrashModal] = useState(false);
+  const [trashLoading, setTrashLoading] = useState(false);
   const [activePage, setActivePage] = useState("info"); // Default page
   const [isOngoing, setIsOngoing] = useState(true);
   const [showTimeline, setShowTimeline] = useState(false);
@@ -55,6 +79,36 @@ export default function PatientProfile() {
   const [confirmModal, setConfirmModal] = useState({ show: false, title: "", message: "", onConfirm: null });
   const [priceModal, setPriceModal] = useState({ show: false, val: "" });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  const [editTreatment, setEditTreatment] = useState(null);
+  const [editTreatmentForm, setEditTreatmentForm] = useState({ tooth_number: "", procedure: "", notes: "", cost: "", date: "" });
+  const [editingPrescription, setEditingPrescription] = useState(null);
+
+  const canEditPrescription = (pr) => {
+    if (!pr || !pr.date) return false;
+    const now = new Date();
+    const [yr, mn, dy] = pr.date.split("-").map(Number);
+    const prDate = new Date(yr, mn - 1, dy, 0, 0, 0, 0);
+    const diffMs = now.getTime() - prDate.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffHours <= 48;
+  };
+
+  const saveEditTreatment = async () => {
+    const res = await updateTreatment(editTreatment.id, {
+      tooth_number: editTreatmentForm.tooth_number,
+      procedure: editTreatmentForm.procedure,
+      notes: editTreatmentForm.notes,
+      cost: parseFloat(editTreatmentForm.cost) || 0,
+      date: editTreatmentForm.date
+    });
+    if (res.ok) {
+      setEditTreatment(null);
+      load();
+    } else {
+      alert("فشل تعديل الإجراء");
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -89,6 +143,12 @@ export default function PatientProfile() {
   };
 
   useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    if (!showMedicalTabs && (activePage === "treatment" || activePage === "teeth")) {
+      setActivePage("info");
+    }
+  }, [activePage, showMedicalTabs]);
 
   useEffect(() => {
     const handleOpenAdd = (e) => {
@@ -161,13 +221,13 @@ export default function PatientProfile() {
               </tr>
             </thead>
             <tbody>
-              ${payments.map(p => `
+              \${displayedPayments.map(p => \`
                 <tr>
-                  <td>${p.date}</td>
-                  <td style="font-weight: 700;">${(parseFloat(p.paid) || parseFloat(p.paid_amount) || 0).toLocaleString()} د.ع</td>
-                  <td>${p.notes || '-'}</td>
+                  <td>\${p.date}</td>
+                  <td style="font-weight: 700;">\${(parseFloat(p.paid) || parseFloat(p.paid_amount) || 0).toLocaleString()} د.ع</td>
+                  <td>\${p.notes || '-'}</td>
                 </tr>
-              `).join('')}
+              \`).join('')}
             </tbody>
           </table>
 
@@ -267,28 +327,13 @@ export default function PatientProfile() {
       return alert(t("⚠️ عذراً، يجب أن يكون المبلغ المدفوع من مضاعفات الـ 500 دينار عراقي."));
     }
 
-    const isSessions = patient?.payment_system === 'sessions';
-    let sessionCost = 0;
-
-    if (isSessions) {
-      sessionCost = parseFloat(payModal.session_cost) || 0;
-      if (sessionCost > 0 && sessionCost % 500 !== 0) {
-        return alert(t("⚠️ عذراً، يجب أن تكون تكلفة الجلسة من مضاعفات الـ 500 دينار عراقي."));
-      }
-      
-      const previousDebt = totalSessionCosts - totalPaid;
-      if (paidAmt > previousDebt + sessionCost) {
-        return alert(t("لا يمكن إدخال مبلغ يتجاوز قيمة الدين المتبقي زائد تكلفة الجلسة."));
-      }
-    } else {
-      if (paidAmt > remaining) {
-        return alert(t("لا يمكن إدخال مبلغ يتجاوز قيمة الدين المتبقي."));
-      }
+    if (paidAmt > remaining) {
+      return alert(t("لا يمكن إدخال مبلغ يتجاوز قيمة الدين المتبقي."));
     }
 
     await addInvoice({ 
       patient_id: parseInt(id), 
-      total_amount: isSessions ? sessionCost : 0, 
+      total_amount: 0, 
       paid_amount: paidAmt,
       payment_method: payModal.method,
       notes: payModal.notes,
@@ -299,9 +344,9 @@ export default function PatientProfile() {
     printReceiptIframe({
       date: localDate(),
       patient_name: patient.first_name + " " + patient.last_name,
-      total_price: isSessions ? totalSessionCosts + sessionCost : agreedPrice,
+      total_price: agreedPrice,
       paid: paidAmt,
-      patient_debt: remaining - (isSessions ? 0 : paidAmt) // This is a bit tricky, load() will update the real remaining
+      patient_debt: remaining - paidAmt // This is a bit tricky, load() will update the real remaining
     });
 
     setPayModal({ show: false, amount: "", session_cost: "", method: "Cash", notes: "" });
@@ -312,11 +357,65 @@ export default function PatientProfile() {
 
   const totalPaid = payments.reduce((acc, curr) => acc + (parseFloat(curr.paid) || parseFloat(curr.paid_amount) || 0), 0);
   const totalSessionCosts = payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || parseFloat(curr.total_amount) || 0), 0);
-  const isSessions = patient?.payment_system === 'sessions';
-  const remaining = isSessions ? (totalSessionCosts - totalPaid) : ((parseFloat(agreedPrice) || 0) - totalPaid);
+  const remaining = (parseFloat(agreedPrice) || 0) - totalPaid;
+
+  const filterPaymentsOnlyToday = user?.role === "secretary" && (settings?.sec_perm_invoices === "today" || settings?.sec_perm_invoices === "today_add");
+  const displayedPayments = filterPaymentsOnlyToday
+    ? payments.filter(p => p.date === localDate())
+    : payments;
 
   return (
     <div className="animate-fade" style={{ padding: isMobile ? 0 : 20 }}>
+
+      {/* ── Trash Confirmation Modal ── */}
+      {trashModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+          backdropFilter: "blur(6px)", zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20
+        }}>
+          <div className="glass-panel" style={{ padding: 32, maxWidth: 420, width: "100%", borderRadius: 20, textAlign: "center" }}>
+            <div style={{ fontSize: 52, marginBottom: 16 }}>🗑️</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{t("نقل المريض لسلة المحذوفات")}</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: 14, lineHeight: 1.8, marginBottom: 24 }}>
+              {t("سيتم نقل ملف المريض")} <strong>{patient?.first_name} {patient?.last_name}</strong> {t("إلى سلة المحذوفات.")}<br />
+              {t("يمكنك استرجاعه من الإعدادات خلال")} <strong>30 {t("يوماً")}</strong>
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                className="btn-ghost"
+                style={{ flex: 1 }}
+                onClick={() => setTrashModal(false)}
+                disabled={trashLoading}
+              >
+                {t("إلغاء")}
+              </button>
+              <button
+                style={{
+                  flex: 1, background: "#ef4444", color: "white", border: "none",
+                  borderRadius: 12, padding: "12px", fontWeight: 700,
+                  cursor: trashLoading ? "not-allowed" : "pointer",
+                  opacity: trashLoading ? 0.6 : 1, fontSize: 14
+                }}
+                onClick={async () => {
+                  setTrashLoading(true);
+                  try {
+                    await deletePatient(id);
+                    nav("/patients");
+                  } catch (e) {
+                    alert(t("حدث خطأ أثناء الحذف"));
+                    setTrashLoading(false);
+                  }
+                }}
+                disabled={trashLoading}
+              >
+                {trashLoading ? "..." : `🗑️ ${t("نقل للسلة")}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .profile-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; }
         .form-section { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
@@ -383,17 +482,39 @@ export default function PatientProfile() {
         }
       `}</style>
       
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <div style={{ 
-          background: isOngoing ? "#10b981" : "#64748b", 
-          padding: isMobile ? "6px 16px" : "8px 24px", 
-          borderRadius: 30, display: "flex", alignItems: "center", gap: 10, cursor: "pointer" 
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        {/* ── Trash button — Doctor only ── */}
+        {isDoctor && (
+          <button
+            onClick={() => setTrashModal(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(239,68,68,0.1)", color: "#ef4444",
+              border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10,
+              padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 600,
+              transition: "all 0.2s"
+            }}
+            onMouseOver={e => e.currentTarget.style.background = "rgba(239,68,68,0.2)"}
+            onMouseOut={e => e.currentTarget.style.background = "rgba(239,68,68,0.1)"}
+          >
+            🗑️ {t("نقل لسلة المحذوفات")}
+          </button>
+        )}
+
+        {/* ── Ongoing / Done toggle ── */}
+        <div style={{
+          background: isOngoing ? "#10b981" : "#64748b",
+          padding: isMobile ? "6px 16px" : "8px 24px",
+          borderRadius: 30, display: "flex", alignItems: "center", gap: 10,
+          cursor: canEditPatient ? "pointer" : "default",
+          marginRight: isDoctor ? 0 : "auto"
         }} onClick={() => {
+          if (!canEditPatient) return;
           const next = !isOngoing;
           setIsOngoing(next);
           saveProfile({ is_ongoing: next ? 1 : 0 });
         }}>
-          <span style={{ fontWeight: 700, color: "white", fontSize: isMobile ? 12 : 14 }}>{isOngoing ? t("Ongoing Case") : t("Closed Case")}</span>
+          <span style={{ fontWeight: 700, color: "white", fontSize: isMobile ? 12 : 14 }}>{isOngoing ? t("مستمر") : t("منتهي")}</span>
           <div style={{ width: isMobile ? 18 : 24, height: isMobile ? 18 : 24, borderRadius: "50%", background: "white" }} />
         </div>
       </div>
@@ -405,10 +526,10 @@ export default function PatientProfile() {
       }}>
         {[
           { id: "info", label: t("بيانات المريض والمالية"), icon: "👤" },
-          { id: "treatment", label: t("العلاجات والوصفات"), icon: "📋" },
-          { id: "teeth", label: t("خريطة الأسنان"), icon: "🦷" },
+          showMedicalTabs && { id: "treatment", label: t("العلاجات والوصفات"), icon: "📋" },
+          showMedicalTabs && { id: "teeth", label: t("خريطة الأسنان"), icon: "🦷" },
           { id: "appointments", label: t("المواعيد"), icon: "📅" }
-        ].map(p => (
+        ].filter(Boolean).map(p => (
           <button 
             key={p.id}
             onClick={() => setActivePage(p.id)}
@@ -439,7 +560,7 @@ export default function PatientProfile() {
                 <div className="input-group">
                   <label className="input-label">{t("رقم الهاتف")}</label>
                   <div className="contact-pill">
-                    <input className="glass-input" style={{ flex: 1, border: "none", background: "transparent" }} value={localPhone} onChange={e => setLocalPhone(e.target.value)} onBlur={() => localPhone !== patient.phone && saveProfile({ phone: localPhone })} />
+                    <input className="glass-input" style={{ flex: 1, border: "none", background: "transparent" }} value={localPhone} onChange={e => setLocalPhone(e.target.value)} onBlur={() => canEditPatient && localPhone !== patient.phone && saveProfile({ phone: localPhone })} readOnly={!canEditPatient} />
                     <a href="#" className="icon-btn wa" onClick={(e) => {
                       e.preventDefault();
                       const clean = localPhone.replace(/\D/g, '');
@@ -453,114 +574,131 @@ export default function PatientProfile() {
                 </div>
                 <div className="input-group">
                   <label className="input-label">{t("العمر")}</label>
-                  <input className="glass-input" type="number" value={localAge} onChange={e => setLocalAge(e.target.value)} onBlur={() => localAge !== patient.age && saveProfile({ age: localAge })} />
+                  <input className="glass-input" type="number" value={localAge} onChange={e => setLocalAge(e.target.value)} onBlur={() => canEditPatient && localAge !== patient.age && saveProfile({ age: localAge })} readOnly={!canEditPatient} />
                 </div>
                 <div className="input-group">
                   <label className="input-label">{t("الجنس")}</label>
                   <div style={{ display: "flex", gap: 16, height: 44, alignItems: "center", background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "0 16px" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
-                      <input type="radio" checked={patient.gender === "Male"} onChange={() => saveProfile({ gender: "Male" })} /> {t("ذكر")}
+                      <input type="radio" checked={patient.gender === "Male"} onChange={() => canEditPatient && saveProfile({ gender: "Male" })} disabled={!canEditPatient} /> {t("ذكر")}
                     </label>
                     <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
-                      <input type="radio" checked={patient.gender === "Female"} onChange={() => saveProfile({ gender: "Female" })} /> {t("أنثى")}
+                      <input type="radio" checked={patient.gender === "Female"} onChange={() => canEditPatient && saveProfile({ gender: "Female" })} disabled={!canEditPatient} /> {t("أنثى")}
                     </label>
                   </div>
                 </div>
-                <div className="input-group full-width">
-                  <label className="input-label">{t("أمراض مزمنة")}</label>
-                  <textarea className="glass-input" style={{ minHeight: 80, padding: 12 }} value={localConditions} onChange={e => setLocalConditions(e.target.value)} onBlur={() => localConditions !== patient.systemic_conditions && saveProfile({ systemic_conditions: localConditions })} />
-                </div>
+                {showMedicalTabs && (
+                  <div className="input-group full-width">
+                    <label className="input-label">{t("أمراض مزمنة")}</label>
+                    <textarea className="glass-input" style={{ minHeight: 80, padding: 12 }} value={localConditions} onChange={e => setLocalConditions(e.target.value)} onBlur={() => canEditPatient && localConditions !== patient.systemic_conditions && saveProfile({ systemic_conditions: localConditions })} readOnly={!canEditPatient} />
+                  </div>
+                )}
                 <div className="input-group full-width">
                   <label className="input-label">{t("ملاحظات")}</label>
-                  <textarea className="glass-input" style={{ minHeight: 80, padding: 12 }} value={localNotes} onChange={e => setLocalNotes(e.target.value)} onBlur={() => localNotes !== patient.notes && saveProfile({ notes: localNotes })} />
+                  <textarea className="glass-input" style={{ minHeight: 80, padding: 12 }} value={localNotes} onChange={e => setLocalNotes(e.target.value)} onBlur={() => canEditPatient && localNotes !== patient.notes && saveProfile({ notes: localNotes })} readOnly={!canEditPatient} />
                 </div>
               </div>
             </div>
             <div className="glass-panel" style={{ padding: 20 }}>
               <label className="input-label" style={{ marginBottom: 10, display: "block" }}>{t("نوع الحالة")}</label>
-              <select className="glass-input" style={{ width: "100%", height: 44, marginBottom: 16 }} value={patient.case_category || ""} onChange={e => saveProfile({ case_category: e.target.value })}>
+              <select className="glass-input" style={{ width: "100%", height: 44, marginBottom: 16 }} value={patient.case_category || ""} onChange={e => canEditPatient && saveProfile({ case_category: e.target.value })} disabled={!canEditPatient}>
                 <option value="">{t("اختر...")}</option>
                 {getDynamicList('treatment_types', [
                   "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"
                 ]).map(c => <option key={c} value={c}>{t(c)}</option>)}
               </select>
 
-              <div className="action-card" onClick={() => setShowTimeline(true)} style={{ background: "rgba(0, 210, 255, 0.1)", borderColor: "rgba(0, 210, 255, 0.3)", marginBottom: 12 }}>
-                <div style={{ fontSize: 24 }}>⏳</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)" }}>{t("السجل الزمني المتكامل")}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("عرض تطور الحالة حسب الجلسات")}</div>
+              {showMedicalTabs && (
+                <div className="action-card" onClick={() => setShowTimeline(true)} style={{ background: "rgba(0, 210, 255, 0.1)", borderColor: "rgba(0, 210, 255, 0.3)", marginBottom: 12 }}>
+                  <div style={{ fontSize: 24 }}>⏳</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)" }}>{t("السجل الزمني المتكامل")}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("عرض تطور الحالة حسب الجلسات")}</div>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <button className="btn-primary" onClick={() => {
-                setSessionData({ treatments: [], current: { tooth: "", procedure: "", cost: "", notes: "" }, meds: [], paid: "", teeth: patient.teeth });
-                setSessionStep(0);
-              }} style={{ width: "100%", height: 50, borderRadius: 12, fontSize: 15, fontWeight: 800, background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 8px 16px rgba(16, 185, 129, 0.2)", border: "none" }}>
-                🚀 {t("بدء جلسة العلاج")}
-              </button>
+              {showMedicalTabs && (
+                <button className="btn-primary" onClick={() => {
+                  if (startSession) {
+                    startSession(id, patient.first_name + " " + patient.last_name, { teeth: patient.teeth || {} });
+                    nav("/home");
+                  } else {
+                    setSessionData({ treatments: [], current: { tooth: "", procedure: "", cost: "", notes: "" }, meds: [], paid: "", teeth: patient.teeth });
+                    setSessionStep(0);
+                  }
+                }} style={{ width: "100%", height: 50, borderRadius: 12, fontSize: 15, fontWeight: 800, background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 8px 16px rgba(16, 185, 129, 0.2)", border: "none" }}>
+                  🚀 {t("بدء جلسة العلاج")}
+                </button>
+              )}
             </div>
           </div>
 
-          <div style={{ marginTop: 40, borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 40 }}>
-            <div className="finance-summary-grid">
-              <div className="glass-panel" style={{ padding: 16, textAlign: "center", borderLeft: "4px solid var(--primary)" }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{isSessions ? t("تكلفة الجلسات") : t("السعر الكلي")}</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{(isSessions ? totalSessionCosts : agreedPrice).toLocaleString()} {t("د")}</div>
-                {!isSessions && <button className="btn-ghost" style={{ fontSize: 10, marginTop: 10 }} onClick={() => setPriceModal({ show: true, val: agreedPrice })}>{t("تعديل")}</button>}
-              </div>
-              <div className="glass-panel" style={{ padding: 16, textAlign: "center", borderLeft: "4px solid #10b981" }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("المدفوع")}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "#10b981" }}>{(totalPaid || 0).toLocaleString()} {t("د")}</div>
-              </div>
-              <div className="glass-panel" style={{ padding: 16, textAlign: "center", borderLeft: "4px solid #ef4444" }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("المتبقي")}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "#ef4444" }}>{(remaining || 0).toLocaleString()} {t("د")}</div>
-              </div>
-            </div>
-            <div className="glass-panel" style={{ padding: 24 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-                <h3 style={{ fontSize: 18 }}>{t("سجل الدفعات")}</h3>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn-secondary" onClick={printPaymentStatement} style={{ padding: "8px 16px" }}>🖨 {t("طباعة كشف الحساب")}</button>
-                  <button className="btn-primary" onClick={() => setPayModal({ show: true, amount: remaining > 0 ? remaining : "", session_cost: "", method: "Cash", notes: "" })}>{t("+ إضافة")}</button>
+          {showFinancials && (
+            <div style={{ marginTop: 40, borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 40 }}>
+              <div className="finance-summary-grid">
+                <div className="glass-panel" style={{ padding: 16, textAlign: "center", borderLeft: "4px solid var(--primary)" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("السعر الكلي")}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>{agreedPrice.toLocaleString()} {t("د")}</div>
+                  {canAddPayment && (
+                    <button className="btn-ghost" style={{ fontSize: 10, marginTop: 10 }} onClick={() => setPriceModal({ show: true, val: agreedPrice })}>{t("تعديل")}</button>
+                  )}
+                </div>
+                <div className="glass-panel" style={{ padding: 16, textAlign: "center", borderLeft: "4px solid #10b981" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("المدفوع")}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#10b981" }}>{(totalPaid || 0).toLocaleString()} {t("د")}</div>
+                </div>
+                <div className="glass-panel" style={{ padding: 16, textAlign: "center", borderLeft: "4px solid #ef4444" }}>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("المتبقي")}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#ef4444" }}>{(remaining || 0).toLocaleString()} {t("د")}</div>
                 </div>
               </div>
-              <table className="mobile-card-table" style={{ width: "100%" }}>
-                <thead>
-                  <tr style={{ textAlign: lang === "ar" ? "right" : "left", fontSize: 12, color: "var(--text-muted)" }}>
-                    <th style={{ padding: 10 }}>{t("التاريخ")}</th>
-                    <th style={{ padding: 10 }}>{t("المبلغ")}</th>
-                    <th style={{ padding: 10 }}>{t("ملاحظات")}</th>
-                    <th style={{ padding: 10 }}>{t("إجراء")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((p, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                      <td data-label={t("التاريخ")} style={{ padding: 10 }}>{p.date}</td>
-                      <td data-label={t("المبلغ")} style={{ padding: 10, fontWeight: 700, color: (parseFloat(p.paid) || 0) > 0 ? "#10b981" : "white" }}>
-                        {(parseFloat(p.paid) || parseFloat(p.paid_amount) || 0).toLocaleString()} د
-                      </td>
-                      <td data-label={t("ملاحظات")} style={{ padding: 10, color: "var(--text-muted)", fontSize: 13 }}>{p.notes}</td>
-                      <td data-label={t("إجراء")} style={{ padding: 10 }}>
-                        <button 
-                          onClick={() => printReceiptIframe({
-                            date: p.date,
-                            patient_name: patient.first_name + " " + patient.last_name,
-                            total_price: isSessions ? totalSessionCosts : agreedPrice,
-                            paid: (parseFloat(p.paid) || parseFloat(p.paid_amount) || 0),
-                            patient_debt: p.patient_debt || 0,
-                            total_debt: (p.patient_debt || 0) + (parseFloat(p.paid) || parseFloat(p.paid_amount) || 0)
-                          })}
-                          className="btn-ghost" style={{ padding: "4px 8px" }} title={t("طباعة وصل")}>🖨</button>
-                      </td>
+              <div className="glass-panel" style={{ padding: 24 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                  <h3 style={{ fontSize: 18 }}>{t("سجل الدفعات")}</h3>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn-secondary" onClick={printPaymentStatement} style={{ padding: "8px 16px" }}>🖨 {t("طباعة كشف الحساب")}</button>
+                    {canAddPayment && (
+                      <button className="btn-primary" onClick={() => setPayModal({ show: true, amount: remaining > 0 ? remaining : "", session_cost: "", method: "Cash", notes: "" })}>{t("+ إضافة")}</button>
+                    )}
+                  </div>
+                </div>
+                <table className="mobile-card-table" style={{ width: "100%" }}>
+                  <thead>
+                    <tr style={{ textAlign: lang === "ar" ? "right" : "left", fontSize: 12, color: "var(--text-muted)" }}>
+                      <th style={{ padding: 10 }}>{t("التاريخ")}</th>
+                      <th style={{ padding: 10 }}>{t("المبلغ")}</th>
+                      <th style={{ padding: 10 }}>{t("ملاحظات")}</th>
+                      <th style={{ padding: 10 }}>{t("إجراء")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {displayedPayments.map((p, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                        <td data-label={t("التاريخ")} style={{ padding: 10 }}>{p.date}</td>
+                        <td data-label={t("المبلغ")} style={{ padding: 10, fontWeight: 700, color: (parseFloat(p.paid) || 0) > 0 ? "#10b981" : "white" }}>
+                          {(parseFloat(p.paid) || parseFloat(p.paid_amount) || 0).toLocaleString()} د
+                        </td>
+                        <td data-label={t("ملاحظات")} style={{ padding: 10, color: "var(--text-muted)", fontSize: 13 }}>{p.notes}</td>
+                        <td data-label={t("إجراء")} style={{ padding: 10 }}>
+                          <button 
+                            onClick={() => printReceiptIframe({
+                              date: p.date,
+                              patient_name: patient.first_name + " " + patient.last_name,
+                              total_price: agreedPrice,
+                              paid: (parseFloat(p.paid) || parseFloat(p.paid_amount) || 0),
+                              patient_debt: p.patient_debt || 0,
+                              total_debt: (p.patient_debt || 0) + (parseFloat(p.paid) || parseFloat(p.paid_amount) || 0)
+                            })}
+                            className="btn-ghost" style={{ padding: "4px 8px" }} title={t("طباعة وصل")}>🖨</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -573,13 +711,28 @@ export default function PatientProfile() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {(patient.treatments || []).map((tr, i) => (
-                <div key={i} style={{ padding: 16, background: "rgba(255,255,255,0.03)", borderRadius: 12, borderLeft: "4px solid var(--primary)", display: "flex", justifyContent: "space-between" }}>
+                <div key={i} style={{ padding: 16, background: "rgba(255,255,255,0.03)", borderRadius: 12, borderLeft: "4px solid var(--primary)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontWeight: 700 }}>{tr.date} - <span style={{ color: "var(--primary)" }}>#{tr.tooth_number}</span></div>
+                    <div style={{ fontWeight: 700 }}>
+                      {tr.date} - <span style={{ color: "var(--primary)" }}>#{tr.tooth_number}</span>
+                      <span style={{ color: "var(--success)", marginRight: 8 }}>{(tr.cost || 0).toLocaleString()} د</span>
+                    </div>
                     <div style={{ fontSize: 15, marginTop: 4 }}>{tr.procedure}</div>
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{tr.notes}</div>
                   </div>
-                  <button onClick={() => setConfirmModal({ show: true, title: t("حذف العلاج"), message: t("هل أنت متأكد من حذف هذا الإجراء؟"), onConfirm: () => deleteTreatment(tr.id).then(load) })} className="btn-ghost" style={{ color: "#ef4444" }}>✕</button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => {
+                      setEditTreatment(tr);
+                      setEditTreatmentForm({
+                        tooth_number: tr.tooth_number || "",
+                        procedure: tr.procedure || "",
+                        notes: tr.notes || "",
+                        cost: tr.cost || 0,
+                        date: tr.date || ""
+                      });
+                    }} className="btn-ghost" style={{ color: "var(--primary)", padding: "4px 8px" }}>✏️</button>
+                    <button onClick={() => setConfirmModal({ show: true, title: t("حذف العلاج"), message: t("هل أنت متأكد من حذف هذا الإجراء؟"), onConfirm: () => deleteTreatment(tr.id).then(load) })} className="btn-ghost" style={{ color: "#ef4444", padding: "4px 8px" }}>✕</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -598,7 +751,12 @@ export default function PatientProfile() {
                   <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{pr.date}</div>
                   <div style={{ fontSize: 14 }}>{pr.meds || t("وصفة مصورة")}</div>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); window.open(getPrescriptionPDFUrl(pr.id), "_blank"); }} className="btn-ghost">🖨</button>
+                <div style={{ display: "flex", gap: 8 }} onClick={e => e.stopPropagation()}>
+                  {canEditPrescription(pr) && (
+                    <button onClick={() => setEditingPrescription(pr)} className="btn-ghost" style={{ color: "var(--primary)" }}>✏️</button>
+                  )}
+                  <button onClick={() => window.open(getPrescriptionPDFUrl(pr.id), "_blank")} className="btn-ghost">🖨</button>
+                </div>
               </div>
             ))}
           </div>
@@ -649,7 +807,7 @@ export default function PatientProfile() {
             {(patient.visits || []).map(v => (
               <div key={v.id} style={{ padding: 16, background: "rgba(255,255,255,0.03)", borderRadius: 12, marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 600 }}>{v.date} · {v.time}</span>
+                  <span style={{ fontWeight: 600 }}>{v.date} · {format12h(v.time, lang)}</span>
                   <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 12, background: "rgba(0,210,255,0.1)", color: "var(--primary)" }}>{v.status}</span>
                 </div>
                 <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>{v.type} ({v.duration_min} {t("دقيقة")})</div>
@@ -686,9 +844,8 @@ export default function PatientProfile() {
       {payModal.show && (
         <Modal title={t("إضافة دفعة")} onClose={() => setPayModal({...payModal, show: false})}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {isSessions && <input type="text" className="glass-input" placeholder={t("تكلفة الجلسة")} value={payModal.session_cost ? Number(payModal.session_cost).toLocaleString() : ""} onChange={e => setPayModal({...payModal, session_cost: e.target.value.replace(/\D/g, "")})} />}
+
             <input type="text" className="glass-input" placeholder={t("المبلغ")} value={payModal.amount ? Number(payModal.amount).toLocaleString() : ""} onChange={e => setPayModal({...payModal, amount: e.target.value.replace(/\D/g, "")})} />
-            <select className="glass-input" value={payModal.method} onChange={e => setPayModal({...payModal, method: e.target.value})}><option value="Cash">Cash</option><option value="Bank">Bank</option></select>
             <input className="glass-input" placeholder={t("ملاحظات")} value={payModal.notes} onChange={e => setPayModal({...payModal, notes: e.target.value})} />
             <button className="btn-primary" onClick={addPayment}>{t("حفظ")}</button>
           </div>
@@ -712,12 +869,63 @@ export default function PatientProfile() {
         </Modal>
       )}
 
+      {/* ── Edit Treatment Modal ── */}
+      {editTreatment && (
+        <Modal title={t("تعديل إجراء")} onClose={() => setEditTreatment(null)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={lblStyle}>{t("رقم السن")}</label>
+              <input className="glass-input" style={{ width: "100%" }} value={editTreatmentForm.tooth_number} onChange={e => setEditTreatmentForm({...editTreatmentForm, tooth_number: e.target.value})} />
+            </div>
+            <div>
+              <label style={lblStyle}>{t("الإجراء")}</label>
+              <select className="glass-input" style={{ width: "100%" }} value={editTreatmentForm.procedure} onChange={e => setEditTreatmentForm({...editTreatmentForm, procedure: e.target.value})}>
+                <option value="">-- {t("اختر الإجراء")} --</option>
+                {getDynamicList('treatment_types', [
+                  "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"
+                ]).map(c => <option key={c} value={c}>{t(c)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lblStyle}>{t("التكلفة")}</label>
+              <input type="number" className="glass-input" style={{ width: "100%" }} value={editTreatmentForm.cost} onChange={e => setEditTreatmentForm({...editTreatmentForm, cost: e.target.value})} />
+            </div>
+            <div>
+              <label style={lblStyle}>{t("التاريخ")}</label>
+              <input type="date" className="glass-input" style={{ width: "100%" }} value={editTreatmentForm.date} onChange={e => setEditTreatmentForm({...editTreatmentForm, date: e.target.value})} />
+            </div>
+            <div>
+              <label style={lblStyle}>{t("ملاحظات")}</label>
+              <textarea className="glass-input" style={{ width: "100%", minHeight: 80 }} value={editTreatmentForm.notes} onChange={e => setEditTreatmentForm({...editTreatmentForm, notes: e.target.value})} />
+            </div>
+            <button className="btn-primary" onClick={saveEditTreatment}>{t("حفظ التعديل")}</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Edit Prescription Modal ── */}
+      {editingPrescription && (
+        <Modal title={t("تعديل الوصفة الطبية")} onClose={() => setEditingPrescription(null)}>
+          <PrescriptionModal 
+            patient={patient} 
+            onClose={() => setEditingPrescription(null)} 
+            onRefresh={load} 
+            existingData={editingPrescription} 
+            isEditing={true} 
+          />
+        </Modal>
+      )}
+
       {priceModal.show && (
         <Modal title={t("تعديل السعر الكلي")} onClose={() => setPriceModal({ ...priceModal, show: false })}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <label className="input-label">{t("السعر الجديد المتفق عليه")}:</label>
             <input className="glass-input" type="text" value={priceModal.val ? Number(priceModal.val).toLocaleString() : ""} onChange={e => setPriceModal({ ...priceModal, val: e.target.value.replace(/\D/g, "") })} />
-            <button className="btn-primary" onClick={() => { saveProfile({ total_agreed_price: parseFloat(priceModal.val) }); setPriceModal({ ...priceModal, show: false }); }}>{t("حفظ التغيير")}</button>
+            <button className="btn-primary" onClick={() => {
+              const amount = parseFloat(priceModal.val) || 0;
+              saveProfile({ total_agreed_price: amount });
+              setPriceModal({ ...priceModal, show: false });
+            }}>{t("حفظ التغيير")}</button>
           </div>
         </Modal>
       )}
@@ -737,7 +945,7 @@ export default function PatientProfile() {
                     <div style={{ fontSize: 60, marginBottom: 20 }}>🩺</div>
                     <h2>{t("بدء جلسة جديدة للمريض")}</h2>
                     <p style={{ color: "var(--text-muted)" }}>{patient.first_name} {patient.last_name}</p>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--primary)", marginTop: 20 }}>📅 {localDate()} · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--primary)", marginTop: 20 }}>📅 {localDate()} · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
                     
                     <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 40 }}>
                       <button className="btn-primary" style={{ padding: "12px 30px" }} onClick={() => {

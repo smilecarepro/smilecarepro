@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from '../LanguageContext';
-import { getSettings, updateSettings, getGoogleAuth, downloadBackup, restoreBackup, resetClinic, uploadClinicLogo, BASE } from "../api";
+import { getSettings, updateSettings, getGoogleAuth, downloadBackup, restoreBackup, resetClinic, uploadClinicLogo, BASE, getTrashPatients, restorePatient, permanentDeletePatient } from "../api";
 
 import { useSettings } from "../SettingsContext";
 import { useAuth } from "../AuthContext";
@@ -31,6 +31,8 @@ export default function Settings() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [confirmData, setConfirmData] = useState({ show: false, title: "", message: "", onConfirm: null, danger: false });
   const [resetModal, setResetModal] = useState({ show: false, password: "" });
+  const [trashList, setTrashList] = useState([]);
+  const [trashLoading, setTrashLoading] = useState(false);
   const [qrCode, setQrCode] = useState(null);
   const [qrStatus, setQrStatus] = useState("loading");
   const [testingBackup, setTestingBackup] = useState(false);
@@ -110,6 +112,46 @@ export default function Settings() {
     setSaving(false);
   };
 
+  const handleDownloadBackup = async () => {
+    try {
+      const activeDoctor = localStorage.getItem("activeDoctor");
+      const headers = {
+        "Authorization": `Bearer ${JSON.parse(localStorage.getItem("clinic_user") || "{}").token || ""}`
+      };
+      if (activeDoctor) {
+        headers["X-Active-Doctor"] = activeDoctor;
+      }
+      
+      const response = await fetch(downloadBackup(), { headers });
+      if (!response.ok) {
+        const txt = await response.text();
+        throw new Error(txt || t("فشل تحميل النسخة الاحتياطية"));
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const disposition = response.headers.get('content-disposition');
+      let filename = `SmileCare_Backup_${new Date().toISOString().split('T')[0]}.db`;
+      if (disposition && disposition.indexOf('attachment') !== -1) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(disposition);
+        if (matches != null && matches[1]) { 
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert(t("فشل تحميل النسخة الاحتياطية") + ": " + e.message);
+    }
+  };
+
   const tabs = user?.account_type === 'center_manager' ? [
     { id: "clinic", label: t("بيانات المركز"), icon: "🏢", roles: ["center_manager"] },
     { id: "security", label: t("الأمان والنسخ"), icon: "🛡️", roles: ["center_manager"] },
@@ -120,6 +162,7 @@ export default function Settings() {
     { id: "lists", label: t("إدارة القوائم"), icon: "📋", roles: ["doctor"] },
     { id: "security", label: t("الأمان والنسخ"), icon: "🛡️", roles: ["doctor"] },
     { id: "automation", label: t("الأتمتة والذكاء الاصطناعي"), icon: "🤖", roles: ["doctor"] },
+    { id: "trash", label: t("سلة المحذوفات"), icon: "🗑️", roles: ["doctor"] },
     { id: "preferences", label: t("المظهر واللغة"), icon: "🌐", roles: ["doctor", "secretary"] },
   ].filter(tab => tab.roles.includes(user?.role) || (user?.account_type === 'center_manager' && tab.roles.includes('center_manager')));
 
@@ -306,6 +349,140 @@ export default function Settings() {
                   </div>
                </div>
 
+               {/* Secretary Permissions (Dynamically Configured) */}
+               <div className="glass-panel" style={{ padding: 32 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>⚙️ {t("صلاحيات السكرتيرة")}</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24 }}>
+                     {/* Patients */}
+                     <div>
+                       <label style={lblStyle}>👥 {t("ملفات المرضى")}</label>
+                       <select className="glass-input" style={{ width: "100%", height: 44 }}
+                         value={form.sec_perm_patients || "view_edit"}
+                         onChange={e => setForm({ ...form, sec_perm_patients: e.target.value })}
+                       >
+                         <option value="view_only">{t("عرض فقط (بدون إضافة أو تعديل)")}</option>
+                         <option value="view_edit">{t("عرض + تعديل البيانات")}</option>
+                         <option value="view_edit_add">{t("عرض + تعديل + إضافة مريض جديد")}</option>
+                       </select>
+                     </div>
+
+                     {/* Invoices */}
+                     <div>
+                       <label style={lblStyle}>🧾 {t("الفواتير والمدفوعات")}</label>
+                       <select className="glass-input" style={{ width: "100%", height: 44 }}
+                         value={form.sec_perm_invoices || "today"}
+                         onChange={e => setForm({ ...form, sec_perm_invoices: e.target.value })}
+                       >
+                         <option value="none">{t("مخفي بالكامل")}</option>
+                         <option value="today">{t("عرض دفعات اليوم فقط")}</option>
+                         <option value="today_add">{t("دفعات اليوم + إضافة/تسجيل دفعة")}</option>
+                         <option value="all">{t("عرض كل الدفعات السابقة (عرض فقط)")}</option>
+                         <option value="all_add">{t("عرض الكل + إضافة/تسجيل دفعة")}</option>
+                       </select>
+                     </div>
+
+                     {/* Expenses */}
+                     <div>
+                       <label style={lblStyle}>💰 {t("المصاريف التشغيلية")}</label>
+                       <select className="glass-input" style={{ width: "100%", height: 44 }}
+                         value={form.sec_perm_expenses || "today"}
+                         onChange={e => setForm({ ...form, sec_perm_expenses: e.target.value })}
+                       >
+                         <option value="none">{t("مخفي بالكامل")}</option>
+                         <option value="today">{t("عرض مصاريف اليوم فقط")}</option>
+                         <option value="today_add">{t("مصاريف اليوم + إضافة مصروف")}</option>
+                         <option value="all">{t("عرض كل المصاريف (عرض فقط)")}</option>
+                         <option value="all_add">{t("عرض الكل + إضافة مصروف")}</option>
+                       </select>
+                     </div>
+
+                     {/* Inventory */}
+                     <div>
+                       <label style={lblStyle}>📦 {t("مخزن مواد العيادة")}</label>
+                       <select className="glass-input" style={{ width: "100%", height: 44 }}
+                         value={form.sec_perm_inventory || "view"}
+                         onChange={e => setForm({ ...form, sec_perm_inventory: e.target.value })}
+                       >
+                         <option value="none">{t("مخفي بالكامل")}</option>
+                         <option value="view">{t("عرض فقط (بدون تعديل الكميات)")}</option>
+                         <option value="edit">{t("عرض + تعديل كميات المواد (+/-)")}</option>
+                       </select>
+                     </div>
+
+                     {/* Reports */}
+                     <div>
+                       <label style={lblStyle}>📊 {t("التقارير والإحصائيات")}</label>
+                       <select className="glass-input" style={{ width: "100%", height: 44 }}
+                         value={form.sec_perm_reports || "none"}
+                         onChange={e => setForm({ ...form, sec_perm_reports: e.target.value })}
+                       >
+                         <option value="none">{t("مخفي بالكامل")}</option>
+                         <option value="today">{t("تقارير اليوم فقط (المالية اليومية)")}</option>
+                         <option value="all">{t("التقارير والإحصائيات الكاملة (العامة والتراكمية)")}</option>
+                       </select>
+                     </div>
+
+                     {/* Binary Toggles Grid */}
+                     <div style={{ gridColumn: isMobile ? "span 1" : "span 2", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 20, marginTop: 12 }}>
+                        {/* Messages Toggle */}
+                        <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>💬 {t("المراسلات الداخلية")}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("شات المراسلات")}</div>
+                          </div>
+                          <div onClick={() => {
+                            const current = form.sec_perm_messages !== "0" ? "0" : "1";
+                            setForm({ ...form, sec_perm_messages: current });
+                          }} style={{ width: 40, height: 20, borderRadius: 20, background: (form.sec_perm_messages !== "0") ? "var(--primary)" : "#475569", position: "relative", cursor: "pointer", transition: "0.2s" }}>
+                            <div style={{ width: 16, height: 16, borderRadius: "50%", background: "white", position: "absolute", top: 2, right: (form.sec_perm_messages !== "0") ? 2 : 22, transition: "all 0.2s" }} />
+                          </div>
+                        </div>
+
+                        {/* Medical History Toggle */}
+                        <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>🩺 {t("السجل الطبي")}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("العلاجات وخريطة الأسنان")}</div>
+                          </div>
+                          <div onClick={() => {
+                            const current = form.sec_perm_medical_history === "1" ? "0" : "1";
+                            setForm({ ...form, sec_perm_medical_history: current });
+                          }} style={{ width: 40, height: 20, borderRadius: 20, background: (form.sec_perm_medical_history === "1") ? "var(--primary)" : "#475569", position: "relative", cursor: "pointer", transition: "0.2s" }}>
+                            <div style={{ width: 16, height: 16, borderRadius: "50%", background: "white", position: "absolute", top: 2, right: (form.sec_perm_medical_history === "1") ? 2 : 22, transition: "all 0.2s" }} />
+                          </div>
+                        </div>
+
+                        {/* Daily Summary Toggle */}
+                        <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>📋 {t("الملخص اليومي")}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("لوحة الجرد اليومي")}</div>
+                          </div>
+                          <div onClick={() => {
+                            const current = form.sec_perm_daily_summary === "1" ? "0" : "1";
+                            setForm({ ...form, sec_perm_daily_summary: current });
+                          }} style={{ width: 40, height: 20, borderRadius: 20, background: (form.sec_perm_daily_summary === "1") ? "var(--primary)" : "#475569", position: "relative", cursor: "pointer", transition: "0.2s" }}>
+                            <div style={{ width: 16, height: 16, borderRadius: "50%", background: "white", position: "absolute", top: 2, right: (form.sec_perm_daily_summary === "1") ? 2 : 22, transition: "all 0.2s" }} />
+                          </div>
+                        </div>
+
+                        {/* Daily Schedule Toggle */}
+                        <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>📅 {t("الجدول اليومي")}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("جدول مواعيد اليوم ومتابعة الجلسات")}</div>
+                          </div>
+                          <div onClick={() => {
+                            const current = form.sec_perm_daily_schedule === "1" ? "0" : "1";
+                            setForm({ ...form, sec_perm_daily_schedule: current });
+                          }} style={{ width: 40, height: 20, borderRadius: 20, background: (form.sec_perm_daily_schedule === "1") ? "var(--primary)" : "#475569", position: "relative", cursor: "pointer", transition: "0.2s" }}>
+                            <div style={{ width: 16, height: 16, borderRadius: "50%", background: "white", position: "absolute", top: 2, right: (form.sec_perm_daily_schedule === "1") ? 2 : 22, transition: "all 0.2s" }} />
+                          </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
                {/* Backup & Tools */}
                <div className="glass-panel" style={{ padding: 32 }}>
                    <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>💾 {t("النسخ الاحتياطي والأدوات")}</h3>
@@ -377,7 +554,7 @@ export default function Settings() {
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
-                     <button onClick={() => window.open(downloadBackup())} 
+                     <button onClick={handleDownloadBackup} 
                        className="glass-panel" style={{ padding: 20, textAlign: "center", cursor: "pointer", border: "1px solid rgba(255,255,255,0.05)" }}>
                        <div style={{ fontSize: 24, marginBottom: 8 }}>📥</div>
                        <div style={{ fontWeight: 600, fontSize: 13 }}>{t("تحميل نسخة احتياطية")}</div>
@@ -526,6 +703,91 @@ export default function Settings() {
                      })}
                   </div>
                </div>
+            </div>
+          )}
+          {activeTab === "trash" && (
+            <div className="glass-panel animate-fade" style={{ padding: 32 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700 }}>🗑️ {t("سلة المحذوفات")}</h3>
+                <button className="btn-ghost" style={{ fontSize: 13 }} onClick={async () => {
+                  setTrashLoading(true);
+                  const data = await getTrashPatients();
+                  setTrashList(data || []);
+                  setTrashLoading(false);
+                }}>
+                  {trashLoading ? "..." : "🔄 تحديث"}
+                </button>
+              </div>
+
+              <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "#fca5a5" }}>
+                ⚠️ {t("يتم حذف المرضى تلقائياً بعد 30 يوماً من تاريخ الحذف. الحذف النهائي لا يمكن التراجع عنه.")}
+              </div>
+
+              {trashList.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-muted)" }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>🗃️</div>
+                  <div style={{ fontSize: 15 }}>{t("سلة المحذوفات فارغة")}</div>
+                  <div style={{ fontSize: 12, marginTop: 8 }}>{t("اضغط تحديث لجلب القائمة")}</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {trashList.map(p => (
+                    <div key={p.id} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "14px 18px", background: "rgba(255,255,255,0.03)",
+                      borderRadius: 14, border: "1px solid rgba(255,255,255,0.06)",
+                      gap: 12, flexWrap: "wrap"
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>{p.first_name} {p.last_name}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                          📅 {t("تاريخ الحذف")}: {new Date(p.deleted_at).toLocaleDateString("ar-IQ")}
+                          {p.phone && <span style={{ marginRight: 12 }}>📞 {p.phone}</span>}
+                        </div>
+                      </div>
+                      {/* Days remaining badge */}
+                      <div style={{
+                        padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+                        background: p.days_remaining <= 5 ? "rgba(239,68,68,0.2)" : p.days_remaining <= 10 ? "rgba(245,158,11,0.15)" : "rgba(100,116,139,0.15)",
+                        color: p.days_remaining <= 5 ? "#ef4444" : p.days_remaining <= 10 ? "#f59e0b" : "#94a3b8"
+                      }}>
+                        ⏳ {p.days_remaining} {t("يوم متبقي")}
+                      </div>
+                      {/* Restore button */}
+                      <button
+                        className="btn-ghost"
+                        style={{ color: "#10b981", borderColor: "rgba(16,185,129,0.3)", fontSize: 13, padding: "7px 16px", fontWeight: 700 }}
+                        onClick={async () => {
+                          await restorePatient(p.id);
+                          setTrashList(prev => prev.filter(x => x.id !== p.id));
+                        }}
+                      >
+                        ↩️ {t("استرجاع")}
+                      </button>
+                      {/* Permanent Delete button */}
+                      <button
+                        style={{
+                          background: "rgba(239,68,68,0.12)", color: "#ef4444",
+                          border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10,
+                          padding: "7px 16px", cursor: "pointer", fontSize: 13, fontWeight: 700
+                        }}
+                        onClick={() => setConfirmData({
+                          show: true,
+                          title: t("حذف نهائي"),
+                          message: `${t("سيتم حذف ملف")} ${p.first_name} ${p.last_name} ${t("نهائياً ولا يمكن التراجع عنه. هل أنت متأكد؟")}`,
+                          danger: true,
+                          onConfirm: async () => {
+                            await permanentDeletePatient(p.id);
+                            setTrashList(prev => prev.filter(x => x.id !== p.id));
+                          }
+                        })}
+                      >
+                        🗑️ {t("حذف نهائي")}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
           {activeTab === "preferences" && (

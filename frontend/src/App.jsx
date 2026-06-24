@@ -3,11 +3,12 @@ import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { BASE } from "./api";
 import { AuthProvider, useAuth }  from "./AuthContext";
 import { LanguageProvider, useLanguage } from "./LanguageContext";
-import { SettingsProvider }       from "./SettingsContext";
+import { SettingsProvider, useSettings }       from "./SettingsContext";
+import { SessionProvider } from "./SessionContext";
 import Layout        from "./components/Layout";
 import Login         from "./pages/Login";
 import Register      from "./pages/Register";
-import Landing       from "./pages/Landing";
+
 
 const Home = lazy(() => import("./pages/Home"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -28,7 +29,6 @@ const Purchases = lazy(() => import("./pages/Purchases"));
 const Messages = lazy(() => import("./pages/Messages"));
 const CenterAnnouncements = lazy(() => import("./pages/CenterAnnouncements"));
 const DailySummary = lazy(() => import("./pages/DailySummary"));
-const BookingRequests = lazy(() => import("./pages/BookingRequests"));
 const CenterDashboard = lazy(() => import("./pages/CenterDashboard"));
 const CenterDoctors = lazy(() => import("./pages/CenterDoctors"));
 const CenterSecretaries = lazy(() => import("./pages/CenterSecretaries"));
@@ -39,6 +39,16 @@ const CenterReports = lazy(() => import("./pages/CenterReports"));
 function ProtectedApp() {
   const { user, logout } = useAuth();
   const { lang } = useLanguage();
+  const { settings } = useSettings();
+  
+  const canViewReports = user?.role !== 'secretary' || (settings?.sec_perm_reports && settings?.sec_perm_reports !== 'none');
+  const canViewInvoices = user?.role !== 'secretary' || (settings?.sec_perm_invoices && settings?.sec_perm_invoices !== 'none');
+  const canViewExpenses = user?.role !== 'secretary' || (settings?.sec_perm_expenses && settings?.sec_perm_expenses !== 'none');
+  const canViewInventory = user?.role !== 'secretary' || (settings?.sec_perm_inventory && settings?.sec_perm_inventory !== 'none');
+  const canViewMessages = user?.role !== 'secretary' || (settings?.sec_perm_messages !== '0');
+  const canViewDailySummary = user?.role !== 'secretary' || (settings?.sec_perm_daily_summary === '1');
+  const canViewDailySchedule = user?.role !== 'secretary';
+  
   
   if (!user) return <Navigate to="/" replace />;
   
@@ -86,23 +96,22 @@ function ProtectedApp() {
         <Route path="/patients"       element={<Patients />} />
         <Route path="/patients/:id"   element={<PatientProfile />} />
         <Route path="/appointments"   element={<Appointments />} />
-        <Route path="/today-schedule" element={<TodaySchedule />} />
-        <Route path="/invoices"       element={<Invoices />} />
-        <Route path="/reports"        element={user?.role === 'secretary' ? <Navigate to="/home" /> : <Reports />} />
-        <Route path="/expenses"       element={<Expenses />} />
-        <Route path="/debts"          element={<Debts />} />
+        <Route path="/today-schedule" element={canViewDailySchedule ? <TodaySchedule /> : <Navigate to="/home" replace />} />
+        <Route path="/invoices"       element={canViewInvoices ? <Invoices /> : <Navigate to="/home" />} />
+        <Route path="/reports"        element={canViewReports ? <Reports /> : <Navigate to="/home" />} />
+        <Route path="/expenses"       element={canViewExpenses ? <Expenses /> : <Navigate to="/home" />} />
+        <Route path="/debts"          element={canViewReports ? <Debts /> : <Navigate to="/home" />} />
         <Route path="/prescriptions"  element={<Prescriptions />} />
         <Route path="/drugs"          element={user?.role === 'secretary' ? <Navigate to="/home" /> : <DrugStore />} />
         <Route path="/settings"       element={<Settings />} />
-        <Route path="/inventory"      element={<Inventory />} />
-        <Route path="/purchases"      element={<Purchases />} />
+        <Route path="/inventory"      element={canViewInventory ? <Inventory /> : <Navigate to="/home" />} />
+        <Route path="/purchases"      element={user?.role === 'secretary' ? <Navigate to="/home" /> : <Purchases />} />
         <Route path="/center/expenses"    element={user?.account_type === 'center_manager' ? <CenterExpenses /> : <Navigate to="/home" />} />
         <Route path="/center/reports"     element={user?.account_type === 'center_manager' ? <CenterReports /> : <Navigate to="/home" />} />
         <Route path="/center/announcements" element={user?.account_type === 'center_manager' ? <CenterAnnouncements /> : <Navigate to="/home" />} />
-        <Route path="/messages"       element={<Messages />} />
-        <Route path="/daily-summary"  element={user?.role === 'secretary' ? <Navigate to="/home" /> : <DailySummary />} />
+        <Route path="/messages"       element={canViewMessages ? <Messages /> : <Navigate to="/home" />} />
+        <Route path="/daily-summary"  element={canViewDailySummary ? <DailySummary /> : <Navigate to="/home" />} />
         <Route path="/audit-log"      element={user?.role === 'secretary' ? <Navigate to="/home" /> : <AuditLog />} />
-        <Route path="/booking-requests" element={<BookingRequests />} />
         <Route path="/"               element={<Navigate to="/home" replace />} />
         <Route path="*"               element={<Navigate to="/home" />} />
       </Routes>
@@ -115,7 +124,7 @@ function AuthRoutes() {
   return (
     <Routes>
       {/* Guest Entrance */}
-      <Route path="/" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : (user.account_type === 'center_manager' ? "/center" : "/home")} replace /> : <Landing />} />
+      <Route path="/" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : (user.account_type === 'center_manager' ? "/center" : "/home")} replace /> : <Login />} />
       
       <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : (user.account_type === 'center_manager' ? "/center" : "/home")} replace /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to={user.role === 'admin' ? "/admin" : (user.account_type === 'center_manager' ? "/center" : "/home")} replace /> : <Register />} />
@@ -163,56 +172,58 @@ export default function App() {
     <LanguageProvider>
       <AuthProvider>
         <SettingsProvider>
-          <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-            {!isOnline && (
-              <div style={{
-                background: 'linear-gradient(90deg, #ff416c, #ff4b2b)',
-                color: 'white',
-                padding: '8px 20px',
-                textAlign: 'center',
-                fontSize: '13px',
-                fontWeight: '700',
-                zIndex: 1000003,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <span style={{ fontSize: '16px' }}>🔌</span>
-                أنت تعمل حالياً في وضع عدم الاتصال. سيتم حفظ التغييرات محلياً ومزامنتها عند عودة الإنترنت.
-              </div>
-            )}
-            {announcement && (
+          <SessionProvider>
+            <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+              {!isOnline && (
+                <div style={{
+                  background: 'linear-gradient(90deg, #ff416c, #ff4b2b)',
+                  color: 'white',
+                  padding: '8px 20px',
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  zIndex: 1000003,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{ fontSize: '16px' }}>🔌</span>
+                  أنت تعمل حالياً في وضع عدم الاتصال. سيتم حفظ التغييرات محلياً ومزامنتها عند عودة الإنترنت.
+                </div>
+              )}
+              {announcement && (
 
-              <div style={{
-                background: 'linear-gradient(90deg, #0061ff, #6033ff)',
-                color: 'white',
-                padding: '10px 20px',
-                textAlign: 'center',
-                fontSize: '13px',
-                fontWeight: '600',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-                position: 'relative',
-                zIndex: 1000002,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px'
-              }}>
-                <span style={{ fontSize: '16px' }}>📢</span>
-                {announcement}
-                <button 
-                  onClick={() => setAnnouncement("")}
-                  style={{ position: 'absolute', right: '15px', background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}
-                >✕</button>
-              </div>
-            )}
-            <HashRouter>
-              <ReactSuspense fallback={<PageLoader />}>
-                <AuthRoutes />
-              </ReactSuspense>
-            </HashRouter>
-          </div>
+                <div style={{
+                  background: 'linear-gradient(90deg, #0061ff, #6033ff)',
+                  color: 'white',
+                  padding: '10px 20px',
+                  textAlign: 'center',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                  position: 'relative',
+                  zIndex: 1000002,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
+                }}>
+                  <span style={{ fontSize: '16px' }}>📢</span>
+                  {announcement}
+                  <button 
+                    onClick={() => setAnnouncement("")}
+                    style={{ position: 'absolute', right: '15px', background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}
+                  >✕</button>
+                </div>
+              )}
+              <HashRouter>
+                <ReactSuspense fallback={<PageLoader />}>
+                  <AuthRoutes />
+                </ReactSuspense>
+              </HashRouter>
+            </div>
+          </SessionProvider>
         </SettingsProvider>
       </AuthProvider>
     </LanguageProvider>

@@ -10,9 +10,11 @@ const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${Str
 
 export default function Expenses() {
   const { t } = useLanguage();
-  const { getDynamicList } = useSettings();
+  const { settings, getDynamicList } = useSettings();
   const { user } = useAuth();
   const isSecretary = user?.role === "secretary";
+  const canAddExpense = user?.role !== "secretary" || settings?.sec_perm_expenses === "today_add" || settings?.sec_perm_expenses === "all_add";
+  const filterOnlyToday = isSecretary && (settings?.sec_perm_expenses === "today" || settings?.sec_perm_expenses === "today_add");
   const [list, setList] = useState([]);
   const [total, setTotal] = useState(0);
   const [modal, setModal] = useState(false);
@@ -22,7 +24,7 @@ export default function Expenses() {
   const load = () => {
     getExpenses().then(data => {
       const today = localDate();
-      const filtered = isSecretary ? data.filter(e => e.date === today) : data;
+      const filtered = filterOnlyToday ? data.filter(e => e.date === today) : data;
       setList(filtered);
       setTotal(filtered.reduce((s, e) => s + e.amount, 0));
     }).catch(console.error);
@@ -54,9 +56,11 @@ export default function Expenses() {
     <div className="animate-fade">
       <div className="expenses-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h2 style={{ fontSize: 22, fontWeight: 700 }}>{isSecretary ? t("مصاريف اليوم") : t("المصاريف التشغيلية")}</h2>
-        <button onClick={() => setModal(true)} className="btn-primary">
-          <span>+</span> {t("إضافة مصروف")}
-        </button>
+        {canAddExpense && (
+          <button onClick={() => setModal(true)} className="btn-primary">
+            <span>+</span> {t("إضافة مصروف")}
+          </button>
+        )}
       </div>
 
       <div className="glass-panel expenses-summary" style={{ padding: 24, marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(24, 95, 165, 0.05))" }}>
@@ -72,7 +76,7 @@ export default function Expenses() {
           <table className="mobile-card-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.03)" }}>
-                {[t("التاريخ"), t("الفئة"), t("الملاحظات"), t("طريقة الدفع"), t("المبلغ"), t("إجراء")].map(h => (
+                {[t("التاريخ"), t("الفئة"), t("الملاحظات"), t("طريقة الدفع"), t("المبلغ"), !isSecretary && t("إجراء")].filter(Boolean).map(h => (
                   <th key={h} style={{ padding: "16px 20px", textAlign: "right", fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{h}</th>
                 ))}
               </tr>
@@ -89,9 +93,11 @@ export default function Expenses() {
                     <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: e.payment_method === 'Bank' ? 'rgba(0,210,255,0.1)' : 'rgba(16,185,129,0.1)', color: e.payment_method === 'Bank' ? '#00D2FF' : '#10b981' }}>{e.payment_method || 'Cash'}</span>
                   </td>
                   <td data-label={t("المبلغ")} style={{ padding: "14px 20px", fontWeight: 700, color: "var(--danger)" }}>{(e.amount || 0).toLocaleString()} {t("د")}</td>
-                  <td data-label={t("إجراء")} style={{ padding: "14px 20px" }}>
-                    <button onClick={() => del(e.id)} className="btn-ghost" style={{ padding: "5px 12px", fontSize: 12, color: "var(--danger)" }}>{t("حذف")}</button>
-                  </td>
+                  {!isSecretary && (
+                    <td data-label={t("إجراء")} style={{ padding: "14px 20px" }}>
+                      <button onClick={() => del(e.id)} className="btn-ghost" style={{ padding: "5px 12px", fontSize: 12, color: "var(--danger)" }}>{t("حذف")}</button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -115,17 +121,7 @@ export default function Expenses() {
                 <div><label style={lblStyle}>{t("المبلغ")}</label><input type="number" className="glass-input" style={{ width: "100%" }} value={form.amount} onChange={v => setForm({ ...form, amount: v.target.value })} /></div>
                 <div><label style={lblStyle}>{t("التاريخ")}</label><input type="date" className="glass-input" style={{ width: "100%" }} value={form.date} onChange={v => setForm({ ...form, date: v.target.value })} /></div>
               </div>
-              <div>
-                <label style={lblStyle}>{t("طريقة الدفع")}</label>
-                <div style={{ display: "flex", gap: 10 }}>
-                  {["Cash", "Bank"].map(m => (
-                    <button key={m} onClick={() => setForm({ ...form, payment_method: m })}
-                      style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `2px solid ${form.payment_method === m ? (m === 'Cash' ? '#10b981' : '#00D2FF') : 'transparent'}`, background: form.payment_method === m ? (m === 'Cash' ? 'rgba(16,185,129,0.15)' : 'rgba(0,210,255,0.15)') : 'rgba(255,255,255,0.04)', color: form.payment_method === m ? (m === 'Cash' ? '#10b981' : '#00D2FF') : 'var(--text-muted)', fontWeight: 600, cursor: 'pointer', fontSize: 14, transition: 'all 0.15s' }}>
-                      {m === 'Cash' ? t("Cash (الخزنة)") : t("Bank (البنك)")}
-                    </button>
-                  ))}
-                </div>
-              </div>
+
               <div>
                 <label style={lblStyle}>{t("ملاحظات")}</label>
                 <input className="glass-input" style={{ width: "100%" }} value={form.notes} onChange={v => setForm({ ...form, notes: v.target.value })} />

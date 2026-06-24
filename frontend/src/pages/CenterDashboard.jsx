@@ -44,7 +44,7 @@ export default function CenterDashboard() {
           <p style={{ color: "var(--text-dim)", marginTop: 4 }}>{t("نظرة شاملة على أداء المركز الطبي والعيادات التابعة")}</p>
         </div>
         <div className="glass-panel" style={{ padding: "10px 20px", fontSize: 24, fontWeight: 800, color: "var(--primary)" }}>
-          {currentTime.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+          {currentTime.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true })}
         </div>
       </header>
 

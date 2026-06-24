@@ -5,9 +5,28 @@ import * as THREE from "three";
 import { useLanguage } from "../LanguageContext";
 
 const getFDINumber = (name) => {
+  if (!name) return null;
+  const lower = name.toLowerCase();
+  if (lower.includes("gum") || lower.includes("gingiva") || lower.includes("mandibula") || lower.includes("maxilla")) {
+    return null;
+  }
   // Extract number directly (e.g. 11 from "Tooth_11" or "11_Mesh")
   const match = name.match(/\d+/);
-  return match ? match[0] : null;
+  if (match) {
+    const num = parseInt(match[0], 10);
+    // FDI tooth numbers must be valid (permanent 11-48, deciduous 51-85)
+    if ((num >= 11 && num <= 18) || 
+        (num >= 21 && num <= 28) || 
+        (num >= 31 && num <= 38) || 
+        (num >= 41 && num <= 48) ||
+        (num >= 51 && num <= 55) ||
+        (num >= 61 && num <= 65) ||
+        (num >= 71 && num <= 75) ||
+        (num >= 81 && num <= 85)) {
+      return String(num);
+    }
+  }
+  return null;
 };
 
 const normalizeToothId = (id) => {
@@ -36,59 +55,84 @@ function Model({ url, onToothSelect, toothStatus, treatments, noControls, focuse
   React.useEffect(() => {
     scene.traverse((child) => {
       if (child.isMesh) {
-        const rawId = getFDINumber(child.name);
-        const toothId = normalizeToothId(rawId);
-        if (!toothId) return;
-
         // Clone material for independence
         if (!child.userData.cloned) {
           child.material = Array.isArray(child.material) ? child.material.map(m => m.clone()) : child.material.clone();
           child.userData.cloned = true;
         }
 
-        const isSessionTooth = treatments?.some(t => normalizeToothId(t.tooth_number || t.tooth) === toothId);
-        const isFocused = normalizeToothId(focusedTooth) === toothId;
+        // Enable shadow casting and receiving
+        child.castShadow = true;
+        child.receiveShadow = true;
 
-        let targetColor = null;
-        const colors = { 
-          "نخر": 0xef4444, "حشو": 0x10b981, "عصب": 0xf59e0b, 
-          "خلع": 0x64748b, "تلبيس": 0x3b82f6, "زرعة": 0xa855f7 
-        };
+        const rawId = getFDINumber(child.name);
+        const toothId = normalizeToothId(rawId);
 
-        // 1. Determine Base Color based on status
-        if (toothStatus[toothId]) {
-          targetColor = colors[toothStatus[toothId].status] || 0xd9d9d1;
-        }
+        if (toothId) {
+          const isSessionTooth = treatments?.some(t => normalizeToothId(t.tooth_number || t.tooth) === toothId);
+          const isFocused = normalizeToothId(focusedTooth) === toothId;
 
-        // 2. Special overrides (Focus)
-        if (isFocused && !noControls) {
-          if (!targetColor) targetColor = 0x3b82f6; // Blue highlight for focus if no status
-        }
+          let targetColor = null;
+          const colors = { 
+            "نخر": 0xef4444, "حشو": 0x10b981, "عصب": 0xf59e0b, 
+            "خلع": 0x64748b, "تلبيس": 0x3b82f6, "زرعة": 0xa855f7 
+          };
 
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
-        materials.forEach(mat => {
-          if (targetColor !== null) {
-            mat.color.setHex(targetColor);
-          } else {
-            mat.color.setRGB(0.85, 0.85, 0.82);
+          // 1. Determine Base Color based on status
+          if (toothStatus[toothId]) {
+            targetColor = colors[toothStatus[toothId].status] || 0xd9d9d1;
           }
 
-          // Glow for 'Actually Worked On' teeth in this session
-          if (isSessionTooth) {
-            mat.emissive.setHex(0x10b981);
-            mat.emissiveIntensity = 0.6;
-            // If it's a session tooth but has no status color, give it a soft green base
-            if (targetColor === null) mat.color.setHex(0x10b981);
-          } else if (isFocused && !noControls) {
-            mat.emissive.setHex(0x3b82f6);
-            mat.emissiveIntensity = 0.4;
-          } else {
-            mat.emissive.setHex(0x000000);
-            mat.emissiveIntensity = 0;
+          // 2. Special overrides (Focus)
+          if (isFocused && !noControls) {
+            if (!targetColor) targetColor = 0x3b82f6; // Blue highlight for focus if no status
           }
 
-          mat.needsUpdate = true;
-        });
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach(mat => {
+            if (targetColor !== null) {
+              mat.color.setHex(targetColor);
+            } else {
+              mat.color.setRGB(0.94, 0.94, 0.90);
+            }
+
+            // Polished enamel look with three-dimensional highlights
+            mat.roughness = 0.1;
+            mat.metalness = 0.05;
+
+            // Glow for 'Actually Worked On' teeth in this session
+            if (isSessionTooth) {
+              mat.emissive.setHex(0x10b981);
+              mat.emissiveIntensity = 0.6;
+              // If it's a session tooth but has no status color, give it a soft green base
+              if (targetColor === null) mat.color.setHex(0x10b981);
+            } else if (isFocused && !noControls) {
+              mat.emissive.setHex(0x3b82f6);
+              mat.emissiveIntensity = 0.4;
+            } else {
+              mat.emissive.setHex(0x000000);
+              mat.emissiveIntensity = 0;
+            }
+
+            mat.needsUpdate = true;
+          });
+        } else {
+          // Gums or jaw base structure
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach(mat => {
+            const nameLower = child.name.toLowerCase();
+            if (nameLower.includes("gum") || nameLower.includes("gingiva") || nameLower.includes("gums")) {
+              mat.color.setRGB(0.8, 0.38, 0.42); // Realistic moist gum pink
+              mat.roughness = 0.35; // Gums are moist
+              mat.metalness = 0.02;
+            } else {
+              mat.color.setRGB(0.65, 0.65, 0.65); // Neutral soft grey for jaw base
+              mat.roughness = 0.7; // Jaw bone is matte
+              mat.metalness = 0.05;
+            }
+            mat.needsUpdate = true;
+          });
+        }
       }
     });
   }, [scene, toothStatus, treatments, noControls, focusedTooth, updateKey]);
@@ -192,9 +236,20 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
         <ErrorBoundary>
           <Suspense fallback={<div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "white" }}>{t("جاري تحميل النموذج...")}</div>}>
             <Canvas shadows camera={{ position: cameraPos, fov: 45 }} gl={{ antialias: true, alpha: true }}>
-              <ambientLight intensity={1.2} />
-              <pointLight position={[10, 10, 10]} intensity={1.5} />
-              <spotLight position={[-10, 10, 10]} angle={0.15} penumbra={1} intensity={1} />
+              <ambientLight intensity={0.5} />
+              <directionalLight 
+                position={[10, 20, 10]} 
+                intensity={1.2} 
+                castShadow 
+                shadow-mapSize-width={1024} 
+                shadow-mapSize-height={1024}
+                shadow-bias={-0.001}
+              />
+              <directionalLight 
+                position={[-10, 10, -10]} 
+                intensity={0.4} 
+              />
+              <pointLight position={[0, -10, 5]} intensity={0.3} />
               <Center top={noControls ? false : true}>
                 <Model 
                    url="second.glb" 

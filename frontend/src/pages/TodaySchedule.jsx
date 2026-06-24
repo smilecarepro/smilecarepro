@@ -3,13 +3,35 @@ import { getAppointments } from "../api";
 import { useLanguage } from "../LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { useSettings } from "../SettingsContext";
+import { useAuth } from "../AuthContext";
+
+const format12h = (timeStr, lang = "ar") => {
+  if (!timeStr) return "";
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = parts[1];
+  const isPm = hours >= 12;
+  const ampm = isPm ? (lang === "ar" ? "م" : "PM") : (lang === "ar" ? "ص" : "AM");
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${hours}:${minutes} ${ampm}`;
+};
+
 
 export default function TodaySchedule() {
   const { t, lang } = useLanguage();
   const nav = useNavigate();
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    if (user?.role === "secretary") {
+      nav("/home", { replace: true });
+    }
+  }, [user, nav]);
   const [hiddenIds, setHiddenIds] = useState(() => {
     const saved = sessionStorage.getItem('today_hidden_ids');
     return saved ? JSON.parse(saved) : [];
@@ -52,8 +74,9 @@ export default function TodaySchedule() {
     setLoading(true);
     getAppointments(todayStr).then(data => {
       if (Array.isArray(data)) {
-        const mapped = data.map(app => ({ ...app, status: mapStatus(app.status) }));
-        setAppointments(mapped.sort((a, b) => a.time.localeCompare(b.time)));
+        const filtered = data.filter(app => app.status !== "completed");
+        const mapped = filtered.map(app => ({ ...app, status: mapStatus(app.status) }));
+        setAppointments(mapped.sort((a, b) => (a.time || "").localeCompare(b.time || "")));
       }
       setLoading(false);
     }).catch(err => {
@@ -109,7 +132,7 @@ export default function TodaySchedule() {
     let message = template
       .replace(/{patient}/g, app.patient_name || "")
       .replace(/{date}/g, app.date || todayStr)
-      .replace(/{time}/g, app.time || "");
+      .replace(/{time}/g, format12h(app.time, lang) || "");
 
     if (!finalPhone || finalPhone === '964') {
       alert(t("رقم الهاتف غير صحيح أو مفقود"));
@@ -177,7 +200,7 @@ export default function TodaySchedule() {
                   padding: isMobile ? "10px" : "15px 25px",
                   borderRadius: 16
                 }}>
-                  {app.time}
+                   {format12h(app.time, lang)}
                   <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", marginTop: 4 }}>{t("التوقيت")}</div>
                 </div>
  

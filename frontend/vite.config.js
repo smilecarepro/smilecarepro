@@ -53,6 +53,19 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": "http://127.0.0.1:5050"
+    },
+    headers: {
+      // Allow unsafe-eval for Vite HMR in dev mode only. Production build never uses eval.
+      "Content-Security-Policy": [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com data:",
+        "img-src 'self' data: blob: https:",
+        "connect-src 'self' ws://localhost:5173 ws://127.0.0.1:5173 http://localhost:5050 http://127.0.0.1:5050 https:",
+        "worker-src 'self' blob:",
+        "frame-src 'none'"
+      ].join("; ")
     }
   },
   build: {
@@ -60,4 +73,3 @@ export default defineConfig({
     emptyOutDir: true
   }
 });
-

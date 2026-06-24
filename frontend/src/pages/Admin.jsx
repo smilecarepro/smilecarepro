@@ -38,6 +38,32 @@ export default function Admin() {
     setSyncingBackups(false);
   };
 
+  const handleDownloadAdminBackup = async (username, clinicName) => {
+    try {
+      const response = await fetch(getAdminBackupUrl(username), {
+        headers: {
+          "Authorization": `Bearer ${JSON.parse(localStorage.getItem("clinic_user") || "{}").token || ""}`
+        }
+      });
+      if (!response.ok) {
+        const txt = await response.text();
+        throw new Error(txt || "فشل تحميل النسخة الاحتياطية");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SmileCare_Backup_${clinicName}_${new Date().toISOString().split('T')[0]}.db`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("فشل تحميل النسخة الاحتياطية: " + e.message);
+    }
+  };
+
 
   const fetchData = async () => {
     try {
@@ -332,7 +358,7 @@ export default function Admin() {
                           disabled={b.status !== 'Available'}
                           className="btn-save" 
                           style={{ padding: "10px 20px", fontSize: 13, background: b.status !== 'Available' ? "#333" : "#10b981" }}
-                          onClick={() => window.open(getAdminBackupUrl(b.username), '_blank')}
+                          onClick={() => handleDownloadAdminBackup(b.username, b.clinic_name)}
                         >
                           ⬇️ تحميل
                         </button>

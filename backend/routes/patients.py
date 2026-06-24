@@ -7,6 +7,11 @@ from database import db_required, log_action
 
 patients_bp = Blueprint("patients", __name__)
 
+def get_sec_permission(key, default):
+    row = g.db.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    return row['value'] if row else default
+
+
 @patients_bp.route("/treatments/all", methods=["GET"])
 @db_required
 def get_all_treatments():
@@ -52,13 +57,21 @@ def get_patients():
         SELECT p.*, p.total_agreed_price AS total_price, MAX(a.date) as last_visit
         FROM patients p
         LEFT JOIN appointments a ON p.id = a.patient_id
-        WHERE (p.first_name LIKE ? OR p.last_name LIKE ? OR p.phone LIKE ?)
+        WHERE p.deleted_at IS NULL
+          AND (p.first_name LIKE ? OR p.last_name LIKE ? OR p.phone LIKE ?)
     """
     params = [f"%{q}%", f"%{q}%", f"%{q}%"]
     
     if status:
-        query += " AND p.status = ?"
-        params.append(status)
+        if status == "مديون":
+            query += " AND p.debt > 0"
+        elif status == "مستمر":
+            query += " AND p.is_ongoing = 1"
+        elif status == "منتهي":
+            query += " AND p.is_ongoing = 0"
+        else:
+            query += " AND p.status = ?"
+            params.append(status)
 
     if date_filter:
         query += " AND p.created_at = ?"
@@ -73,12 +86,16 @@ def get_patients():
 @patients_bp.route("/<int:id>", methods=["PUT"])
 @db_required
 def update_patient(id):
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_patients', 'view_edit')
+        if perm not in ['view_edit', 'view_edit_add']:
+            return jsonify({"error": "غير مصرح لك بتعديل بيانات المرضى"}), 403
     d = request.json
     fields = [
         'first_name', 'last_name', 'phone', 'birth_date', 'age', 'gender', 
         'occupation', 'address', 'systemic_conditions', 'notes', 
         'case_category', 'is_ongoing', 'status', 'case_notes', 'case_images',
-        'payment_system', 'total_agreed_price'
+        'total_agreed_price'
     ]
     
     # Map arrays to strings if they exist
@@ -114,7 +131,7 @@ def update_patient(id):
         inv = g.db.execute("SELECT id FROM invoices WHERE patient_id = ?", (id,)).fetchone()
         if not inv and d['total_agreed_price'] > 0:
             # Create a default empty invoice so that they show up in debts if needed
-            g.db.execute("INSERT INTO invoices (patient_id, agreed_price, amount, status, date) VALUES (?, ?, ?, ?, CURRENT_DATE)", 
+            g.db.execute("INSERT INTO invoices (patient_id, total_amount, paid_amount, status, date) VALUES (?, ?, ?, ?, CURRENT_DATE)", 
                          (id, d['total_agreed_price'], 0, 'غير مدفوع'))
 
     g.db.commit()
@@ -123,16 +140,27 @@ def update_patient(id):
 @patients_bp.route("/", methods=["POST"])
 @db_required
 def add_patient():
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_patients', 'view_edit')
+        if perm != 'view_edit_add':
+            return jsonify({"error": "غير مصرح لك بإضافة مرضى جدد"}), 403
     d = request.json
     fields = [
         'first_name', 'last_name', 'phone', 'birth_date', 'age', 'gender', 
         'occupation', 'address', 'systemic_conditions', 'notes', 
-        'case_category', 'is_ongoing', 'status', 'payment_system', 'total_agreed_price'
+        'case_category', 'is_ongoing', 'status', 'total_agreed_price'
     ]
     
     # Use default values if missing
-    values = [d.get(f, "") for f in fields]
-    if not d.get('status'): values[fields.index('status')] = 'جديد'
+    values = []
+    for f in fields:
+        val = d.get(f, "")
+        
+        if f == 'total_agreed_price' and val == "":
+            val = 0
+        if f == 'status' and not val:
+            val = 'جديد'
+        values.append(val)
 
     placeholders = ", ".join(["?"] * len(fields))
     col_names = ", ".join(fields)
@@ -186,6 +214,10 @@ def get_patient(id):
 @patients_bp.route("/<int:id>/teeth", methods=["POST"])
 @db_required
 def update_teeth(id):
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_medical_history', '0')
+        if perm != '1':
+            return jsonify({"error": "Unauthorized"}), 403
     data = json.dumps(request.json)
     g.db.execute("INSERT OR REPLACE INTO teeth_map (patient_id, map_data) VALUES (?, ?)", (id, data))
     
@@ -204,6 +236,10 @@ import datetime
 @patients_bp.route("/<int:id>/prescriptions", methods=["POST"])
 @db_required
 def add_prescription(id):
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_medical_history', '0')
+        if perm != '1':
+            return jsonify({"error": "Unauthorized"}), 403
     # Support both JSON and multipart/form-data
     if request.is_json:
         d = request.json
@@ -237,6 +273,10 @@ def add_prescription(id):
 @patients_bp.route("/prescriptions/<int:presc_id>", methods=["DELETE"])
 @db_required
 def delete_prescription(presc_id):
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_medical_history', '0')
+        if perm != '1':
+            return jsonify({"error": "Unauthorized"}), 403
     g.db.execute("DELETE FROM prescriptions WHERE id = ?", (presc_id,))
     g.db.commit()
     return jsonify({"ok": True})
@@ -244,15 +284,40 @@ def delete_prescription(presc_id):
 @patients_bp.route("/prescriptions/<int:presc_id>", methods=["PUT"])
 @db_required
 def update_prescription(presc_id):
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_medical_history', '0')
+        if perm != '1':
+            return jsonify({"error": "Unauthorized"}), 403
     d = request.json
-    g.db.execute("UPDATE prescriptions SET meds = ?, notes = ?, date = ? WHERE id = ?",
-                 (d.get('meds', ''), d.get('notes', ''), d.get('date', ''), presc_id))
+    import json
+    
+    # If they sent drugs, let's update drugs_json and meds summary
+    drugs_list = d.get("drugs")
+    if drugs_list is not None:
+        drugs_json = json.dumps(drugs_list, ensure_ascii=False)
+        meds_summary = "، ".join([dr.get("name", "") for dr in drugs_list])
+        g.db.execute("UPDATE prescriptions SET meds = ?, drugs_json = ? WHERE id = ?", (meds_summary, drugs_json, presc_id))
+        
+    # Update other fields if present
+    if 'diagnosis' in d:
+        g.db.execute("UPDATE prescriptions SET diagnosis = ?, notes = ? WHERE id = ?", (d['diagnosis'], d['diagnosis'], presc_id))
+    elif 'notes' in d:
+        g.db.execute("UPDATE prescriptions SET notes = ? WHERE id = ?", (d['notes'], presc_id))
+        
+    if 'date' in d:
+        g.db.execute("UPDATE prescriptions SET date = ? WHERE id = ?", (d['date'], presc_id))
+        
     g.db.commit()
     return jsonify({"ok": True})
+
 
 @patients_bp.route("/<int:id>/treatments", methods=["POST"])
 @db_required
 def add_treatment(id):
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_medical_history', '0')
+        if perm != '1':
+            return jsonify({"error": "Unauthorized"}), 403
     d = request.json
     g.db.execute("""
         INSERT INTO treatment_logs (patient_id, tooth_number, procedure, notes, cost, date)
@@ -270,32 +335,131 @@ def add_treatment(id):
 @patients_bp.route("/treatments/<int:tid>", methods=["DELETE"])
 @db_required
 def delete_treatment(tid):
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_medical_history', '0')
+        if perm != '1':
+            return jsonify({"error": "Unauthorized"}), 403
     g.db.execute("DELETE FROM treatment_logs WHERE id = ?", (tid,))
     g.db.commit()
     return jsonify({"ok": True})
 
+@patients_bp.route("/treatments/<int:tid>", methods=["PUT"])
+@db_required
+def update_treatment(tid):
+    if g.user.get('role') == 'secretary':
+        perm_med = get_sec_permission('sec_perm_medical_history', '0')
+        perm_inv = get_sec_permission('sec_perm_invoices', 'today')
+        if perm_med != '1' and perm_inv == 'none':
+            return jsonify({"error": "Unauthorized"}), 403
+    """Edit a treatment log entry (procedure, cost, date, notes, tooth)."""
+    d = request.json
+    old = g.db.execute("SELECT * FROM treatment_logs WHERE id=?", (tid,)).fetchone()
+    if not old:
+        return jsonify({"error": "NotFound"}), 404
+    g.db.execute(
+        "UPDATE treatment_logs SET tooth_number=?, procedure=?, notes=?, cost=?, date=? WHERE id=?",
+        (
+            d.get('tooth_number', old['tooth_number']),
+            d.get('procedure',    old['procedure']),
+            d.get('notes',        old['notes']),
+            d.get('cost',         old['cost']),
+            d.get('date',         old['date']),
+            tid
+        )
+    )
+    p = g.db.execute("SELECT first_name, last_name FROM patients WHERE id=?", (old['patient_id'],)).fetchone()
+    p_name = f"{p['first_name']} {p['last_name']}" if p else "Unknown"
+    log_action("UPDATE_TREATMENT", target_id=old['patient_id'], target_name=p_name,
+               description=f"تعديل إجراء علاجي: {d.get('procedure', old['procedure'])} للسن {d.get('tooth_number', old['tooth_number'])}",
+               old_data=dict(old), new_data=d)
+    g.db.commit()
+    return jsonify({"ok": True})
+
+# ── نقل المريض لسلة المحذوفات (Soft Delete) ────────────────────────
 @patients_bp.route("/<int:id>", methods=["DELETE"])
 @db_required
 def delete_patient(id):
-    # Get info before delete for logging
+    if g.user.get('role') == 'secretary':
+        return jsonify({"error": "Unauthorized"}), 403
+    """Soft-delete: move patient to trash (sets deleted_at). Does NOT remove data."""
+    p = g.db.execute("SELECT first_name, last_name FROM patients WHERE id=? AND deleted_at IS NULL", (id,)).fetchone()
+    if not p:
+        return jsonify({"error": "Patient not found"}), 404
+    import datetime
+    deleted_at = datetime.datetime.now().isoformat()
+    g.db.execute("UPDATE patients SET deleted_at = ? WHERE id = ?", (deleted_at, id))
+    p_name = f"{p['first_name']} {p['last_name']}"
+    log_action("TRASH_PATIENT", target_id=id, target_name=p_name,
+               description="نقل ملف المريض إلى سلة المحذوفات")
+    g.db.commit()
+    return jsonify({"ok": True})
+
+
+@patients_bp.route("/trash", methods=["GET"])
+@db_required
+def get_trash_patients():
+    if g.user.get('role') == 'secretary':
+        return jsonify({"error": "Unauthorized"}), 403
+    """Returns patients in the trash with days_remaining before auto-delete."""
+    rows = g.db.execute(
+        "SELECT id, first_name, last_name, phone, deleted_at FROM patients WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+    ).fetchall()
+    result = []
+    for r in rows:
+        import datetime
+        deleted_dt = datetime.datetime.fromisoformat(r['deleted_at'])
+        days_passed = (datetime.datetime.now() - deleted_dt).days
+        days_remaining = max(0, 30 - days_passed)
+        result.append({
+            **dict(r),
+            "days_remaining": days_remaining
+        })
+    return jsonify(result)
+
+# ── استرجاع مريض من السلة ───────────────────────────────────
+@patients_bp.route("/<int:id>/restore", methods=["POST"])
+@db_required
+def restore_patient(id):
+    if g.user.get('role') == 'secretary':
+        return jsonify({"error": "Unauthorized"}), 403
+    """Restore a soft-deleted patient back to active."""
+    p = g.db.execute("SELECT first_name, last_name FROM patients WHERE id=? AND deleted_at IS NOT NULL", (id,)).fetchone()
+    if not p:
+        return jsonify({"error": "Patient not found in trash"}), 404
+    g.db.execute("UPDATE patients SET deleted_at = NULL WHERE id = ?", (id,))
+    p_name = f"{p['first_name']} {p['last_name']}"
+    log_action("RESTORE_PATIENT", target_id=id, target_name=p_name, description="استرجاع المريض من سلة المحذوفات")
+    g.db.commit()
+    return jsonify({"ok": True})
+
+# ── حذف نهائي كامل للمريض وكل بياناته ──────────────────────
+@patients_bp.route("/<int:id>/permanent", methods=["DELETE"])
+@db_required
+def permanent_delete_patient(id):
+    if g.user.get('role') == 'secretary':
+        return jsonify({"error": "Unauthorized"}), 403
+    """Permanently deletes a patient and all related data. Irreversible."""
     p = g.db.execute("SELECT first_name, last_name FROM patients WHERE id=?", (id,)).fetchone()
     if p:
         p_name = f"{p['first_name']} {p['last_name']}"
-        log_action("DELETE_PATIENT", target_id=id, target_name=p_name, description="حذف ملف المريض بالكامل من النظام")
-    
-    g.db.execute("DELETE FROM patients WHERE id = ?", (id,))
-    # Clean up related data (optional but recommended)
+        log_action("PERMANENT_DELETE_PATIENT", target_id=id, target_name=p_name,
+                   description="حذف نهائي كامل لملف المريض من سلة المحذوفات")
     g.db.execute("DELETE FROM appointments WHERE patient_id = ?", (id,))
     g.db.execute("DELETE FROM invoices WHERE patient_id = ?", (id,))
     g.db.execute("DELETE FROM teeth_map WHERE patient_id = ?", (id,))
     g.db.execute("DELETE FROM treatment_logs WHERE patient_id = ?", (id,))
     g.db.execute("DELETE FROM prescriptions WHERE patient_id = ?", (id,))
-    
+    g.db.execute("DELETE FROM patients WHERE id = ?", (id,))
     g.db.commit()
     return jsonify({"ok": True})
+
 @patients_bp.route("/<int:id>/report-pdf", methods=["GET"])
 @db_required
 def download_patient_report_pdf(id):
+    if g.user.get('role') == 'secretary':
+        perm = get_sec_permission('sec_perm_medical_history', '0')
+        if perm != '1':
+            return jsonify({"error": "Unauthorized"}), 403
     from flask import send_file
     import io
     from pdf_utils import get_pdf_styles, add_header_footer, force_english
@@ -376,4 +540,62 @@ def download_patient_report_pdf(id):
 
     doc.build(story, onFirstPage=lambda c, d: add_header_footer(c, d, clinic), onLaterPages=lambda c, d: add_header_footer(c, d, clinic))
     buf.seek(0)
-    return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=f"report_{id}.pdf")
+    return send_file(buf, mimetype="application/pdf", as_attachment=False, download_name=f"report_{id}.pdf")
+
+
+@patients_bp.route("/<int:id>/latest-session", methods=["GET"])
+@db_required
+def get_latest_session(id):
+    # Find the latest date of treatment logs for this patient
+    row = g.db.execute("SELECT MAX(date) as max_date FROM treatment_logs WHERE patient_id = ?", (id,)).fetchone()
+    latest_date = row['max_date'] if row and row['max_date'] else None
+    
+    treatments = []
+    if latest_date:
+        rows = g.db.execute("SELECT * FROM treatment_logs WHERE patient_id = ? AND date = ?", (id, latest_date)).fetchall()
+        treatments = [dict(r) for r in rows]
+        
+    # Get the latest prescription
+    rx_rows = g.db.execute("SELECT * FROM prescriptions WHERE patient_id = ? ORDER BY date DESC, id DESC LIMIT 1", (id,)).fetchall()
+    prescription = dict(rx_rows[0]) if rx_rows else None
+    
+    return jsonify({
+        "date": latest_date,
+        "treatments": treatments,
+        "prescription": prescription
+    })
+
+
+@patients_bp.route("/<int:id>/fine", methods=["POST"])
+@db_required
+def add_fine(id):
+    data = request.get_json() or {}
+    amount = float(data.get("amount", 0))
+    notes = data.get("notes", "غرامة غياب/تأجيل")
+    
+    import datetime
+    date = data.get("date") or datetime.datetime.now().strftime("%Y-%m-%d")
+    
+    if amount <= 0:
+        return jsonify({"error": "Invalid amount"}), 400
+        
+    p = g.db.execute("SELECT total_agreed_price, first_name, last_name FROM patients WHERE id = ?", (id,)).fetchone()
+    if not p:
+        return jsonify({"error": "Patient not found"}), 404
+        
+    # Insert a treatment log for the fine
+    g.db.execute(
+        "INSERT INTO treatment_logs (patient_id, tooth_number, procedure, notes, cost, date) VALUES (?, ?, ?, ?, ?, ?)",
+        (id, "General", "غرامة", notes, amount, date)
+    )
+    
+    new_total = float(p['total_agreed_price'] or 0) + amount
+    g.db.execute("UPDATE patients SET total_agreed_price = ? WHERE id = ?", (new_total, id))
+        
+    # Log the action
+    p_name = f"{p['first_name']} {p['last_name']}"
+    log_action("ADD_FINE", target_id=id, target_name=p_name, description=f"إضافة غرامة مالية بقيمة {amount:,.0f} د.ع")
+    
+    g.db.commit()
+    return jsonify({"ok": True})
+

@@ -159,7 +159,7 @@ export default function AuditLog() {
                   onMouseLeave={e => { if(selectedLog?.id !== log.id) e.currentTarget.style.background = "transparent"}}
                 >
                   <td style={{ padding: "16px 24px", fontSize: 14 }}>
-                    <div style={{ color: "var(--text-light)" }}>{new Date(log.timestamp + " UTC").toLocaleTimeString("ar-IQ", { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div style={{ color: "var(--text-light)" }}>{new Date(log.timestamp + " UTC").toLocaleTimeString("ar-IQ", { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
                     <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{new Date(log.timestamp + " UTC").toLocaleDateString("ar-IQ")}</div>
                   </td>
                   {isManager && (

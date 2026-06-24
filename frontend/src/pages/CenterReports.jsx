@@ -114,7 +114,7 @@ export default function CenterReports() {
         <div className="glass-panel" style={{ padding: 24, minHeight: 400 }}>
           <h3 style={{ marginBottom: 24, fontSize: 18, fontWeight: 800 }}>📊 {t("مقارنة الأداء بين العيادات")}</h3>
           <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} />
@@ -134,7 +134,7 @@ export default function CenterReports() {
         <div className="glass-panel" style={{ padding: 24, minHeight: 400 }}>
           <h3 style={{ marginBottom: 24, fontSize: 18, fontWeight: 800 }}>🥧 {t("مصادر العمولات (حسب الطبيب)")}</h3>
           <div style={{ width: '100%', height: 300 }}>
-            <ResponsiveContainer>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <PieChart>
                 <Pie
                   data={pieData}

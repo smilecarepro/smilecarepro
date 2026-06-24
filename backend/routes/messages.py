@@ -4,10 +4,34 @@ from routes.auth import token_required
 
 messages_bp = Blueprint("messages", __name__)
 
+def check_messages_permission(user):
+    if user.get('role') == 'secretary':
+        from database import get_clinic_db_path
+        import sqlite3
+        
+        username = user.get('username')
+        active_doctor = request.headers.get("X-Active-Doctor")
+        if user.get("account_type") in ["center_secretary", "center_manager"] and active_doctor:
+            username = active_doctor
+            
+        db_path = get_clinic_db_path(username)
+        try:
+            conn_local = sqlite3.connect(db_path)
+            row = conn_local.execute("SELECT value FROM settings WHERE key = 'sec_perm_messages'").fetchone()
+            val = row[0] if row else '1'
+            conn_local.close()
+            return val != '0'
+        except:
+            return True
+    return True
+
+
 @messages_bp.route("/contacts", methods=["GET"])
 @token_required
 def get_contacts():
     user = request.user
+    if not check_messages_permission(user):
+        return jsonify([]), 200
     role = user.get('role')
     account_type = user.get('account_type')
     username = user.get('username')
@@ -75,6 +99,8 @@ def get_contacts():
 @token_required
 def send_message():
     user = request.user
+    if not check_messages_permission(user):
+        return jsonify({"error": "Unauthorized"}), 403
     data = request.json
     receiver = data.get("receiver_username")
     content = data.get("content")
@@ -92,6 +118,8 @@ def send_message():
 @messages_bp.route("/history/<other_user>", methods=["GET"])
 @token_required
 def get_chat_history(other_user):
+    if not check_messages_permission(request.user):
+        return jsonify([]), 200
     me = request.user['username']
     conn = get_master_db()
     conn.row_factory = lambda cursor, row: {cursor.description[i][0]: row[i] for i in range(len(cursor.description))}
@@ -113,6 +141,8 @@ def get_chat_history(other_user):
 @messages_bp.route("/unread", methods=["GET"])
 @token_required
 def get_unread_count():
+    if not check_messages_permission(request.user):
+        return jsonify({"count": 0}), 200
     me = request.user['username']
     conn = get_master_db()
     count_row = conn.execute("SELECT COUNT(*) as c FROM messages WHERE receiver_username = ? AND is_read = 0", (me,)).fetchone()

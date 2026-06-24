@@ -83,8 +83,17 @@ export default function Purchases() {
 
   const handleUpdateItem = (itemId, field, value) => {
     setViewingOrder(prev => {
-        const newItems = prev.items.map(i => i.id === itemId ? { ...i, [field]: parseFloat(value) || 0 } : i);
-        return { ...prev, items: newItems };
+      const newItems = prev.items.map(i => {
+        if (i.id === itemId) {
+          let val = value;
+          if (field === 'received_qty' || field === 'price_per_unit') {
+            val = parseFloat(value) || 0;
+          }
+          return { ...i, [field]: val };
+        }
+        return i;
+      });
+      return { ...prev, items: newItems };
     });
   };
 
@@ -308,6 +317,99 @@ export default function Purchases() {
               <button onClick={addCustomItem} className="btn-ghost" style={{ marginRight: 'auto' }}>+ {t("مادة جديدة")}</button>
               <button onClick={() => setShowOrderModal(false)} className="btn-secondary">{t("إلغاء")}</button>
               <button onClick={handleSaveOrder} className="btn-primary" disabled={currentOrder.items.length === 0}>{t("حفظ القائمة")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingOrder && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="modal-panel animate-fade" style={{ width: '100%', maxWidth: 1100, padding: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h3 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>
+                {viewingOrder.status === 'completed' ? `📄 ${t("تفاصيل الفاتورة")}` : `🔍 ${t("جرد المواد المستلمة")}`}
+              </h3>
+              <button onClick={() => setViewingOrder(null)} className="btn-secondary" style={{ minHeight: 38 }}>{t("إغلاق")}</button>
+            </div>
+
+            <div className="table-container custom-scrollbar" style={{ maxHeight: 400, background: 'rgba(0,0,0,0.2)', borderRadius: 14 }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>{t("المادة")}</th>
+                    <th>{t("المطلوب")}</th>
+                    <th>{t("الواصل فعلياً")}</th>
+                    <th>{t("سعر الوحدة")}</th>
+                    <th>{t("تاريخ الصلاحية")}</th>
+                    <th>{t("الإجمالي")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewingOrder.items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td style={{ fontWeight: 600 }}>{item.name}</td>
+                      <td>{item.requested_qty}</td>
+                      <td>
+                        {viewingOrder.status === 'completed' ? item.received_qty : (
+                          <input 
+                            type="number" 
+                            className="glass-input" 
+                            style={{ width: 100, minHeight: 38 }}
+                            value={item.received_qty || 0}
+                            onChange={(e) => handleUpdateItem(item.id, 'received_qty', e.target.value)}
+                          />
+                        )}
+                      </td>
+                      <td>
+                        {viewingOrder.status === 'completed' ? `${(item.price_per_unit || 0).toLocaleString()} ${t("د")}` : (
+                          <input 
+                            type="text" 
+                            className="glass-input" 
+                            style={{ width: 140, minHeight: 38 }}
+                            value={item.price_per_unit ? Number(item.price_per_unit).toLocaleString() : ""}
+                            onChange={(e) => handleUpdateItem(item.id, 'price_per_unit', e.target.value.replace(/\D/g, ""))}
+                          />
+                        )}
+                      </td>
+                      <td>
+                        {viewingOrder.status === 'completed' ? (item.expiry_date || '---') : (
+                          <input 
+                            type="date" 
+                            className="glass-input" 
+                            style={{ minHeight: 38, padding: '4px 8px' }}
+                            value={item.expiry_date || ""}
+                            onChange={(e) => handleUpdateItem(item.id, 'expiry_date', e.target.value)}
+                          />
+                        )}
+                      </td>
+                      <td style={{ fontWeight: 800, color: 'var(--primary-light)' }}>
+                        {((item.received_qty || 0) * (item.price_per_unit || 0)).toLocaleString()} {t("د")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ marginTop: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: 24, borderRadius: 20, border: '1px solid var(--glass-border)' }}>
+              <div>
+                <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{t("المبلغ الإجمالي المستحق:")}</span>
+                <div style={{ fontSize: 32, fontWeight: 900, color: 'white' }}>
+                    {viewingOrder.items.reduce((sum, i) => sum + ((i.received_qty || 0) * (i.price_per_unit || 0)), 0).toLocaleString()} <span style={{ fontSize: 16 }}>{t("د")}</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {viewingOrder.status !== 'completed' && (
+                  <>
+                    <button onClick={() => updatePurchase(viewingOrder.id, { items: viewingOrder.items }).then(() => {
+                         const event = new CustomEvent('show-toast', { detail: { message: t("💾 تم حفظ الجرد مؤقتاً"), type: "success" } });
+                         window.dispatchEvent(event);
+                    })} className="btn-secondary">{t("حفظ المسودة")}</button>
+                    <button onClick={() => handleFinalize(viewingOrder.id)} className="btn-primary" style={{ background: 'var(--success)' }}>{t("إتمام الجرد والشراء")} ✔️</button>
+                  </>
+                )}
+                <button onClick={() => printOrder(viewingOrder)} className="btn-secondary">🖨️ {t("طباعة القائمة")}</button>
+              </div>
             </div>
           </div>
         </div>

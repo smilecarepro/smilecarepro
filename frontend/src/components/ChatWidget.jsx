@@ -194,7 +194,7 @@ export default function ChatWidget() {
                           {m.content}
                         </div>
                         <div style={{ fontSize: 8, color: "var(--text-dim)", marginTop: 4, marginHorizontal: 4 }}>
-                          {m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                          {m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : ""}
                         </div>
                       </div>
                     );

@@ -47,11 +47,11 @@ def update_purchase(id):
         g.db.execute("UPDATE purchase_orders SET status = ? WHERE id = ?", (status, id))
     
     if items:
-        # Update received_qty and price_per_unit for items
+        # Update received_qty, price_per_unit, and expiry_date for items
         for item in items:
             g.db.execute(
-                "UPDATE purchase_items SET received_qty = ?, price_per_unit = ? WHERE id = ?",
-                (item.get('received_qty'), item.get('price_per_unit'), item.get('id'))
+                "UPDATE purchase_items SET received_qty = ?, price_per_unit = ?, expiry_date = ? WHERE id = ?",
+                (item.get('received_qty'), item.get('price_per_unit'), item.get('expiry_date'), item.get('id'))
             )
             
     g.db.commit()
@@ -71,17 +71,30 @@ def finalize_purchase(id):
         price = item['price_per_unit'] or 0
         total_cost += qty * price
         
+        item_id = item['inventory_item_id']
+        
         # Update Inventory
-        if item['inventory_item_id']:
+        if item_id:
             g.db.execute(
-                "UPDATE inventory_items SET stock_quantity = stock_quantity + ?, purchase_price = ? WHERE id = ?",
-                (qty, price, item['inventory_item_id'])
+                "UPDATE inventory_items SET stock_quantity = stock_quantity + ?, purchase_price = ?, last_updated=CURRENT_TIMESTAMP WHERE id = ?",
+                (qty, price, item_id)
             )
         else:
             # Create new inventory item if doesn't exist
-            g.db.execute(
-                "INSERT INTO inventory_items (name, stock_quantity, purchase_price, category) VALUES (?,?,?,?)",
+            cur = g.db.cursor()
+            cur.execute(
+                "INSERT INTO inventory_items (name, stock_quantity, purchase_price, category, last_updated) VALUES (?,?,?,?, CURRENT_TIMESTAMP)",
                 (item['name'], qty, price, 'مشتريات جديدة')
+            )
+            item_id = cur.lastrowid
+            # Link purchase item to newly created inventory item
+            g.db.execute("UPDATE purchase_items SET inventory_item_id = ? WHERE id = ?", (item_id, item['id']))
+            
+        # Add to inventory batches if qty > 0 and expiry_date is provided
+        if qty > 0 and item['expiry_date']:
+            g.db.execute(
+                "INSERT INTO inventory_batches (inventory_item_id, quantity, expiry_date) VALUES (?, ?, ?)",
+                (item_id, qty, item['expiry_date'])
             )
             
     # Add to Expenses

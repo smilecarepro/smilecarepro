@@ -66,13 +66,7 @@ export default function CenterExpenses() {
               <label style={lblStyle}>{t("التاريخ")}</label>
               <input type="date" className="glass-input" style={{ width: "100%" }} value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} />
             </div>
-            <div>
-              <label style={lblStyle}>{t("طريقة الدفع")}</label>
-              <select className="glass-input" style={{ width: "100%" }} value={newExpense.payment_method} onChange={e => setNewExpense({...newExpense, payment_method: e.target.value})}>
-                <option value="Cash">{t("نقد")}</option>
-                <option value="Bank">{t("تحويل بنكي")}</option>
-              </select>
-            </div>
+
             <div style={{ gridColumn: "span 2" }}>
               <label style={lblStyle}>{t("ملاحظات")}</label>
               <input className="glass-input" style={{ width: "100%" }} value={newExpense.notes} onChange={e => setNewExpense({...newExpense, notes: e.target.value})} />

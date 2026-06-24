@@ -6,7 +6,7 @@ import { useSettings } from "../SettingsContext";
 
 // Static fallbacks removed - now handled via getDynamicList
 
-export default function PrescriptionModal({ patient, onClose, onRefresh, existingData, isWizard = false, onAdd, initialMeds, initialDiagnosis }) {
+export default function PrescriptionModal({ patient, onClose, onRefresh, existingData, isWizard = false, onAdd, initialMeds, initialDiagnosis, isEditing = false }) {
   const { t } = useLanguage();
   const { getDynamicList } = useSettings();
   const [step, setStep] = useState(isWizard ? 1 : 0);
@@ -28,7 +28,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
   });
   const [loading, setLoading] = useState(false);
 
-  const isReadOnly = !!existingData;
+  const isReadOnly = !!existingData && !isEditing;
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
@@ -177,9 +177,15 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
         custom_info: editablePatient
       };
 
-      const saveRes = await createSmartPrescription(payload);
+      let saveRes;
+      if (isEditing && existingData?.id) {
+        const { updatePrescription } = await import("../api");
+        saveRes = await updatePrescription(existingData.id, payload);
+      } else {
+        saveRes = await createSmartPrescription(payload);
+      }
 
-      if (saveRes.id) {
+      if (saveRes.ok || saveRes.id) {
         // Use native printing instead of fetching PDF
         printLocalPrescription();
         onRefresh();

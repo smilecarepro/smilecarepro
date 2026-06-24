@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../LanguageContext";
 import { useAuth } from "../AuthContext";
 import { getFinancialStats, getStats } from "../api";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { useSettings } from "../SettingsContext";
 
 const SummaryCard = ({ label, val, color }) => {
   const { t } = useLanguage();
@@ -23,8 +25,10 @@ const ReportRow = ({ label, val, unit, color, bold }) => (
 
 export default function Reports() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const isSecretary = user?.role === "secretary";
+  const { settings } = useSettings();
+  const showFullReport = user?.role !== "secretary" || settings?.sec_perm_reports === "all";
   const [fin, setFin] = useState({});
   const [stats, setStats] = useState({});
 
@@ -42,11 +46,10 @@ export default function Reports() {
       <div className="summary-grid">
         <SummaryCard label={t("إيرادات اليوم")} val={fin.collected_today} color="#10b981" />
         <SummaryCard label={t("صرفيات اليوم")} val={fin.expenses_today} color="#ef4444" />
-        {!isSecretary && (
+        {showFullReport && (
           <>
             <SummaryCard label={t("إيرادات الشهر")} val={fin.collected_month} color="#185FA5" />
-            <SummaryCard label={t("إجمالي الكاش (Cash)")} val={fin.cash_revenue} color="#f59e0b" />
-            <SummaryCard label={t("إجمالي البنك (Bank)")} val={fin.bank_revenue} color="#00D2FF" />
+            <SummaryCard label={t("إجمالي المقبوضات")} val={fin.cash_revenue} color="#f59e0b" />
           </>
         )}
       </div>
@@ -60,12 +63,12 @@ export default function Reports() {
         .mobile-mode .reports-main-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
       `}</style>
 
-      <div className={`reports-main-grid ${isSecretary ? "is-secretary" : ""}`}>
+      <div className={`reports-main-grid ${!showFullReport ? "is-secretary" : ""}`}>
         {/* Main Financial Report */}
         <div className="glass-panel" style={{ padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-            <h3 style={{ fontSize: 18, fontWeight: 600 }}>🏦 {isSecretary ? t("التقرير المالي لليوم") : t("التقرير المالي العام")}</h3>
-            {!isSecretary && (
+            <h3 style={{ fontSize: 18, fontWeight: 600 }}>🏦 {!showFullReport ? t("التقرير المالي لليوم") : t("التقرير المالي العام")}</h3>
+            {showFullReport && (
               <div style={{ fontSize: 12, background: "rgba(16, 185, 129, 0.1)", color: "#10b981", padding: "4px 12px", borderRadius: 20 }}>
                 Collection Rate: {fin.collection_rate}%
               </div>
@@ -74,33 +77,35 @@ export default function Reports() {
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
              <ReportRow label={t("إيرادات اليوم")} val={fin.collected_today} unit={t("د")} />
              <ReportRow label={t("صرفيات اليوم")} val={fin.expenses_today} unit={t("د")} />
-             {!isSecretary && (
+             {showFullReport && (
                <>
                  <ReportRow label={t("إجمالي المقبوضات (All Time)")} val={fin.revenue} unit={t("د")} />
                  <ReportRow label={t("إجمالي المصاريف (All Time)")} val={fin.expenses} unit={t("د")} />
                </>
              )}
              <div style={{ height: 1, background: "rgba(255,255,255,0.1)" }} />
-             <ReportRow label={isSecretary ? t("صافي ربح اليوم") : t("صافي الربح")} val={isSecretary ? (fin.collected_today - fin.expenses_today) : fin.net_profit} unit={t("د")} color="#10b981" bold />
+             <ReportRow label={!showFullReport ? t("صافي ربح اليوم") : t("صافي الربح")} val={!showFullReport ? (fin.collected_today - fin.expenses_today) : fin.net_profit} unit={t("د")} color="#10b981" bold />
           </div>
         </div>
 
         {/* Debts Summary */}
-        <div className="glass-panel" style={{ padding: 24 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>⚠️ {t("مديونية المرضى")}</h3>
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-             <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>{t("إجمالي الديون المتبقية عند المرضى")}</div>
-             <div style={{ fontSize: 32, fontWeight: 800, color: "#ef4444" }}>{(fin.total_debt || 0).toLocaleString()} {t("د")}</div>
-             <button className="btn-ghost" style={{ marginTop: 20, width: "100%" }} onClick={() => window.location.href = "/debts"}>{t("عرض تفاصيل المدينين")}</button>
+        {showFullReport && (
+          <div className="glass-panel" style={{ padding: 24 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>⚠️ {t("مديونية المرضى")}</h3>
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+               <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>{t("إجمالي الديون المتبقية عند المرضى")}</div>
+               <div style={{ fontSize: 32, fontWeight: 800, color: "#ef4444" }}>{(fin.total_debt || 0).toLocaleString()} {t("د")}</div>
+               <button className="btn-ghost" style={{ marginTop: 20, width: "100%" }} onClick={() => navigate("/debts")}>{t("عرض تفاصيل المدينين")}</button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {!isSecretary && (
+      {showFullReport && (
         <div className="glass-panel" style={{ padding: 24 }}>
           <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>📈 {t("النمو الشهري")}</h3>
           <div style={{ height: 250, width: "100%" }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={fin.monthly_growth || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">

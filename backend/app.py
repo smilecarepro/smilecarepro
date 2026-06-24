@@ -55,11 +55,12 @@ limiter.init_app(app)
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from cloud_backup import run_daily_company_backup
-from database import cleanup_old_tokens
+from database import cleanup_old_tokens, cleanup_trash_patients
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=run_daily_company_backup, trigger="cron", hour=2, minute=0)
 scheduler.add_job(func=cleanup_old_tokens, trigger="cron", hour=3, minute=0)
+scheduler.add_job(func=cleanup_trash_patients, trigger="cron", hour=1, minute=30)  # حذف سلة المحذوفات يومياً
 scheduler.start()
 
 # 🔐 Strict CORS Configuration

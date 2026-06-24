@@ -145,7 +145,7 @@ export default function Messages() {
                       {m.message}
                     </div>
                     <div style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 4, textAlign: isMe ? "left" : "right", padding: "0 4px" }}>
-                      {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                     </div>
                   </div>
                 );

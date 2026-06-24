@@ -1,12 +1,25 @@
-
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "../LanguageContext";
 import { useAuth } from "../AuthContext";
-import { getInvoices, getInvoiceSummary, addInvoice, payInvoice, getPatients, getInvoicePDFUrl, getDailySummaryPDFUrl, BASE } from "../api";
+import { 
+  getInvoices, 
+  getInvoiceSummary, 
+  addInvoice, 
+  payInvoice, 
+  getPatients, 
+  getInvoicePDFUrl, 
+  getDailySummaryPDFUrl, 
+  BASE,
+  updateInvoice,
+  deleteInvoice
+} from "../api";
 import { useSettings } from "../SettingsContext";
 
-const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const localDate = () => { 
+  const d = new Date(); 
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; 
+};
 
 const StatItem = ({ label, value, color }) => {
   const { t } = useLanguage();
@@ -26,15 +39,29 @@ export default function Invoices() {
   const { settings } = useSettings();
   const searchRef = useRef(null);
   const isSecretary = user?.role === "secretary";
+  const canAddInvoice = user?.role !== "secretary" || settings?.sec_perm_invoices === "today_add" || settings?.sec_perm_invoices === "all_add";
+  const filterOnlyToday = isSecretary && (settings?.sec_perm_invoices === "today" || settings?.sec_perm_invoices === "today_add");
   const [invoices, setInvoices] = useState([]);
   const [summary, setSummary] = useState({});
   const [patients, setPatients] = useState([]);
   const [q, setQ] = useState("");
   const [modal, setModal] = useState(false);
-  const [payModal, setPayModal] = useState(null);
-  const [form, setForm] = useState({ patient_id: "", agreed_price: "", paid: "", payment_method: "Cash", date: localDate(), notes: "" });
-  const [payAmt, setPayAmt] = useState("");
-  const [printReceipt, setPrintReceipt] = useState(null);
+  const [editModal, setEditModal] = useState(null);
+  const [form, setForm] = useState({ 
+    patient_id: "", 
+    agreed_price: "", 
+    paid: "", 
+    payment_method: "Cash", 
+    date: localDate(), 
+    notes: "" 
+  });
+  const [editForm, setEditForm] = useState({
+    total_amount: "",
+    paid_amount: "",
+    payment_method: "Cash",
+    date: "",
+    notes: ""
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [showResults, setShowResults] = useState(false);
 
@@ -43,6 +70,7 @@ export default function Invoices() {
     getInvoiceSummary().then(setSummary).catch(console.error);
     getPatients().then(setPatients).catch(console.error);
   };
+  
   useEffect(() => { load(); }, [q]);
   useEffect(() => { getPatients().then(setPatients).catch(console.error); }, []);
 
@@ -82,14 +110,67 @@ export default function Invoices() {
       date: form.date
     });
 
-    if (res.ok) {
-       // We'd ideally need the ID of the new invoice to print PDF immediately.
-       // For now, let's just refresh, the user can print from the table.
-       // Or the backend 'addInvoice' should return the ID.
-    }
-
     setModal(false); load();
     setSearchTerm("");
+  };
+
+  const canEditInvoice = (invoiceDateStr) => {
+    if (!invoiceDateStr) return false;
+    const now = new Date();
+    const [yr, mn, dy] = invoiceDateStr.split("-").map(Number);
+    const invoiceDate = new Date(yr, mn - 1, dy);
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    invoiceDate.setHours(0,0,0,0);
+    
+    const diffTime = today.getTime() - invoiceDate.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    
+    return diffDays <= 1;
+  };
+
+  const handleEdit = (invoice) => {
+    setEditModal(invoice);
+    setEditForm({
+      total_amount: invoice.amount || 0,
+      paid_amount: invoice.paid || 0,
+      payment_method: invoice.payment_method || "Cash",
+      date: invoice.date || "",
+      notes: invoice.notes || ""
+    });
+  };
+
+  const saveEdit = async () => {
+    if (editForm.paid_amount && parseFloat(editForm.paid_amount) % 500 !== 0) {
+      return alert(t("⚠️ عذراً، يجب أن يكون مبلغ الدفعة من مضاعفات الـ 500 دينار عراقي."));
+    }
+    
+    const res = await updateInvoice(editModal.id, {
+      total_amount: parseFloat(editForm.total_amount) || 0,
+      paid_amount: parseFloat(editForm.paid_amount) || 0,
+      payment_method: editForm.payment_method,
+      date: editForm.date,
+      notes: editForm.notes
+    });
+
+    if (res.ok) {
+      setEditModal(null);
+      load();
+    } else {
+      alert("فشل تعديل الفاتورة");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm(t("هل أنت متأكد من حذف هذه الفاتورة؟ سيتم إعادة حساب مديونية المريض."))) {
+      const res = await deleteInvoice(id);
+      if (res.ok) {
+        load();
+      } else {
+        alert("فشل حذف الفاتورة");
+      }
+    }
   };
 
   const printPDFReceipt = async (invoiceId) => {
@@ -110,11 +191,9 @@ export default function Invoices() {
     p.phone?.includes(searchTerm)
   );
 
-  const pay = async () => {
-    if (!payAmt) return;
-    await payInvoice(payModal.id, parseFloat(payAmt));
-    setPayModal(null); setPayAmt(""); load();
-  };
+  const displayedInvoices = filterOnlyToday
+    ? invoices.filter(i => i.date === localDate())
+    : invoices;
 
   return (
     <div className="animate-fade">
@@ -133,16 +212,18 @@ export default function Invoices() {
               alert("فشل في استرداد ملخص اليوم");
             }
           }} className="btn-secondary" style={{ padding: "8px 16px" }}>🖨 {t("طباعة التقرير")}</button>
-          <button onClick={() => { setForm({ patient_id: "", agreed_price: "", paid: "", payment_method: "Cash", date: localDate(), notes: "" }); setSearchTerm(""); setModal(true); }} className="btn-primary">
-            <span>+</span> {t("إصدار فاتورة جديدة")}
-          </button>
+          {canAddInvoice && (
+            <button onClick={() => { setForm({ patient_id: "", agreed_price: "", paid: "", payment_method: "Cash", date: localDate(), notes: "" }); setSearchTerm(""); setModal(true); }} className="btn-primary">
+              <span>+</span> {t("إصدار فاتورة جديدة")}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 12, marginBottom: 20 }}>
-        <StatItem label={isSecretary ? "إجمالي فواتير اليوم" : "إجمالي الفواتير"} value={(isSecretary ? (summary.today_total || 0) : (summary.total || 0)).toLocaleString() + " د"} />
-        <StatItem label={isSecretary ? "المبالغ المحصلة اليوم" : "المبالغ المحصلة"} value={(isSecretary ? (summary.today_collected || 0) : (summary.collected || 0)).toLocaleString() + " د"} color="var(--success)" />
-        <StatItem label="الديون المتبقية" value={(summary.debt || 0).toLocaleString() + " د"} color="var(--danger)" />
+      <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: `repeat(${filterOnlyToday ? 2 : 3}, 1fr)`, gap: 12, marginBottom: 20 }}>
+        <StatItem label={filterOnlyToday ? "إجمالي فواتير اليوم" : "إجمالي الفواتير"} value={(filterOnlyToday ? (summary.today_total || 0) : (summary.total || 0)).toLocaleString() + " د"} />
+        <StatItem label={filterOnlyToday ? "المبالغ المحصلة اليوم" : "المبالغ المحصلة"} value={(filterOnlyToday ? (summary.today_collected || 0) : (summary.collected || 0)).toLocaleString() + " د"} color="var(--success)" />
+        {!filterOnlyToday && <StatItem label="الديون المتبقية" value={(summary.debt || 0).toLocaleString() + " د"} color="var(--danger)" />}
       </div>
 
       <div className="glass-panel" style={{ padding: 16, marginBottom: 20 }}>
@@ -154,24 +235,33 @@ export default function Invoices() {
           <table className="mobile-card-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.03)" }}>
-                {[t("المريض"), t("التاريخ"), t("السعر الكلي للعلاج"), t("المدفوع الآن"), t("دين المريض الكلي"), t("الحالة"), t("إجراء")].map(h => (
+                {[t("المريض"), t("التاريخ"), t("السعر الكلي للعلاج"), t("المدفوع الآن"), t("دين المريض الكلي"), t("طريقة الدفع"), t("الحالة"), t("إجراء")].map(h => (
                   <th key={h} style={{ padding: "16px 20px", textAlign: "right", fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {invoices.map(i => (
+              {displayedInvoices.map(i => (
                 <tr key={i.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                   <td data-label={t("المريض")} style={{ padding: "14px 20px", fontWeight: 500 }}>{i.patient_name}</td>
                   <td data-label={t("التاريخ")} style={{ padding: "14px 20px", fontSize: 13, color: "var(--text-muted)" }}>{i.date}</td>
                   <td data-label={t("السعر الكلي للعلاج")} style={{ padding: "14px 20px", fontSize: 13 }}>{(i.total_price || 0).toLocaleString()} د</td>
                   <td data-label={t("المدفوع الآن")} style={{ padding: "14px 20px", fontSize: 13, color: "var(--success)" }}>{(i.paid || 0).toLocaleString()} د</td>
                   <td data-label={t("دين المريض الكلي")} style={{ padding: "14px 20px", fontSize: 13, color: "var(--danger)", fontWeight: 700 }}>{Math.max(0, i.patient_debt || 0).toLocaleString()} د</td>
+                  <td data-label={t("طريقة الدفع")} style={{ padding: "14px 20px", fontSize: 13, color: "var(--text-muted)" }}>{t(i.payment_method)}</td>
                   <td data-label={t("الحالة")} style={{ padding: "14px 20px" }}>
                     <span style={{ fontSize: 11, padding: "4px 10px", borderRadius: 20, background: i.status === "مدفوع" ? "rgba(16, 185, 129, 0.1)" : "rgba(245, 158, 11, 0.1)", color: i.status === "مدفوع" ? "#10b981" : "#f59e0b" }}>{t(i.status)}</span>
                   </td>
                   <td data-label={t("إجراء")} style={{ padding: "14px 20px" }}>
-                    <button onClick={() => printPDFReceipt(i.id)} className="btn-ghost" style={{ padding: "5px 12px", fontSize: 12 }}>🖨</button>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                      <button onClick={() => printPDFReceipt(i.id)} className="btn-ghost" style={{ padding: "5px 10px", fontSize: 12 }} title={t("طباعة")}>🖨</button>
+                      {!isSecretary && canEditInvoice(i.date) && (
+                        <>
+                          <button onClick={() => handleEdit(i)} className="btn-ghost" style={{ padding: "5px 10px", fontSize: 12, color: "var(--primary)" }} title={t("تعديل")}>✏️</button>
+                          <button onClick={() => handleDelete(i.id)} className="btn-ghost" style={{ padding: "5px 10px", fontSize: 12, color: "var(--danger)" }} title={t("حذف")}>🗑️</button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -180,6 +270,7 @@ export default function Invoices() {
         </div>
       </div>
 
+      {/* ── Add Invoice Modal ── */}
       {modal && createPortal(
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="glass-panel animate-fade" style={{ width: "100%", maxWidth: 520, padding: 32 }}>
@@ -208,22 +299,75 @@ export default function Invoices() {
                 <div><label style={lblStyle}>{t("المبلغ المطلوب (الدين)")}</label><input type="text" readOnly className="glass-input" style={{ width: "100%", background: "rgba(255,255,255,0.02)" }} value={form.agreed_price ? Number(form.agreed_price).toLocaleString() : ""} /></div>
                 <div><label style={lblStyle}>{t("الدفعة الحالية")}</label><input type="text" className="glass-input" style={{ width: "100%" }} value={form.paid ? Number(form.paid).toLocaleString() : ""} onChange={e => setForm({ ...form, paid: e.target.value.replace(/\D/g, "") })} /></div>
               </div>
-              <div>
-                <label style={lblStyle}>{t("طريقة الدفع")}</label>
-                <div style={{ display: "flex", gap: 10 }}>
-                  {["Cash", "Bank"].map(m => (
-                    <button key={m} onClick={() => setForm({ ...form, payment_method: m })} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `2px solid ${form.payment_method === m ? (m === 'Cash' ? '#10b981' : '#00D2FF') : 'transparent'}`, background: form.payment_method === m ? (m === 'Cash' ? 'rgba(16,185,129,0.15)' : 'rgba(0,210,255,0.15)') : 'rgba(255,255,255,0.04)', color: form.payment_method === m ? (m === 'Cash' ? '#10b981' : '#00D2FF') : 'var(--text-muted)', fontWeight: 600 }}>{m === 'Cash' ? t("Cash (الخزنة)") : t("Bank (البنك)")}</button>
-                  ))}
-                </div>
-              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={lblStyle}>{t("طريقة الدفع")}</label>
+                  <select className="glass-input" style={{ width: "100%" }} value={form.payment_method} onChange={e => setForm({ ...form, payment_method: e.target.value })}>
+                    <option value="Cash">{t("نقداً")}</option>
+                    <option value="Card">{t("بطاقة")}</option>
+                  </select>
+                </div>
                 <div><label style={lblStyle}>{t("التاريخ")}</label><input type="date" className="glass-input" style={{ width: "100%" }} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
-                <div><label style={lblStyle}>{t("ملاحظات")}</label><input className="glass-input" style={{ width: "100%" }} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
               </div>
+              <div><label style={lblStyle}>{t("ملاحظات")}</label><input className="glass-input" style={{ width: "100%" }} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
             </div>
             <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
               <button onClick={() => setModal(false)} className="btn-ghost" style={{ flex: 1 }}>{t("إلغاء")}</button>
               <button onClick={save} className="btn-primary" style={{ flex: 1 }}>{t("حفظ الفاتورة")}</button>
+            </div>
+          </div>
+        </div>
+        , document.body)}
+
+      {/* ── Edit Invoice Modal ── */}
+      {editModal && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="glass-panel animate-fade" style={{ width: "100%", maxWidth: 520, padding: 32 }}>
+            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24 }}>{t("تعديل الفاتورة")}</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={lblStyle}>{t("المريض")}</label>
+                <input type="text" readOnly className="glass-input" style={{ width: "100%", background: "rgba(255,255,255,0.02)" }} value={editModal.patient_name || ""} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={lblStyle}>{t("المبلغ المطلوب للفاتورة")}</label>
+                  <input 
+                    type="number" 
+                    className="glass-input" 
+                    style={{ width: "100%" }} 
+                    value={editForm.total_amount} 
+                    onChange={e => setEditForm({ ...editForm, total_amount: e.target.value })} 
+                  />
+                </div>
+                <div>
+                  <label style={lblStyle}>{t("المبلغ المدفوع")}</label>
+                  <input 
+                    type="number" 
+                    className="glass-input" 
+                    style={{ width: "100%" }} 
+                    value={editForm.paid_amount} 
+                    onChange={e => setEditForm({ ...editForm, paid_amount: e.target.value })} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={lblStyle}>{t("طريقة الدفع")}</label>
+                  <select className="glass-input" style={{ width: "100%" }} value={editForm.payment_method} onChange={e => setEditForm({ ...editForm, payment_method: e.target.value })}>
+                    <option value="Cash">{t("نقداً")}</option>
+                    <option value="Card">{t("بطاقة")}</option>
+                  </select>
+                </div>
+                <div><label style={lblStyle}>{t("التاريخ")}</label><input type="date" className="glass-input" style={{ width: "100%" }} value={editForm.date} onChange={e => setEditForm({ ...editForm, date: e.target.value })} /></div>
+              </div>
+              <div><label style={lblStyle}>{t("ملاحظات")}</label><input className="glass-input" style={{ width: "100%" }} value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} /></div>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+              <button onClick={() => setEditModal(null)} className="btn-ghost" style={{ flex: 1 }}>{t("إلغاء")}</button>
+              <button onClick={saveEdit} className="btn-primary" style={{ flex: 1 }}>{t("حفظ التعديلات")}</button>
             </div>
           </div>
         </div>

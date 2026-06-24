@@ -4,6 +4,7 @@ import { useLanguage } from "../LanguageContext";
 import { getPatients, addPatient } from "../api";
 import { createPortal } from "react-dom";
 import { useSettings } from "../SettingsContext";
+import { useAuth } from "../AuthContext";
 
 const localDate = () => {
   const d = new Date();
@@ -16,7 +17,9 @@ export default function Patients() {
 
 
   const { t } = useLanguage();
-  const { getDynamicList } = useSettings();
+  const { settings, getDynamicList } = useSettings();
+  const { user } = useAuth();
+  const canAddPatient = user?.role !== "secretary" || settings?.sec_perm_patients === "view_edit_add";
   const [patients, setPatients] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [q,        setQ]        = useState(searchParams.get("q") || "");
@@ -24,7 +27,7 @@ export default function Patients() {
   const [modal,    setModal]    = useState(false);
   const [form,     setForm]     = useState({ 
     first_name:"", last_name:"", phone:"", gender:"Male", age:"", address:"", case_category:"", teeth: {},
-    payment_system: "total", total_agreed_price: "", initial_payment: "", payment_method: "Cash"
+    total_agreed_price: "", initial_payment: "", payment_method: "Cash"
   });
   const [saving,   setSaving]   = useState(false);
   const nav = useNavigate();
@@ -33,38 +36,20 @@ export default function Patients() {
   useEffect(() => { load(); }, [q, status]);
 
   const save = async () => {
-    if (!form.first_name || !form.last_name) return alert(t("الرجاء إدخال الاسم"));
+    if (!form.first_name) return alert(t("الرجاء إدخال الاسم"));
     
-    if (form.payment_system === "total" && form.total_agreed_price && parseFloat(form.total_agreed_price) % 500 !== 0) {
-      return alert(t("⚠️ عذراً، لا يمكن إدخال هذا الرقم. يرجى إدخال مبلغ (السعر الكلي) صحيح من مضاعفات الـ 500 دينار عراقي."));
-    }
-    if (form.initial_payment && parseFloat(form.initial_payment) % 500 !== 0) {
-      return alert(t("⚠️ عذراً، لا يمكن إدخال هذا الرقم. يرجى إدخال مبلغ (الدفعة الأولى) صحيح من مضاعفات الـ 500 دينار عراقي."));
-    }
-
-    setSaving(true);
     const res = await addPatient(form).catch(console.error);
     if (res && res.id) {
-      const { saveTeeth, addInvoice } = await import("../api");
+      const { saveTeeth } = await import("../api");
       if (form.teeth && Object.keys(form.teeth).length > 0) {
         await saveTeeth(res.id, form.teeth).catch(console.error);
-      }
-      if (form.total_agreed_price || form.initial_payment) {
-        await addInvoice({
-          patient_id: res.id,
-          amount: form.payment_system === 'total' ? (parseFloat(form.total_agreed_price) || 0) : 0,
-          paid: parseFloat(form.initial_payment) || 0,
-          payment_method: form.payment_method || "Cash",
-          date: localDate(),
-          notes: t("الدفعة الأولى عند التسجيل")
-        }).catch(console.error);
       }
     }
     setSaving(false);
     setModal(false);
     setForm({ 
       first_name:"", last_name:"", phone:"", gender:"Male", age:"", address:"", 
-      case_category:"", teeth:{}, payment_system: "total", total_agreed_price: "", initial_payment: "", payment_method: "Cash"
+      case_category:"", teeth:{}, total_agreed_price: "", initial_payment: "", payment_method: "Cash"
     });
     load();
   };
@@ -73,9 +58,11 @@ export default function Patients() {
     <div className="animate-fade">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h2 style={{ fontSize: 22, fontWeight: 700 }}>{t("إدارة المرضى")}</h2>
-        <button onClick={() => setModal(true)} className="btn-primary">
-          <span>+</span> {t("إضافة مريض جديد")}
-        </button>
+        {canAddPatient && (
+          <button onClick={() => setModal(true)} className="btn-primary">
+            <span>+</span> {t("إضافة مريض جديد")}
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -91,8 +78,8 @@ export default function Patients() {
         </div>
         <select className="glass-input status-select" value={status} onChange={e => setStatus(e.target.value)} style={{ width: 160 }}>
           <option value="">{t("جميع الحالات")}</option>
-          <option value="جديد">{t("جديد")}</option>
-          <option value="منتظم">{t("منتظم")}</option>
+          <option value="مستمر">{t("مستمر")}</option>
+          <option value="منتهي">{t("منتهي")}</option>
           <option value="مديون">{t("مديون")}</option>
         </select>
       </div>
@@ -149,9 +136,9 @@ export default function Patients() {
                     <td data-label={t("الحالة")} style={{ padding: "14px 20px" }}>
                       <span style={{ 
                         fontSize: 11, padding: "4px 10px", borderRadius: 20,
-                        background: p.status === "منتظم" ? "rgba(24, 95, 165, 0.1)" : p.status === "مديون" ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
-                        color: p.status === "منتظم" ? "#185FA5" : p.status === "مديون" ? "#ef4444" : "#10b981"
-                      }}>{t(p.status)}</span>
+                        background: p.is_ongoing ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.08)",
+                        color: p.is_ongoing ? "#10b981" : "var(--text-muted)"
+                      }}>{t(p.is_ongoing ? "مستمر" : "منتهي")}</span>
                     </td>
                   </tr>
                 );
@@ -169,18 +156,22 @@ export default function Patients() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", overflowY: "auto", padding: "40px 10px" }}>
           <div className="glass-panel animate-fade" style={{ width: "100%", maxWidth: 650, padding: 32, maxHeight: "95vh", overflowY: "auto" }}>
             <h3 style={{ fontSize: 24, fontWeight: 700, marginBottom: 32, textAlign: "center" }}>{t("إضافة مريض جديد")}</h3>
-            
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div><label style={lblStyle}>{t("الاسم الأول")}</label><input className="glass-input" style={{ width: "100%" }} value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} /></div>
-              <div><label style={lblStyle}>{t("اسم العائلة")}</label><input className="glass-input" style={{ width: "100%" }} value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} /></div>
-              <div><label style={lblStyle}>{t("رقم الهاتف")}</label><input className="glass-input" style={{ width: "100%" }} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
-              <div><label style={lblStyle}>{t("العنوان")}</label><input className="glass-input" style={{ width: "100%" }} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div><label className="input-label">{t("الاسم الأول")}</label><input className="glass-input" style={{ width: "100%" }} value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} /></div>
+                <div><label className="input-label">{t("اسم العائلة")}</label><input className="glass-input" style={{ width: "100%" }} value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} /></div>
+              </div>
               
-              <div style={{ display: "flex", gap: 20 }}>
-                <div style={{ flex: 1 }}><label style={lblStyle}>{t("العمر")}</label><input type="number" className="glass-input" style={{ width: "100%" }} value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} /></div>
-                <div style={{ flex: 1 }}>
-                  <label style={lblStyle}>{t("الجنس")}</label>
-                  <select className="glass-input" style={{ width: "100%" }} value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div><label className="input-label">{t("رقم الهاتف")}</label><input className="glass-input" style={{ width: "100%" }} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+                <div><label className="input-label">{t("العمر")}</label><input type="number" className="glass-input" style={{ width: "100%" }} value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} /></div>
+              </div>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div><label className="input-label">{t("العنوان")}</label><input className="glass-input" style={{ width: "100%" }} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+                <div>
+                  <label className="input-label">{t("الجنس")}</label>
+                  <select className="glass-input" style={{ width: "100%", height: 44 }} value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}>
                     <option value="Male">{t("ذكر")}</option>
                     <option value="Female">{t("أنثى")}</option>
                   </select>
@@ -188,38 +179,8 @@ export default function Patients() {
               </div>
 
               <div>
-                <label style={lblStyle}>{t("نظام المحاسبة")}</label>
-                <div style={{ display: "flex", gap: 20, padding: 12, background: "rgba(255,255,255,0.03)", borderRadius: 12 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                    <input type="radio" checked={form.payment_system === "total"} onChange={() => setForm({ ...form, payment_system: "total" })} /> {t("مبلغ كلي")}
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                    <input type="radio" checked={form.payment_system === "sessions"} onChange={() => setForm({ ...form, payment_system: "sessions", total_agreed_price: "" })} /> {t("نظام جلسات")}
-                  </label>
-                </div>
-              </div>
-
-              <div className="grid-2" style={{ marginTop: 10 }}>
-                {form.payment_system === "total" ? (
-                  <div><label style={lblStyle}>{t("السعر الكلي المتفق عليه")}</label><input type="text" className="glass-input" style={{ width: "100%" }} placeholder="IQD" value={form.total_agreed_price ? Number(form.total_agreed_price).toLocaleString() : ""} onChange={e => setForm({ ...form, total_agreed_price: e.target.value.replace(/\D/g, "") })} /></div>
-                ) : (
-                  <div></div>
-                )}
-                <div>
-                  <label style={lblStyle}>{t("الدفعة الأولى")}</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input type="text" className="glass-input" style={{ flex: 1 }} placeholder="IQD" value={form.initial_payment ? Number(form.initial_payment).toLocaleString() : ""} onChange={e => setForm({ ...form, initial_payment: e.target.value.replace(/\D/g, "") })} />
-                    <select className="glass-input" style={{ width: 140 }} value={form.payment_method || "Cash"} onChange={e => setForm({ ...form, payment_method: e.target.value })}>
-                      <option value="Cash">{t("Cash (الخزنة)")}</option>
-                      <option value="Bank">{t("Bank (البنك)")}</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label style={lblStyle}>{t("نوع الحالة")}</label>
-                <select className="glass-input" style={{ width: "100%" }} value={form.case_category} onChange={e => setForm({ ...form, case_category: e.target.value })}>
+                <label className="input-label">{t("نوع الحالة")}</label>
+                <select className="glass-input" style={{ width: "100%", height: 44 }} value={form.case_category} onChange={e => setForm({ ...form, case_category: e.target.value })}>
                   <option value="">{t("اختر النوع...")}</option>
                   {getDynamicList('treatment_types', [
                     "فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"
@@ -228,12 +189,18 @@ export default function Patients() {
                   ))}
                 </select>
               </div>
-            </div>
 
-            <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 40 }}>
+              
+
+              <div style={{ marginTop: 4 }}>
+                <label className="input-label">{t("ملاحظات طبية / عامة")}</label>
+                <textarea className="glass-input" style={{ width: "100%", minHeight: 80 }} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+              </div>
+<div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 40 }}>
               <button onClick={() => setModal(false)} className="btn-ghost" style={{ width: 120 }}>{t("إلغاء")}</button>
               <button onClick={save} disabled={saving} className="btn-primary" style={{ width: 200 }}>{saving ? t("جاري الحفظ...") : t("إضافة المريض")}</button>
             </div>
+          </div>
           </div>
         </div>
       , document.body)}

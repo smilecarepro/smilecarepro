@@ -202,7 +202,7 @@ def download_pdf(rid):
         return send_file(
             buf,
             mimetype="application/pdf",
-            as_attachment=True,
+            as_attachment=False,
             download_name=f"prescription_{rx['rx_number']}.pdf"
         )
 
