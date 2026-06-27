@@ -144,8 +144,9 @@ export default function SecretaryDashboard() {
 
   useEffect(() => {
     loadSchedule();
-    const interval = setInterval(() => loadSchedule(true), 5000);
-    return () => clearInterval(interval);
+    // Auto-refresh disabled to prevent UI chaos
+    // const interval = setInterval(() => loadSchedule(true), 5000);
+    // return () => clearInterval(interval);
   }, []);
 
   // Cycle appointment status
