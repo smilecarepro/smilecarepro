@@ -535,8 +535,8 @@ export default function SecretaryDashboard() {
             <strong>{t("إضافة صرفيات +")}</strong>
           </button>
           
-          <button onClick={() => nav("/messages")} className="quick-btn-luxury" style={{ borderColor: "#f59e0b" }}>
-            <span style={{ fontSize: 20 }}>💬</span>
+          <button onClick={() => nav("/appointments", { state: { openArchive: true } })} className="quick-btn-luxury" style={{ borderColor: "#f59e0b" }}>
+            <span style={{ fontSize: 20 }}>📜</span>
             <strong>{t("سجل المتابعة")}</strong>
           </button>
           

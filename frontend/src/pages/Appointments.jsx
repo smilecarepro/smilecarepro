@@ -125,6 +125,13 @@ export default function Appointments() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    if (location.state?.openArchive) {
+      setArchiveModal(true);
+      nav(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, nav, location.pathname]);
+
   // جلب بيانات الأرشيف عند تغيير الفلاتر أو فتح النافذة
   useEffect(() => {
     if (archiveModal) {
