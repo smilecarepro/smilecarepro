@@ -133,7 +133,8 @@ export const getSecretarySettings = () => req("/auth/secretary");
 export const updateSecretarySettings = (data) => req("/auth/secretary", "POST", data);
 
 // Patients
-export const getPatients = (q = "", status = "", date = "") => req(`/patients/?q=${q}&status=${status}&date=${date}`);
+export const getPatients = (q = "", status = "", date = "") => 
+  req(`/patients/?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}&date=${encodeURIComponent(date)}`);
 export const getPatient = (id) => req(`/patients/${id}`);
 export const addPatient = (data) => req("/patients/", "POST", data);
 export const updatePatient = (id, data) => req(`/patients/${id}`, "PUT", data);
