@@ -56,7 +56,7 @@ def get_patients():
     query = """
         SELECT p.*, 
                COALESCE(NULLIF(p.is_ongoing, ''), 1) as calc_is_ongoing,
-               (p.total_agreed_price - COALESCE((SELECT SUM(paid_amount) FROM invoices WHERE patient_id = p.id), 0)) AS calc_debt,
+               (CAST(p.total_agreed_price AS REAL) - COALESCE((SELECT SUM(paid_amount) FROM invoices WHERE patient_id = p.id), 0)) AS calc_debt,
                p.total_agreed_price AS total_price, 
                MAX(a.date) as last_visit
         FROM patients p
@@ -68,7 +68,7 @@ def get_patients():
     
     if status:
         if status == "مديون":
-            query += " AND (p.total_agreed_price > (SELECT COALESCE(SUM(paid_amount), 0) FROM invoices WHERE patient_id = p.id))"
+            query += " AND ((CAST(p.total_agreed_price AS REAL) - (SELECT COALESCE(SUM(paid_amount), 0) FROM invoices WHERE patient_id = p.id)) > 0)"
         elif status == "مستمر":
             query += " AND (p.is_ongoing = 1 OR p.is_ongoing IS NULL OR p.is_ongoing = '')"
         elif status == "منتهي":
