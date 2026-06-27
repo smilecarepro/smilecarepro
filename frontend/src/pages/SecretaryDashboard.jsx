@@ -133,7 +133,11 @@ export default function SecretaryDashboard() {
           if (s === "غائب") s = "absent";
           return { ...app, status: s };
         });
-        setAppointments(mapped.sort((a, b) => (a.time || "").localeCompare(b.time || "")));
+        const sorted = mapped.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+        setAppointments(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(sorted)) return prev;
+          return sorted;
+        });
       }
       if (!silent) setLoadingSchedule(false);
     }).catch(err => {
@@ -144,9 +148,9 @@ export default function SecretaryDashboard() {
 
   useEffect(() => {
     loadSchedule();
-    // Auto-refresh disabled to prevent UI chaos
-    // const interval = setInterval(() => loadSchedule(true), 5000);
-    // return () => clearInterval(interval);
+    // Auto-refresh silently every 10 seconds without UI churn
+    const interval = setInterval(() => loadSchedule(true), 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // Cycle appointment status

@@ -69,7 +69,11 @@ export default function DoctorDashboard() {
       if (Array.isArray(data)) {
         const filtered = data.filter(app => app.status !== "completed");
         const mapped = filtered.map(app => ({ ...app, status: mapStatus(app.status) }));
-        setAppointments(mapped.sort((a, b) => (a.time || "").localeCompare(b.time || "")));
+        const sorted = mapped.sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+        setAppointments(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(sorted)) return prev;
+          return sorted;
+        });
       }
       if (!silent) setLoadingSchedule(false);
     }).catch(err => {
@@ -81,9 +85,9 @@ export default function DoctorDashboard() {
   useEffect(() => {
     if (!activeSession) {
       loadSchedule();
-      // Auto-refresh disabled to prevent UI chaos
-      // const interval = setInterval(() => loadSchedule(true), 5000);
-      // return () => clearInterval(interval);
+      // Auto-refresh silently every 10 seconds without UI churn
+      const interval = setInterval(() => loadSchedule(true), 10000);
+      return () => clearInterval(interval);
     }
   }, [activeSession]);
 
