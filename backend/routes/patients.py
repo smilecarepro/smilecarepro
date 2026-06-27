@@ -55,8 +55,8 @@ def get_patients():
     
     query = """
         SELECT p.*, 
-               COALESCE(NULLIF(p.is_ongoing, ''), 1) as is_ongoing,
-               (p.total_agreed_price - COALESCE((SELECT SUM(paid_amount) FROM invoices WHERE patient_id = p.id), 0)) AS debt,
+               COALESCE(NULLIF(p.is_ongoing, ''), 1) as calc_is_ongoing,
+               (p.total_agreed_price - COALESCE((SELECT SUM(paid_amount) FROM invoices WHERE patient_id = p.id), 0)) AS calc_debt,
                p.total_agreed_price AS total_price, 
                MAX(a.date) as last_visit
         FROM patients p
@@ -85,7 +85,13 @@ def get_patients():
     params.extend([limit, offset])
     
     rows = g.db.execute(query, params).fetchall()
-    return jsonify([dict(r) for r in rows])
+    results = []
+    for r in rows:
+        d = dict(r)
+        d['is_ongoing'] = d.get('calc_is_ongoing', d.get('is_ongoing'))
+        d['debt'] = d.get('calc_debt', 0)
+        results.append(d)
+    return jsonify(results)
 
 @patients_bp.route("/<int:id>", methods=["PUT"])
 @db_required
