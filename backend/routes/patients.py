@@ -54,7 +54,11 @@ def get_patients():
     offset = (page - 1) * limit
     
     query = """
-        SELECT p.*, p.total_agreed_price AS total_price, MAX(a.date) as last_visit
+        SELECT p.*, 
+               COALESCE(NULLIF(p.is_ongoing, ''), 1) as is_ongoing,
+               (p.total_agreed_price - COALESCE((SELECT SUM(paid_amount) FROM invoices WHERE patient_id = p.id), 0)) AS debt,
+               p.total_agreed_price AS total_price, 
+               MAX(a.date) as last_visit
         FROM patients p
         LEFT JOIN appointments a ON p.id = a.patient_id
         WHERE p.deleted_at IS NULL
@@ -64,9 +68,9 @@ def get_patients():
     
     if status:
         if status == "مديون":
-            query += " AND p.debt > 0"
+            query += " AND (p.total_agreed_price > (SELECT COALESCE(SUM(paid_amount), 0) FROM invoices WHERE patient_id = p.id))"
         elif status == "مستمر":
-            query += " AND p.is_ongoing = 1"
+            query += " AND (p.is_ongoing = 1 OR p.is_ongoing IS NULL OR p.is_ongoing = '')"
         elif status == "منتهي":
             query += " AND p.is_ongoing = 0"
         else:
@@ -160,6 +164,8 @@ def add_patient():
             val = 0
         if f == 'status' and not val:
             val = 'جديد'
+        if f == 'is_ongoing' and val == "":
+            val = 1
         values.append(val)
 
     placeholders = ", ".join(["?"] * len(fields))
