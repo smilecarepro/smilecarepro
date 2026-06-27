@@ -57,15 +57,15 @@ def get_contacts():
 
     if my_center_id:
         # 1. The Manager(s) of this center
-        mgrs = conn.execute("SELECT username, manager_name as full_name, 'manager' as role FROM center_managers WHERE id = ?", (my_center_id,)).fetchall()
+        mgrs = conn.execute("SELECT username, manager_name as display_name, 'manager' as type FROM center_managers WHERE id = ?", (my_center_id,)).fetchall()
         contacts += mgrs
         
         # 2. All Doctors in this center
-        docs = conn.execute("SELECT username, doctor_name as full_name, 'doctor' as role FROM doctors WHERE center_id = ?", (my_center_id,)).fetchall()
+        docs = conn.execute("SELECT username, doctor_name as display_name, 'doctor' as type FROM doctors WHERE center_id = ?", (my_center_id,)).fetchall()
         contacts += docs
         
         # 3. All Secretaries in this center
-        secs = conn.execute("SELECT username, full_name as full_name, 'secretary' as role FROM secretaries WHERE center_id = ?", (my_center_id,)).fetchall()
+        secs = conn.execute("SELECT username, full_name as display_name, 'secretary' as type FROM secretaries WHERE center_id = ?", (my_center_id,)).fetchall()
         contacts += secs
 
     else:
