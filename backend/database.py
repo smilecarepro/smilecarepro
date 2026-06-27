@@ -280,6 +280,7 @@ def init_clinic_schema(conn):
         ("debt", "REAL DEFAULT 0"),
         ("total_paid", "REAL DEFAULT 0"),
         ("age", "INTEGER"),
+        ("is_ongoing", "INTEGER DEFAULT 1"),
         ("deleted_at", "TEXT DEFAULT NULL"),  # Soft delete — سلة المحذوفات
     ]
     for col, ctype in clinic_columns:
