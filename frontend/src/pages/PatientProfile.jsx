@@ -354,7 +354,7 @@ export default function PatientProfile() {
     load();
   };
 
-  if (!patient) return <div style={{ color: "white", padding: 40 }}>{t("جاري التحميل...")}</div>;
+  if (!patient) return <div style={{ color: "var(--text-main)", padding: 40 }}>{t("جاري التحميل...")}</div>;
 
   const totalPaid = payments.reduce((acc, curr) => acc + (parseFloat(curr.paid) || parseFloat(curr.paid_amount) || 0), 0);
   const totalSessionCosts = payments.reduce((acc, curr) => acc + (parseFloat(curr.amount) || parseFloat(curr.total_amount) || 0), 0);
@@ -515,14 +515,14 @@ export default function PatientProfile() {
           setIsOngoing(next);
           saveProfile({ is_ongoing: next ? 1 : 0 });
         }}>
-          <span style={{ fontWeight: 700, color: "white", fontSize: isMobile ? 12 : 14 }}>{isOngoing ? t("مستمر") : t("منتهي")}</span>
+          <span style={{ fontWeight: 700, color: "var(--text-main)", fontSize: isMobile ? 12 : 14 }}>{isOngoing ? t("مستمر") : t("منتهي")}</span>
           <div style={{ width: isMobile ? 18 : 24, height: isMobile ? 18 : 24, borderRadius: "50%", background: "white" }} />
         </div>
       </div>
 
       <div style={{ 
         display: "flex", gap: 8, marginBottom: 24, padding: 4, 
-        background: "rgba(255,255,255,0.03)", borderRadius: 16,
+        background: "var(--panel-bg)", borderRadius: 16,
         overflowX: "auto", whiteSpace: "nowrap"
       }}>
         {[
@@ -579,7 +579,7 @@ export default function PatientProfile() {
                 </div>
                 <div className="input-group">
                   <label className="input-label">{t("الجنس")}</label>
-                  <div style={{ display: "flex", gap: 16, height: 44, alignItems: "center", background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "0 16px" }}>
+                  <div style={{ display: "flex", gap: 16, height: 44, alignItems: "center", background: "var(--panel-bg)", borderRadius: 12, padding: "0 16px" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
                       <input type="radio" checked={patient.gender === "Male"} onChange={() => canEditPatient && saveProfile({ gender: "Male" })} disabled={!canEditPatient} /> {t("ذكر")}
                     </label>
@@ -636,7 +636,7 @@ export default function PatientProfile() {
           </div>
 
           {showFinancials && (
-            <div style={{ marginTop: 40, borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 40 }}>
+            <div style={{ marginTop: 40, borderTop: "1px solid var(--glass-border)", paddingTop: 40 }}>
               <div className="finance-summary-grid">
                 <div className="glass-panel" style={{ padding: 16, textAlign: "center", borderLeft: "4px solid var(--primary)" }}>
                   <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("السعر الكلي")}</div>
@@ -675,9 +675,9 @@ export default function PatientProfile() {
                   </thead>
                   <tbody>
                     {displayedPayments.map((p, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                      <tr key={i} style={{ borderBottom: "1px solid var(--glass-border)" }}>
                         <td data-label={t("التاريخ")} style={{ padding: 10 }}>{p.date}</td>
-                        <td data-label={t("المبلغ")} style={{ padding: 10, fontWeight: 700, color: (parseFloat(p.paid) || 0) > 0 ? "#10b981" : "white" }}>
+                        <td data-label={t("المبلغ")} style={{ padding: 10, fontWeight: 700, color: (parseFloat(p.paid) || 0) > 0 ? "#10b981" : "var(--text-main)" }}>
                           {(parseFloat(p.paid) || parseFloat(p.paid_amount) || 0).toLocaleString()} د
                         </td>
                         <td data-label={t("ملاحظات")} style={{ padding: 10, color: "var(--text-muted)", fontSize: 13 }}>{p.notes}</td>
@@ -712,7 +712,7 @@ export default function PatientProfile() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {(patient.treatments || []).map((tr, i) => (
-                <div key={i} style={{ padding: 16, background: "rgba(255,255,255,0.03)", borderRadius: 12, borderLeft: "4px solid var(--primary)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={i} style={{ padding: 16, background: "var(--panel-bg)", borderRadius: 12, borderLeft: "4px solid var(--primary)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontWeight: 700 }}>
                       {tr.date} - <span style={{ color: "var(--primary)" }}>#{tr.tooth_number}</span>
@@ -767,7 +767,7 @@ export default function PatientProfile() {
       {activePage === "teeth" && (
         <div className="animate-fade">
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-            <div style={{ background: "rgba(255,255,255,0.05)", padding: 6, borderRadius: 16, display: "flex", gap: 8 }}>
+            <div style={{ background: "var(--panel-bg)", padding: 6, borderRadius: 16, display: "flex", gap: 8 }}>
               <button onClick={() => setMapMode("2D")} style={{ padding: "8px 24px", borderRadius: 12, border: "none", background: mapMode === "2D" ? "var(--primary)" : "transparent", color: mapMode === "2D" ? "white" : "var(--text-muted)", fontWeight: 700, cursor: "pointer", transition: "0.3s" }}>2D View</button>
               <button onClick={() => setMapMode("3D")} style={{ padding: "8px 24px", borderRadius: 12, border: "none", background: mapMode === "3D" ? "var(--primary)" : "transparent", color: mapMode === "3D" ? "white" : "var(--text-muted)", fontWeight: 700, cursor: "pointer", transition: "0.3s" }}>3D View ✨</button>
             </div>
@@ -806,7 +806,7 @@ export default function PatientProfile() {
           <div className="glass-panel" style={{ padding: 24 }}>
             <h3 style={{ fontSize: 18, marginBottom: 20 }}>📅 {t("المواعيد")}</h3>
             {(patient.visits || []).map(v => (
-              <div key={v.id} style={{ padding: 16, background: "rgba(255,255,255,0.03)", borderRadius: 12, marginBottom: 10 }}>
+              <div key={v.id} style={{ padding: 16, background: "var(--panel-bg)", borderRadius: 12, marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontWeight: 600 }}>{v.date} · {format12h(v.time, lang)}</span>
                   <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 12, background: "rgba(0,210,255,0.1)", color: "var(--primary)" }}>{v.status}</span>
@@ -936,7 +936,7 @@ export default function PatientProfile() {
             {/* Wizard Progress Bar */}
             <div style={{ display: "flex", gap: 10, marginBottom: 30 }}>
                {[t("البداية"), t("التشخيص"), t("الإجراء"), t("الوصفة"), t("صورة"), t("الملخص")].map((label, i) => (
-                 <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: sessionStep >= i ? "var(--primary)" : "rgba(255,255,255,0.05)", transition: "0.3s" }} />
+                 <div key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: sessionStep >= i ? "var(--primary)" : "var(--panel-bg)", transition: "0.3s" }} />
                ))}
             </div>
 
@@ -1020,7 +1020,7 @@ export default function PatientProfile() {
                         </div>
 
                         {sessionData.treatments.length > 0 && (
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, borderTop: "1px solid var(--glass-border)", paddingTop: 16 }}>
                             <div>
                               <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: "var(--success)", fontWeight: 800 }}>✅ {t("إجراءات مضافة:")}</h4>
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -1302,9 +1302,9 @@ export default function PatientProfile() {
                    </div>
                    
                    {sessionData.photo && (
-                     <div className="no-print" style={{ background: "rgba(255,255,255,0.02)", padding: 20, borderRadius: 12, marginTop: 20, textAlign: "center" }}>
+                     <div className="no-print" style={{ background: "var(--panel-bg)", padding: 20, borderRadius: 12, marginTop: 20, textAlign: "center" }}>
                        <div style={{ fontWeight: 600, marginBottom: 10, color: "var(--text-muted)" }}>📸 {t("صورة الجلسة المرفقة (لا تظهر في الطباعة)")}</div>
-                       <img src={sessionData.photo} style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8, objectFit: "contain", border: "1px solid rgba(255,255,255,0.1)" }} />
+                       <img src={sessionData.photo} style={{ maxWidth: "100%", maxHeight: 300, borderRadius: 8, objectFit: "contain", border: "1px solid var(--glass-border)" }} />
                      </div>
                    )}
                    
@@ -1497,7 +1497,7 @@ function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid }) {
              
              return (
                <div key={toothObj.tooth} className="glass-panel" style={{ padding: 20, borderTop: "4px solid var(--primary)" }}>
-                  <h3 style={{ margin: 0, marginBottom: 20, fontSize: 20, color: "white", fontWeight: 800, display: "flex", alignItems: "center", gap: 10 }}>
+                  <h3 style={{ margin: 0, marginBottom: 20, fontSize: 20, color: "var(--text-main)", fontWeight: 800, display: "flex", alignItems: "center", gap: 10 }}>
                      <span style={{ fontSize: 24 }}>🦷</span> {toothLabel}
                   </h3>
                   
@@ -1518,7 +1518,7 @@ function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid }) {
 
                          return (
                            <div key={dateKey} style={{ 
-                             background: "rgba(255,255,255,0.03)", 
+                             background: "var(--panel-bg)", 
                              borderRadius: 12, 
                              border: isExpanded ? "1px solid var(--primary)" : "1px solid rgba(255,255,255,0.08)",
                              overflow: "hidden",
@@ -1552,10 +1552,10 @@ function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid }) {
 
                               {/* Expanded Session Summary */}
                               {isExpanded && (
-                                <div className="animate-fade" style={{ padding: 20, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                                <div className="animate-fade" style={{ padding: 20, borderTop: "1px solid var(--glass-border)" }}>
                                    
                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
-                                      <h4 style={{ margin: 0, color: "white", fontSize: 16 }}>📄 {t("ملخص الجلسة الشامل")}</h4>
+                                      <h4 style={{ margin: 0, color: "var(--text-main)", fontSize: 16 }}>📄 {t("ملخص الجلسة الشامل")}</h4>
                                       <button onClick={() => printSession(dateKey, toothLabel)} className="btn-ghost" style={{ padding: "6px 12px", fontSize: 12, border: "1px solid var(--primary)", color: "var(--primary)", borderRadius: 8 }}>
                                          🖨 {t("طباعة الملخص")}
                                       </button>
@@ -1565,15 +1565,15 @@ function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid }) {
                                       {/* 1. Diagnosis */}
                                       <div className="glass-panel" style={{ padding: 15, borderLeft: "4px solid #f59e0b", marginBottom: 0 }}>
                                          <div style={{ fontSize: 12, fontWeight: 800, color: "#f59e0b", marginBottom: 8 }}>🔍 {t("التشخيص")}</div>
-                                         <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{diagnosis || t("لم يتم تسجيل تشخيص محدد")}</div>
+                                         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)" }}>{diagnosis || t("لم يتم تسجيل تشخيص محدد")}</div>
                                       </div>
 
                                       {/* 2. Treatments */}
                                       <div className="glass-panel" style={{ padding: 15, marginBottom: 0 }}>
                                         <div style={{ fontWeight: 800, marginBottom: 10, fontSize: 13, color: "var(--primary)" }}>📋 {t("الإجراءات المنفذة")}</div>
                                         {filteredTreatments.length > 0 ? filteredTreatments.map((tr, i) => (
-                                          <div key={i} style={{ padding: 10, background: "rgba(255,255,255,0.02)", borderRadius: 8, marginBottom: i !== filteredTreatments.length - 1 ? 8 : 0 }}>
-                                             <div style={{ fontWeight: 700, fontSize: 14, color: "white" }}>{tr.procedure}</div>
+                                          <div key={i} style={{ padding: 10, background: "var(--panel-bg)", borderRadius: 8, marginBottom: i !== filteredTreatments.length - 1 ? 8 : 0 }}>
+                                             <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-main)" }}>{tr.procedure}</div>
                                              {tr.notes && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>{tr.notes}</div>}
                                           </div>
                                         )) : <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("لا توجد إجراءات مسجلة.")}</div>}
@@ -1596,7 +1596,7 @@ function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid }) {
                                       {session.visits?.[0]?.image_url && (
                                         <div className="glass-panel no-print" style={{ padding: 15, marginBottom: 0, textAlign: "center" }}>
                                            <div style={{ fontWeight: 800, marginBottom: 10, fontSize: 13, color: "var(--primary)" }}>📸 {t("صورة الجلسة المرفقة")}</div>
-                                           <img src={session.visits[0].image_url} style={{ maxWidth: "100%", maxHeight: 250, borderRadius: 8, objectFit: "contain", border: "1px solid rgba(255,255,255,0.1)" }} />
+                                           <img src={session.visits[0].image_url} style={{ maxWidth: "100%", maxHeight: 250, borderRadius: 8, objectFit: "contain", border: "1px solid var(--glass-border)" }} />
                                         </div>
                                       )}
                                    </div>
@@ -1647,7 +1647,7 @@ const FormInput = ({ label, val, onChange, readOnly, type = "text" }) => (
 const ActionButton = ({ icon, label, onClick }) => (
   <button className="glass-panel" style={{ 
     display: "flex", alignItems: "center", gap: 16, padding: "16px 24px", 
-    width: "100%", textAlign: "left", cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)" 
+    width: "100%", textAlign: "left", cursor: "pointer", border: "1px solid var(--glass-border)" 
   }} onClick={onClick}>
     <span style={{ fontSize: 24 }}>{icon}</span>
     <span style={{ fontWeight: 600 }}>{label}</span>
@@ -1666,6 +1666,6 @@ const DetailRow = ({ label, val, color }) => (
 const InfoBox = ({ label, val }) => (
   <div>
     <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>{label}</div>
-    <div style={{ padding: 12, background: "rgba(255,255,255,0.03)", borderRadius: 8, fontSize: 13 }}>{val || "—"}</div>
+    <div style={{ padding: 12, background: "var(--panel-bg)", borderRadius: 8, fontSize: 13 }}>{val || "—"}</div>
   </div>
 );

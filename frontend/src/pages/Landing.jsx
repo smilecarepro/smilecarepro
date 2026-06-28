@@ -17,7 +17,7 @@ export default function Landing() {
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "24px 8%", position: "fixed", width: "100%", top: 0, zIndex: 100,
         background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
+        borderBottom: "1px solid var(--glass-border)"
       }}>
         <div style={{ fontSize: "24px", fontWeight: "800", color: "#38bdf8", display: "flex", alignItems: "center", gap: "10px" }}>
           <span>🦷</span> SmileCare
@@ -54,7 +54,7 @@ export default function Landing() {
       </section>
 
       {/* Features Grid */}
-      <section style={{ padding: "80px 8%", background: "rgba(255,255,255,0.02)" }}>
+      <section style={{ padding: "80px 8%", background: "var(--panel-bg)" }}>
         <div style={{ textAlign: "center", marginBottom: "60px" }}>
           <h2 style={{ fontSize: "36px", fontWeight: "800", marginBottom: "16px" }}>لماذا يختار الأطباء SmileCare؟</h2>
           <div style={{ width: "80px", h: "4px", background: "#38bdf8", margin: "0 auto", height: "4px", borderRadius: "2px" }}></div>
@@ -72,7 +72,7 @@ export default function Landing() {
             { t: "إدارة الموظفين", d: "صلاحيات خاصة للسكرتارية وإدارة كاملة للفريق.", i: "👥" }
           ].map((f, i) => (
             <div key={i} className="glass-panel" style={{ 
-              padding: "32px", borderRadius: "24px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)",
+              padding: "32px", borderRadius: "24px", background: "var(--panel-bg)", border: "1px solid var(--glass-border)",
               transition: "transform 0.3s", cursor: "default"
             }}>
               <div style={{ fontSize: "40px", marginBottom: "16px" }}>{f.i}</div>
@@ -84,7 +84,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer style={{ padding: "60px 8% 40px", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <footer style={{ padding: "60px 8% 40px", textAlign: "center", borderTop: "1px solid var(--glass-border)" }}>
         <p style={{ color: "#64748b", fontSize: "14px" }}>
           &copy; 2026 SmileCare Pro. جميع الحقوق محفوظة. نظام إدارة عيادات الأسنان المتطور.
         </p>

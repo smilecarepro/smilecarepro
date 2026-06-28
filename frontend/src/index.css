@@ -87,16 +87,32 @@
 
 /* 🌙 LIGHT MODE OVERRIDES */
 .light-mode {
-  --bg-dark: #f1f5f9;
+  --bg-dark: #f8fafc;
   --bg-surface: #ffffff;
-  --bg-card: rgba(255, 255, 255, 0.8);
-  --bg-card-hover: rgba(255, 255, 255, 0.95);
-  --glass-border: rgba(0, 0, 0, 0.05);
-  --glass-border-hover: rgba(99, 102, 241, 0.2);
-  --text-light: #0f172a;
-  --text-muted: #64748b;
-  --text-faint: rgba(0, 0, 0, 0.1);
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: #ffffff;
+  --glass-border: rgba(0, 0, 0, 0.15);
+  --panel-bg: rgba(0, 0, 0, 0.03);
+  --panel-bg-hover: rgba(0, 0, 0, 0.06);
+  --glass-border-hover: rgba(99, 102, 241, 0.3);
+  --text-main: #000000 !important;
+  --text-light: #000000 !important;
+  --text-muted: #111111 !important;
+  --text-dim: #222222 !important;
+  --text-faint: #333333 !important;
   --shadow-card: 0 10px 40px rgba(0, 0, 0, 0.05);
+}
+
+/* Force dark text globally in light mode unless it's inside a button */
+.light-mode * {
+  color: var(--text-main);
+}
+.light-mode .btn-primary, 
+.light-mode .btn-primary *, 
+.light-mode .btn-danger, 
+.light-mode .btn-danger *,
+.light-mode .status-badge {
+  color: #ffffff !important;
 }
 
 .light-mode body::before {

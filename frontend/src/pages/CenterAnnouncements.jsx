@@ -51,7 +51,7 @@ export default function CenterAnnouncements() {
           onChange={e => setMsg(e.target.value)}
         />
 
-        <div style={{ background: "rgba(255,255,255,0.02)", padding: 20, borderRadius: 16, marginBottom: 32, border: "1px dashed rgba(255,255,255,0.1)" }}>
+        <div style={{ background: "var(--panel-bg)", padding: 20, borderRadius: 16, marginBottom: 32, border: "1px dashed var(--glass-border)" }}>
            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <div style={{ fontSize: 24 }}>💡</div>
               <div style={{ fontSize: 13, color: "var(--text-dim)" }}>

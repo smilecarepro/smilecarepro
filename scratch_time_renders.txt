@@ -1,0 +1,15 @@
+frontend/src/pages/Appointments.jsx line 82: time: apt.time,
+frontend/src/pages/Appointments.jsx line 248: if (!form.patient_id || !form.date || !form.time) return alert(t("أدخل المريض والتاريخ والوقت"));
+frontend/src/pages/Appointments.jsx line 257: time: form.time,
+frontend/src/pages/Appointments.jsx line 405: ) : [...apts].sort((a,b) => a.time.localeCompare(b.time)).map(v => (
+frontend/src/pages/Appointments.jsx line 422: <div style={{ fontSize: isMobile ? 24 : 32, fontWeight: 900, color: "var(--primary)" }}>{v.time}</div>
+frontend/src/pages/Appointments.jsx line 565: const [h, m] = a.time.split(':');
+frontend/src/pages/Appointments.jsx line 604: {a.time}
+frontend/src/pages/Appointments.jsx line 644: .replace(/{time}/g, a.time || "");
+frontend/src/pages/Appointments.jsx line 691: <div style={{ background: "var(--primary)", color: "white", padding: "4px 10px", borderRadius: 8, fontWeight: 700, fontSize: 13 }}>{a.time}</div>
+frontend/src/pages/Appointments.jsx line 707: .replace(/{time}/g, a.time || "");
+frontend/src/pages/Appointments.jsx line 819: value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} />
+frontend/src/pages/Appointments.jsx line 939: <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{apt.type} - {apt.time}</div>
+frontend/src/pages/TodaySchedule.jsx line 56: setAppointments(mapped.sort((a, b) => a.time.localeCompare(b.time)));
+frontend/src/pages/TodaySchedule.jsx line 112: .replace(/{time}/g, app.time || "");
+frontend/src/pages/TodaySchedule.jsx line 180: {app.time}

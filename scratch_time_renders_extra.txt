@@ -1,0 +1,4 @@
+frontend/src/pages/Home.jsx line 179: <div style={{ fontSize: 13, fontWeight: 600, color: "var(--accent)", flexShrink: 0, direction: "ltr" }}>{a.time}</div>
+frontend/src/pages/PatientProfile.jsx line 488: <div className="action-card" onClick={() => setShowTimeline(true)} style={{ background: "rgba(0, 210, 255, 0.1)", borderColor: "rgba(0, 210, 255, 0.3)", marginBottom: 12 }}>
+frontend/src/pages/PatientProfile.jsx line 652: <span style={{ fontWeight: 600 }}>{v.date} · {v.time}</span>
+frontend/src/pages/PatientProfile.jsx line 740: <div style={{ fontSize: 20, fontWeight: 700, color: "var(--primary)", marginTop: 20 }}>📅 {localDate()} · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>

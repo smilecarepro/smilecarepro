@@ -207,7 +207,7 @@ function PrescriptionCard({ pr, settings, onClick }) {
             console.error("Print error:", err);
             alert("فشل في طباعة الوصفة");
           }
-        }} className="btn-ghost" style={{ fontSize: 11, padding: "4px 12px", border: "1px solid rgba(255,255,255,0.1)" }}>🖨 Print</button>
+        }} className="btn-ghost" style={{ fontSize: 11, padding: "4px 12px", border: "1px solid var(--glass-border)" }}>🖨 Print</button>
       </div>
     </div>
   );

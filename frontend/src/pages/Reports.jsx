@@ -83,7 +83,7 @@ export default function Reports() {
                  <ReportRow label={t("إجمالي المصاريف (All Time)")} val={fin.expenses} unit={t("د")} />
                </>
              )}
-             <div style={{ height: 1, background: "rgba(255,255,255,0.1)" }} />
+             <div style={{ height: 1, background: "var(--panel-bg-hover)" }} />
              <ReportRow label={!showFullReport ? t("صافي ربح اليوم") : t("صافي الربح")} val={!showFullReport ? (fin.collected_today - fin.expenses_today) : fin.net_profit} unit={t("د")} color="#10b981" bold />
           </div>
         </div>
@@ -115,7 +115,7 @@ export default function Reports() {
                 </defs>
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={{ background: "rgba(15,23,42,0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "white" }} />
+                <Tooltip contentStyle={{ background: "rgba(15,23,42,0.9)", border: "1px solid var(--glass-border)", borderRadius: 8, color: "white" }} />
                 <Area type="monotone" dataKey="revenue" name={t("الإيرادات")} stroke="#00D2FF" fillOpacity={1} fill="url(#colorRev)" />
               </AreaChart>
             </ResponsiveContainer>

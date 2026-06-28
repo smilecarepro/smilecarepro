@@ -151,7 +151,7 @@ export default function CenterSecretaries() {
                       style={{
                         padding: "6px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer",
                         border: "1px solid",
-                        borderColor: isAssigned ? "var(--primary)" : "rgba(255,255,255,0.1)",
+                        borderColor: isAssigned ? "var(--primary)" : "var(--panel-bg-hover)",
                         background: isAssigned ? "rgba(var(--primary-h), 85%, 65%, 0.1)" : "transparent",
                         color: isAssigned ? "var(--primary)" : "var(--text-dim)",
                         transition: "all 0.2s"

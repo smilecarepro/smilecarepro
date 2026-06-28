@@ -169,7 +169,7 @@ export default function Chat() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: isDragging ? 'grabbing' : 'grab', zIndex: 999999, 
           transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', 
-          border: 'none', color: '#fff',
+          border: 'none', color: "var(--text-main)",
           touchAction: 'none',
           transform: isDragging ? 'scale(1.1)' : 'scale(1)'
         }} 
@@ -192,7 +192,7 @@ export default function Chat() {
       {isOpen && (
         <div style={{
           position: 'fixed', bottom: `${pos.y + 75}px`, left: `${pos.x}px`, width: '350px', height: '500px',
-          background: 'rgba(255, 255, 255, 0.98)', backdropFilter: 'blur(30px)', borderRadius: '24px',
+          background: "var(--panel-bg-hover)", backdropFilter: 'blur(30px)', borderRadius: '24px',
           boxShadow: '0 25px 70px rgba(0,0,0,0.3)', border: '1px solid rgba(0,0,0,0.05)',
           zIndex: 999999, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'slideUp 0.3s ease'
         }}>
@@ -202,7 +202,7 @@ export default function Chat() {
               <div style={{ width: '8px', height: '8px', background: '#2ecc71', borderRadius: '50%', boxShadow: '0 0 8px #2ecc71' }} />
               <span style={{ fontSize: '14px' }}>المحادثة الداخلية</span>
             </div>
-            <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+            <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: "var(--text-main)", cursor: 'pointer' }}>
                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>

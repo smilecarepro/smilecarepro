@@ -66,7 +66,7 @@ export default function Login() {
                 : "يرجى مراجعة الإدارة للتفعيل."}
             </p>
             {window.lastErrorPhone && (
-              <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid rgba(255,255,255,0.05)", fontSize: "13px" }}>
+              <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--glass-border)", fontSize: "13px" }}>
                 رقم الدعم: <strong style={{ color: "var(--accent)" }}>{window.lastErrorPhone}</strong>
               </div>
             )}
@@ -112,7 +112,7 @@ export default function Login() {
         </div>
       </div>
 
-      <div style={{ position: "absolute", bottom: 24, fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
+      <div style={{ position: "absolute", bottom: 24, fontSize: 11, color: "var(--panel-bg-hover)" }}>
         SmileCare SaaS Edition v1.0 · Premium Iraqi Edition
       </div>
     </div>

@@ -235,7 +235,7 @@ export default function Invoices() {
         <div className="table-container">
           <table className="mobile-card-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+              <tr style={{ background: "var(--panel-bg)" }}>
                 {[t("المريض"), t("التاريخ"), t("السعر الكلي للعلاج"), t("المدفوع الآن"), t("دين المريض الكلي"), t("طريقة الدفع"), t("الحالة"), t("إجراء")].map(h => (
                   <th key={h} style={{ padding: "16px 20px", textAlign: "right", fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{h}</th>
                 ))}
@@ -243,7 +243,7 @@ export default function Invoices() {
             </thead>
             <tbody>
               {displayedInvoices.map(i => (
-                <tr key={i.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <tr key={i.id} style={{ borderBottom: "1px solid var(--glass-border)" }}>
                   <td data-label={t("المريض")} style={{ padding: "14px 20px", fontWeight: 500 }}>{i.patient_name}</td>
                   <td data-label={t("التاريخ")} style={{ padding: "14px 20px", fontSize: 13, color: "var(--text-muted)" }}>{i.date}</td>
                   <td data-label={t("السعر الكلي للعلاج")} style={{ padding: "14px 20px", fontSize: 13 }}>{(i.total_price || 0).toLocaleString()} د</td>
@@ -284,7 +284,7 @@ export default function Invoices() {
                   <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.5 }}>🔍</span>
                 </div>
                 {showResults && searchTerm && (
-                  <div className="glass-panel" style={{ position: "absolute", top: "105%", left: 0, right: 0, zIndex: 100, maxHeight: 240, overflowY: "auto", padding: 8, boxShadow: "0 20px 50px rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <div className="glass-panel" style={{ position: "absolute", top: "105%", left: 0, right: 0, zIndex: 100, maxHeight: 240, overflowY: "auto", padding: 8, boxShadow: "0 20px 50px rgba(0,0,0,0.6)", border: "1px solid var(--glass-border)" }}>
                     {filteredPatients.length === 0 ? <div style={{ padding: 12, color: "var(--text-muted)", textAlign: "center", fontSize: 13 }}>{t("لا يوجد نتائج")}</div> : filteredPatients.map(p => (
                       <div key={p.id} onClick={() => { setForm({ ...form, patient_id: p.id, agreed_price: p.debt || 0 }); setSearchTerm(`${p.first_name} ${p.last_name}`); setShowResults(false); }} style={{ padding: "10px 16px", cursor: "pointer", borderRadius: 10, background: form.patient_id == p.id ? "rgba(24, 95, 165, 0.3)" : "transparent", marginBottom: 4 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -297,7 +297,7 @@ export default function Invoices() {
                 )}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div><label style={lblStyle}>{t("المبلغ المطلوب (الدين)")}</label><input type="text" readOnly className="glass-input" style={{ width: "100%", background: "rgba(255,255,255,0.02)" }} value={form.agreed_price ? Number(form.agreed_price).toLocaleString() : ""} /></div>
+                <div><label style={lblStyle}>{t("المبلغ المطلوب (الدين)")}</label><input type="text" readOnly className="glass-input" style={{ width: "100%", background: "var(--panel-bg)" }} value={form.agreed_price ? Number(form.agreed_price).toLocaleString() : ""} /></div>
                 <div><label style={lblStyle}>{t("الدفعة الحالية")}</label><input type="text" className="glass-input" style={{ width: "100%" }} value={form.paid ? Number(form.paid).toLocaleString() : ""} onChange={e => setForm({ ...form, paid: e.target.value.replace(/\D/g, "") })} /></div>
               </div>
 
@@ -329,7 +329,7 @@ export default function Invoices() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
                 <label style={lblStyle}>{t("المريض")}</label>
-                <input type="text" readOnly className="glass-input" style={{ width: "100%", background: "rgba(255,255,255,0.02)" }} value={editModal.patient_name || ""} />
+                <input type="text" readOnly className="glass-input" style={{ width: "100%", background: "var(--panel-bg)" }} value={editModal.patient_name || ""} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <div>

@@ -47,13 +47,13 @@ export default function Messages() {
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table className="mobile-card-table" style={{ width: "100%", textAlign: lang === "ar" ? "right" : "left", borderCollapse: "collapse" }}>
-              <thead style={{ background: "rgba(255,255,255,0.02)" }}>
+              <thead style={{ background: "var(--panel-bg)" }}>
                 <tr style={{ color: "var(--text-muted)", fontSize: 14 }}>
-                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>#</th>
-                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{t("أسم المريض")}</th>
-                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{t("التاريخ والوقت")}</th>
-                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{t("رقم الهاتف")}</th>
-                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)", textAlign: "center" }}>{t("الاجراء")}</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid var(--glass-border)" }}>#</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid var(--glass-border)" }}>{t("أسم المريض")}</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid var(--glass-border)" }}>{t("التاريخ والوقت")}</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid var(--glass-border)" }}>{t("رقم الهاتف")}</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid var(--glass-border)", textAlign: "center" }}>{t("الاجراء")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -64,7 +64,7 @@ export default function Messages() {
                     </td>
                   </tr>
                 ) : appointments.map((apt, index) => (
-                  <tr key={apt.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.02)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <tr key={apt.id} style={{ borderBottom: "1px solid var(--glass-border)", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "var(--panel-bg)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                     <td style={{ padding: "16px" }}>{index + 1}</td>
                     <td style={{ padding: "16px", fontWeight: 700 }}>{apt.patient_name}</td>
                     <td style={{ padding: "16px", color: "var(--text-muted)" }} dir="ltr">

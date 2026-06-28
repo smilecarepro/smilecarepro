@@ -146,7 +146,7 @@ export default function CenterDoctors() {
            <div className="glass-panel animate-fade" style={{ width: "100%", maxWidth: 600, padding: 32, border: "1px solid var(--accent)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
                 <h3 style={{ fontSize: 22 }}>⚙️ {t("إعدادات الطبيب")}: <span style={{ color: "var(--primary)" }}>{editingDoctor.doctor_name}</span></h3>
-                <button onClick={() => setEditingDoctor(null)} style={{ background: "none", border: "none", color: "#fff", fontSize: 24, cursor: "pointer" }}>✕</button>
+                <button onClick={() => setEditingDoctor(null)} style={{ background: "none", border: "none", color: "var(--text-main)", fontSize: 24, cursor: "pointer" }}>✕</button>
               </div>
               
               <form onSubmit={handleUpdate} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
@@ -173,7 +173,7 @@ export default function CenterDoctors() {
                 <div style={{ gridColumn: "span 2", display: "flex", gap: 12, marginTop: 10 }}>
                    <button type="submit" className="btn-primary" style={{ flex: 2, padding: 14 }} disabled={loading}>{loading ? t("جاري الحفظ...") : t("حفظ التغييرات")}</button>
                    <button type="button" onClick={() => { setEditingDoctor(null); handleDeleteDoctor(editingDoctor.id); }} style={{ flex: 1, padding: 14, background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", color: "#ef4444", borderRadius: 12, cursor: "pointer" }}>{t("حذف الحساب")}</button>
-                   <button type="button" onClick={() => setEditingDoctor(null)} style={{ flex: 1, padding: 14, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", borderRadius: 12, cursor: "pointer" }}>{t("إلغاء")}</button>
+                   <button type="button" onClick={() => setEditingDoctor(null)} style={{ flex: 1, padding: 14, background: "var(--panel-bg)", border: "1px solid var(--glass-border)", color: "#fff", borderRadius: 12, cursor: "pointer" }}>{t("إلغاء")}</button>
                 </div>
               </form>
            </div>
@@ -216,7 +216,7 @@ export default function CenterDoctors() {
                </button>
             </div>
             
-            <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)" }}>
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--glass-border)", display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)" }}>
                <span>💰 {t("العمولة")}: %{doc.commission_rate || 0}</span>
                <span>📅 {doc.expiry_date || t("غير محدد")}</span>
             </div>

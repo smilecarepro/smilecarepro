@@ -74,7 +74,7 @@ export default function CenterReports() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 24 }}>
           <div className="glass-panel" style={{ padding: 24, borderTop: "4px solid var(--primary)" }}>
             <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 8 }}>{t("إجمالي إيرادات العيادات")}</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: "white" }}>{report.summary.total_revenue.toLocaleString()} <span style={{ fontSize: 14 }}>د</span></div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: "var(--text-main)" }}>{report.summary.total_revenue.toLocaleString()} <span style={{ fontSize: 14 }}>د</span></div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>{t("إجمالي ما تم تحصيله في كل الفروع")}</div>
           </div>
           
@@ -92,7 +92,7 @@ export default function CenterReports() {
 
           <div className="glass-panel shadow-primary" style={{ padding: 24, background: "linear-gradient(135deg, rgba(24, 95, 165, 0.2), rgba(0, 210, 255, 0.1))", border: "1px solid var(--primary)" }}>
             <div style={{ fontSize: 13, color: "var(--primary-glow)", marginBottom: 8, fontWeight: 700 }}>{t("صافي ربح المركز")}</div>
-            <div style={{ fontSize: 32, fontWeight: 900, color: "white" }}>{report.summary.net_profit.toLocaleString()} <span style={{ fontSize: 14 }}>د</span></div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: "var(--text-main)" }}>{report.summary.net_profit.toLocaleString()} <span style={{ fontSize: 14 }}>د</span></div>
             <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>{t("الربح الصافي بعد خصم كافة التكاليف")}</div>
           </div>
         </div>
@@ -105,7 +105,7 @@ export default function CenterReports() {
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--panel-bg)" />
                 <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} />
                 <YAxis stroke="var(--text-dim)" fontSize={12} />
                 <Tooltip 
@@ -192,9 +192,9 @@ export default function CenterReports() {
             </tbody>
             {report && report.doctors_breakdown.length > 0 && (
               <tfoot style={{ borderTop: "2px solid var(--glass-border)" }}>
-                <tr style={{ background: "rgba(255,255,255,0.02)" }}>
+                <tr style={{ background: "var(--panel-bg)" }}>
                   <td colSpan="3" style={{ fontWeight: 800, textAlign: "left" }}>{t("الإجمالي المجمع")}</td>
-                  <td style={{ textAlign: "right", fontWeight: 900, color: "white" }}>{report.summary.total_revenue.toLocaleString()} د</td>
+                  <td style={{ textAlign: "right", fontWeight: 900, color: "var(--text-main)" }}>{report.summary.total_revenue.toLocaleString()} د</td>
                   <td style={{ textAlign: "right", fontWeight: 900, color: "#10b981" }}>{report.summary.total_commission.toLocaleString()} د</td>
                   <td style={{ textAlign: "center", fontWeight: 900 }}>
                     {report.doctors_breakdown.reduce((sum, d) => sum + d.appointments_count, 0)}

@@ -258,7 +258,7 @@ export default function DrugAdder({ patient, onAdd }) {
                   onClick={() => togglePending(d)}
                   style={{ 
                     padding: 10, borderRadius: 10, position: "relative",
-                    background: isPending ? "var(--primary)" : "rgba(255,255,255,0.02)", 
+                    background: isPending ? "var(--primary)" : "var(--panel-bg)", 
                     border: isPending ? "2px solid var(--primary)" : "1px solid rgba(255,255,255,0.08)", 
                     cursor: "pointer", transition: "all 0.15s",
                     transform: isPending ? "scale(1.02)" : "scale(1)",
@@ -268,7 +268,7 @@ export default function DrugAdder({ patient, onAdd }) {
                     <div style={{ position: "absolute", top: 6, right: 6, background: "white", color: "var(--primary)", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900 }}>✓</div>
                   )}
                   <div style={{ fontWeight: 700, fontSize: 12, color: isPending ? "white" : "inherit", paddingRight: isPending ? 18 : 0 }}>{d.name}</div>
-                  <div style={{ fontSize: 10, color: isPending ? "rgba(255,255,255,0.7)" : "var(--text-muted)" }}>{d.category}</div>
+                  <div style={{ fontSize: 10, color: isPending ? "var(--panel-bg-hover)" : "var(--text-muted)" }}>{d.category}</div>
                 </div>
               );
             })
@@ -281,10 +281,10 @@ export default function DrugAdder({ patient, onAdd }) {
 
         {/* Add All Button */}
         {pendingDrugs.length > 0 && (
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--glass-border)" }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
               {pendingDrugs.map(d => (
-                <span key={d.id} style={{ fontSize: 11, background: "rgba(255,255,255,0.1)", padding: "2px 8px", borderRadius: 10, display: "flex", alignItems: "center", gap: 4 }}>
+                <span key={d.id} style={{ fontSize: 11, background: "var(--panel-bg-hover)", padding: "2px 8px", borderRadius: 10, display: "flex", alignItems: "center", gap: 4 }}>
                   {d.name}
                   <span onClick={() => togglePending(d)} style={{ cursor: "pointer", color: "#ef4444", fontWeight: 700 }}>×</span>
                 </span>
@@ -301,7 +301,7 @@ export default function DrugAdder({ patient, onAdd }) {
         )}
         
         {selected && (
-           <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.1)", animation: "slideUp 0.3s ease" }}>
+           <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--glass-border)", animation: "slideUp 0.3s ease" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   <span style={{ fontWeight: 700, color: "var(--primary)", fontSize: 14 }}>{selected.name}</span>
@@ -357,11 +357,11 @@ export default function DrugAdder({ patient, onAdd }) {
                 onClick={() => handleSelect(d)}
                 style={{ 
                   padding: "8px 12px", cursor: "pointer", borderRadius: 8, marginBottom: 6,
-                  background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)",
+                  background: "var(--panel-bg)", border: "1px solid var(--glass-border)",
                   transition: "background 0.2s"
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
-                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.02)"}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--panel-bg)"}
+                onMouseLeave={e => e.currentTarget.style.background = "var(--panel-bg)"}
               >
                 <div style={{ fontWeight: 600, fontSize: 12 }}>{d.name}</div>
                 <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{d.category}</div>

@@ -136,7 +136,7 @@ export default function TimePicker({ value, onChange }) {
             width: "280px",
             background: "rgba(15, 23, 42, 0.96)",
             backdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            border: "1px solid var(--glass-border)",
             borderRadius: "16px",
             boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)",
             zIndex: 9999,
@@ -178,13 +178,13 @@ export default function TimePicker({ value, onChange }) {
                         cursor: "pointer",
                         fontSize: 14,
                         fontWeight: isActive ? "700" : "400",
-                        color: isActive ? "#fff" : "rgba(255, 255, 255, 0.6)",
+                        color: isActive ? "#fff" : "var(--text-muted)",
                         background: isActive ? "var(--primary, #185fa5)" : "transparent",
                         boxShadow: isActive ? "0 4px 12px rgba(24, 95, 165, 0.3)" : "none",
                         transition: "all 0.15s ease"
                       }}
                       onMouseEnter={(e) => {
-                        if (!isActive) e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                        if (!isActive) e.currentTarget.style.background = "var(--panel-bg)";
                       }}
                       onMouseLeave={(e) => {
                         if (!isActive) e.currentTarget.style.background = "transparent";
@@ -228,13 +228,13 @@ export default function TimePicker({ value, onChange }) {
                         cursor: "pointer",
                         fontSize: 14,
                         fontWeight: isActive ? "700" : "400",
-                        color: isActive ? "#fff" : "rgba(255, 255, 255, 0.6)",
+                        color: isActive ? "#fff" : "var(--text-muted)",
                         background: isActive ? "var(--primary, #185fa5)" : "transparent",
                         boxShadow: isActive ? "0 4px 12px rgba(24, 95, 165, 0.3)" : "none",
                         transition: "all 0.15s ease"
                       }}
                       onMouseEnter={(e) => {
-                        if (!isActive) e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                        if (!isActive) e.currentTarget.style.background = "var(--panel-bg)";
                       }}
                       onMouseLeave={(e) => {
                         if (!isActive) e.currentTarget.style.background = "transparent";
@@ -279,13 +279,13 @@ export default function TimePicker({ value, onChange }) {
                         cursor: "pointer",
                         fontSize: 13,
                         fontWeight: isActive ? "700" : "400",
-                        color: isActive ? "#fff" : "rgba(255, 255, 255, 0.6)",
+                        color: isActive ? "#fff" : "var(--text-muted)",
                         background: isActive ? "var(--primary, #185fa5)" : "transparent",
                         boxShadow: isActive ? "0 4px 12px rgba(24, 95, 165, 0.3)" : "none",
                         transition: "all 0.15s ease"
                       }}
                       onMouseEnter={(e) => {
-                        if (!isActive) e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                        if (!isActive) e.currentTarget.style.background = "var(--panel-bg)";
                       }}
                       onMouseLeave={(e) => {
                         if (!isActive) e.currentTarget.style.background = "transparent";
@@ -304,19 +304,19 @@ export default function TimePicker({ value, onChange }) {
               width: "100%",
               padding: "8px 0",
               borderRadius: "10px",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              background: "rgba(255, 255, 255, 0.05)",
-              color: "#fff",
+              border: "1px solid var(--glass-border)",
+              background: "var(--panel-bg)",
+              color: "var(--text-main)",
               cursor: "pointer",
               fontSize: 13,
               fontWeight: "600",
               transition: "all 0.2s"
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+              e.currentTarget.style.background = "var(--panel-bg-hover)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.background = "var(--panel-bg)";
             }}
           >
             {t("موافق")}

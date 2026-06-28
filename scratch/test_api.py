@@ -1,21 +1,15 @@
 import requests
+import json
 
-BASE = "http://localhost:5050/api"
+s = requests.Session()
+r = s.post('https://smilecarepro-production.up.railway.app/api/auth/login', json={'username':'a','password':'a'})
+token = r.json().get('token')
 
-def test_get_patient():
-    # First get patients to find an ID
-    res = requests.get(f"{BASE}/patients/")
-    patients = res.json()
-    if not patients:
-        print("No patients found")
-        return
-    
-    pid = patients[0]['id']
-    print(f"Testing patient ID: {pid}")
-    
-    res = requests.get(f"{BASE}/patients/{pid}")
-    print(f"Status: {res.status_code}")
-    print(f"Response: {res.text[:200]}...")
+r1 = s.get('https://smilecarepro-production.up.railway.app/api/patients/?status=مستمر', headers={'Authorization': 'Bearer '+token})
+r2 = s.get('https://smilecarepro-production.up.railway.app/api/patients/?status=مديون', headers={'Authorization': 'Bearer '+token})
+r3 = s.get('https://smilecarepro-production.up.railway.app/api/patients/?status=منتهي', headers={'Authorization': 'Bearer '+token})
 
-if __name__ == "__main__":
-    test_get_patient()
+with open('test_output.txt', 'w', encoding='utf-8') as f:
+    f.write("مستمر: " + str(len(r1.json())) + "\n")
+    f.write("مديون: " + str(len(r2.json())) + "\n")
+    f.write("منتهي: " + str(len(r3.json())) + "\n")

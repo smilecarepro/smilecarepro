@@ -119,7 +119,7 @@ export default function ChatWidget() {
             display: "flex", alignItems: "center", gap: 12
           }}>
             {selectedContact && (
-              <button onClick={() => setSelectedContact(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 18 }}>
+              <button onClick={() => setSelectedContact(null)} style={{ background: "none", border: "none", color: "var(--text-main)", cursor: "pointer", fontSize: 18 }}>
                 {isRTL ? "←" : "→"}
               </button>
             )}
@@ -155,7 +155,7 @@ export default function ChatWidget() {
                   >
                     <div style={{ 
                       width: 38, height: 38, borderRadius: "50%", 
-                      background: "rgba(255,255,255,0.05)", display: "flex", 
+                      background: "var(--panel-bg)", display: "flex", 
                       alignItems: "center", justifyContent: "center", fontSize: 16 
                     }}>
                       {c.role === 'doctor' ? '👨‍⚕️' : c.role === 'manager' ? '⚙️' : '👤'}
@@ -186,8 +186,8 @@ export default function ChatWidget() {
                         <div style={{
                           maxWidth: "85%", padding: "8px 14px", borderRadius: 16,
                           fontSize: 13, lineHeight: 1.4,
-                          background: isMe ? "var(--primary)" : "rgba(255,255,255,0.08)",
-                          color: "white",
+                          background: isMe ? "var(--primary)" : "var(--panel-bg-hover)",
+                          color: "var(--text-main)",
                           borderBottomRightRadius: isMe ? 2 : 16,
                           borderBottomLeftRadius: isMe ? 16 : 2
                         }}>

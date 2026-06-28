@@ -376,7 +376,7 @@ export default function Appointments() {
   };
 
   const getStatusBadge = (status) => {
-    const config = STATUS_CONFIG[status] || { ar: status, color: "#fff", bg: "rgba(255,255,255,0.1)" };
+    const config = STATUS_CONFIG[status] || { ar: status, color: "var(--text-main)", bg: "var(--panel-bg-hover)" };
     return (
       <span style={{
         color: config.color,
@@ -416,7 +416,7 @@ export default function Appointments() {
           }} className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(34, 197, 94, 0.1)", color: "#22c55e", whiteSpace: "nowrap", flexShrink: 0 }}>
             <span>🔔</span> <span>{isMobile ? "" : t("إرسال تذكيرات الغد")}</span>
           </button>
-          <button onClick={() => setArchiveModal(true)} className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255, 255, 255, 0.05)", color: "var(--text-light)", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <button onClick={() => setArchiveModal(true)} className="btn-ghost" style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--panel-bg)", color: "var(--text-light)", whiteSpace: "nowrap", flexShrink: 0 }}>
             <span>📜</span> <span>{isMobile ? "" : t("سجل المتابعة")}</span>
           </button>
           <button onClick={openModal} className="btn-primary" style={{ whiteSpace: "nowrap", flexShrink: 0, flex: isMobile ? 1 : "none" }}>
@@ -444,7 +444,7 @@ export default function Appointments() {
 
            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
              {apts.length === 0 ? (
-               <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)", background: "rgba(255,255,255,0.02)", borderRadius: 24 }}>
+               <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)", background: "var(--panel-bg)", borderRadius: 24 }}>
                  <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
                  <div>{t("لا توجد مواعيد مسجلة لهذا اليوم")}</div>
                </div>
@@ -545,7 +545,7 @@ export default function Appointments() {
                            ✔️
                          </button>
                        )}
-                        <button onClick={(e) => { e.stopPropagation(); nav(`/patients/${v.patient_id}`); }} className="btn-ghost" style={{ padding: "8px 12px", background: "rgba(255,255,255,0.05)", borderRadius: 10, border: "none", cursor: "pointer" }}>👤</button>
+                        <button onClick={(e) => { e.stopPropagation(); nav(`/patients/${v.patient_id}`); }} className="btn-ghost" style={{ padding: "8px 12px", background: "var(--panel-bg)", borderRadius: 10, border: "none", cursor: "pointer" }}>👤</button>
                      </div>
                  </div>
                </div>
@@ -582,7 +582,7 @@ export default function Appointments() {
                   height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                   borderRadius: 8, fontSize: 13, cursor: "pointer", position: "relative",
                   background: isSel ? "var(--primary)" : isToday ? "rgba(24,95,165,0.2)" : "transparent",
-                  color: isSel ? "white" : isToday ? "var(--primary)" : "white",
+                  color: isSel ? "white" : isToday ? "var(--primary)" : "var(--text-main)",
                   fontWeight: isSel || isToday ? 700 : 400,
                   border: hasApt && !isSel ? "1px solid rgba(24,95,165,0.4)" : "1px solid transparent",
                   transition: "all 0.15s"
@@ -596,7 +596,7 @@ export default function Appointments() {
             })}
           </div>
 
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", gap: 16, fontSize: 11, color: "var(--text-muted)" }}>
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--glass-border)", display: "flex", gap: 16, fontSize: 11, color: "var(--text-muted)" }}>
             <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "var(--primary)", marginLeft: 4 }} />يوم فيه موعد</span>
             <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "var(--primary)", marginLeft: 4 }} />اليوم المحدد</span>
           </div>
@@ -607,7 +607,7 @@ export default function Appointments() {
             <h3 style={{ fontSize: 18, fontWeight: 600 }}>
               📅 مواعيد {selDay} {t(MONTHS[month])} {year}
             </h3>
-            <span style={{ fontSize: 12, color: "var(--text-muted)", background: "rgba(255,255,255,0.05)", padding: "4px 12px", borderRadius: 20 }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)", background: "var(--panel-bg)", padding: "4px 12px", borderRadius: 20 }}>
               {apts.length} موعد
             </span>
           </div>
@@ -636,7 +636,7 @@ export default function Appointments() {
                   onClick={() => nav(`/patients/${a.patient_id}`)}
                   style={{
                     display: "flex", alignItems: "center", gap: isMobile ? 10 : 16, padding: isMobile ? "12px 14px" : "16px 20px",
-                    background: isSoon ? "rgba(245, 158, 11, 0.1)" : "rgba(255,255,255,0.03)", 
+                    background: isSoon ? "rgba(245, 158, 11, 0.1)" : "var(--panel-bg)", 
                     borderRadius: 14,
                     border: isSoon ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid rgba(255,255,255,0.07)", 
                     transition: "all 0.3s",
@@ -645,11 +645,11 @@ export default function Appointments() {
                     overflow: "hidden"
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = isSoon ? "rgba(245, 158, 11, 0.15)" : "rgba(255,255,255,0.06)";
+                    e.currentTarget.style.background = isSoon ? "rgba(245, 158, 11, 0.15)" : "var(--panel-bg-hover)";
                     e.currentTarget.style.transform = "translateX(-5px)";
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.background = isSoon ? "rgba(245, 158, 11, 0.1)" : "rgba(255,255,255,0.03)";
+                    e.currentTarget.style.background = isSoon ? "rgba(245, 158, 11, 0.1)" : "var(--panel-bg)";
                     e.currentTarget.style.transform = "none";
                   }}
                 >
@@ -760,7 +760,7 @@ export default function Appointments() {
               <div style={{ textAlign: "center", padding: 20, color: "var(--text-muted)" }}>{t("لا توجد مواعيد ليوم غد")}</div>
             ) : (
               tomorrowApts.map(a => (
-                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: 12, background: "rgba(255,255,255,0.03)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)" }}>
+                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 16, padding: 12, background: "var(--panel-bg)", borderRadius: 12, border: "1px solid var(--glass-border)" }}>
                   <div style={{ background: "var(--primary)", color: "white", padding: "4px 10px", borderRadius: 8, fontWeight: 700, fontSize: 13 }}>{a.time}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{a.patient_name}</div>
@@ -846,7 +846,7 @@ export default function Appointments() {
                       position: "absolute", top: "105%", left: 0, right: 0, zIndex: 100,
                       maxHeight: 240, overflowY: "auto", padding: 8,
                       boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
-                      border: "1px solid rgba(255,255,255,0.1)"
+                      border: "1px solid var(--glass-border)"
                     }}>
                       {filteredPatients.length === 0 ? (
                         <div style={{ padding: 12, color: "var(--text-muted)", textAlign: "center", fontSize: 13 }}>
@@ -866,7 +866,7 @@ export default function Appointments() {
                               background: form.patient_id == p.id ? "rgba(24, 95, 165, 0.3)" : "transparent",
                               marginBottom: 4, transition: "all 0.2s"
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--panel-bg-hover)"}
                             onMouseLeave={e => e.currentTarget.style.background = form.patient_id == p.id ? "rgba(24, 95, 165, 0.3)" : "transparent"}
                           >
                             <div style={{ fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
@@ -925,7 +925,7 @@ export default function Appointments() {
                       <button key={s} onClick={() => setForm({ ...form, status: s })}
                         style={{
                           flex: "1 1 100px", padding: "10px 4px", borderRadius: 10, border: `2px solid ${form.status === s ? sc.color : "transparent"}`,
-                          background: form.status === s ? sc.bg : "rgba(255,255,255,0.04)",
+                          background: form.status === s ? sc.bg : "var(--panel-bg)",
                           color: form.status === s ? sc.color : "var(--text-muted)",
                           fontWeight: 600, cursor: "pointer", fontSize: 12, transition: "all 0.15s"
                         }}>
@@ -1034,7 +1034,7 @@ export default function Appointments() {
 
             {/* Filter Control Bar */}
             <div style={{ 
-              background: "rgba(255,255,255,0.02)", 
+              background: "var(--panel-bg)", 
               padding: isMobile ? 12 : 16, 
               borderRadius: 16, 
               marginBottom: 16, 
@@ -1044,7 +1044,7 @@ export default function Appointments() {
               gap: 12 
             }}>
               {/* Mode Toggle */}
-              <div style={{ display: "flex", gap: 6, background: "rgba(255,255,255,0.03)", padding: 4, borderRadius: 10, alignSelf: isMobile ? "stretch" : "center" }}>
+              <div style={{ display: "flex", gap: 6, background: "var(--panel-bg)", padding: 4, borderRadius: 10, alignSelf: isMobile ? "stretch" : "center" }}>
                 <button 
                   onClick={() => setArchiveMode("month")} 
                   style={{
@@ -1099,11 +1099,11 @@ export default function Appointments() {
               flexWrap: "wrap", 
               gap: 6, 
               marginBottom: 16, 
-              borderBottom: "1px solid rgba(255,255,255,0.05)", 
+              borderBottom: "1px solid var(--glass-border)", 
               paddingBottom: 12 
             }}>
               {[
-                { key: "all", label: "الكل", color: "#ccc", bg: "rgba(255,255,255,0.05)" },
+                { key: "all", label: "الكل", color: "#ccc", bg: "var(--panel-bg)" },
                 ...STATUS_ORDER.map(s => ({
                   key: s,
                   label: STATUS_CONFIG[s].ar,
@@ -1123,7 +1123,7 @@ export default function Appointments() {
                     style={{
                       display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 20, fontSize: 11,
                       border: isActive ? `1px solid ${item.color}` : "1px solid rgba(255,255,255,0.04)",
-                      background: isActive ? item.bg : "rgba(255,255,255,0.01)",
+                      background: isActive ? item.bg : "var(--panel-bg)",
                       color: isActive ? "#fff" : "var(--text-muted)",
                       cursor: "pointer", fontWeight: isActive ? 700 : 500, transition: "all 0.15s ease"
                     }}
@@ -1158,8 +1158,8 @@ export default function Appointments() {
                           className="glass-panel" 
                           style={{ 
                             padding: 14, 
-                            background: "rgba(255,255,255,0.01)", 
-                            border: "1px solid rgba(255,255,255,0.05)",
+                            background: "var(--panel-bg)", 
+                            border: "1px solid var(--glass-border)",
                             borderRadius: 14 
                           }}
                         >
@@ -1179,8 +1179,8 @@ export default function Appointments() {
                             fontSize: 11, 
                             margin: "8px 0", 
                             padding: "6px 0", 
-                            borderTop: "1px solid rgba(255,255,255,0.03)", 
-                            borderBottom: "1px solid rgba(255,255,255,0.03)" 
+                            borderTop: "1px solid var(--glass-border)", 
+                            borderBottom: "1px solid var(--glass-border)" 
                           }}>
                             <span>📅 {apt.date}</span>
                             <span>⏰ {format12h(apt.time, lang)}</span>
@@ -1235,7 +1235,7 @@ export default function Appointments() {
                   ) : (
                     <table style={{ width: "100%", borderCollapse: "collapse", textAlign: lang === "ar" ? "right" : "left" }}>
                       <thead>
-                        <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", color: "var(--text-muted)", fontSize: 13 }}>
+                        <tr style={{ borderBottom: "1px solid var(--glass-border)", color: "var(--text-muted)", fontSize: 13 }}>
                           <th style={{ padding: "12px 8px" }}>{t("اليوم والتاريخ")}</th>
                           <th style={{ padding: "12px 8px" }}>{t("الوقت")}</th>
                           <th style={{ padding: "12px 8px" }}>{t("المريض")}</th>
@@ -1249,11 +1249,11 @@ export default function Appointments() {
                           <tr 
                             key={apt.id} 
                             style={{ 
-                              borderBottom: "1px solid rgba(255,255,255,0.04)", 
+                              borderBottom: "1px solid var(--glass-border)", 
                               fontSize: 14, 
                               transition: "background 0.2s" 
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.01)"}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--panel-bg)"}
                             onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                           >
                             <td style={{ padding: "14px 8px", fontWeight: 600 }}>{apt.date}</td>

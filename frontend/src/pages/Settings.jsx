@@ -207,7 +207,7 @@ export default function Settings() {
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>🏢 {t("بيانات العيادة العامة")}</h3>
               
               <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 32, marginBottom: 32, alignItems: isMobile ? "flex-start" : "center" }}>
-                <div style={{ width: 80, height: 80, borderRadius: 16, overflow: "hidden", background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px dashed rgba(255,255,255,0.1)", flexShrink: 0 }}>
+                <div style={{ width: 80, height: 80, borderRadius: 16, overflow: "hidden", background: "var(--panel-bg)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px dashed var(--glass-border)", flexShrink: 0 }}>
                   {form.clinic_logo ? (
                     <img src={BASE + form.clinic_logo} alt="Clinic Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
@@ -253,7 +253,7 @@ export default function Settings() {
                        const f = e.target.files[0];
                        if(f){ const r=new FileReader(); r.onloadend=()=>setForm({...form, prescription_header:r.result}); r.readAsDataURL(f); }
                      }} />
-                     <label htmlFor="h-up" className="btn-ghost" style={{ display: "block", height: 120, border: "2px dashed rgba(255,255,255,0.1)", borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}>
+                     <label htmlFor="h-up" className="btn-ghost" style={{ display: "block", height: 120, border: "2px dashed var(--glass-border)", borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "var(--panel-bg)" }}>
                         {form.prescription_header ? <img src={form.prescription_header} style={{ width: "100%", height: "100%", objectFit: "contain", background: "white" }} /> : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 12, color: "var(--text-muted)" }}>{t("رفع صورة الرأس")}</div>}
                      </label>
                    </div>
@@ -263,7 +263,7 @@ export default function Settings() {
                        const f = e.target.files[0];
                        if(f){ const r=new FileReader(); r.onloadend=()=>setForm({...form, prescription_footer:r.result}); r.readAsDataURL(f); }
                      }} />
-                     <label htmlFor="f-up" className="btn-ghost" style={{ display: "block", height: 120, border: "2px dashed rgba(255,255,255,0.1)", borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "rgba(255,255,255,0.02)" }}>
+                     <label htmlFor="f-up" className="btn-ghost" style={{ display: "block", height: 120, border: "2px dashed var(--glass-border)", borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "var(--panel-bg)" }}>
                         {form.prescription_footer ? <img src={form.prescription_footer} style={{ width: "100%", height: "100%", objectFit: "contain", background: "white" }} /> : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: 12, color: "var(--text-muted)" }}>{t("رفع صورة التذييل")}</div>}
                      </label>
                    </div>
@@ -425,7 +425,7 @@ export default function Settings() {
                      {/* Binary Toggles Grid */}
                      <div style={{ gridColumn: isMobile ? "span 1" : "span 2", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 20, marginTop: 12 }}>
                         {/* Messages Toggle */}
-                        <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ padding: 16, background: "var(--panel-bg)", borderRadius: 12, border: "1px solid var(--glass-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700 }}>💬 {t("سجل المتابعة الداخلية")}</div>
                             <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("شات سجل المتابعة")}</div>
@@ -439,7 +439,7 @@ export default function Settings() {
                         </div>
 
                         {/* Medical History Toggle */}
-                        <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ padding: 16, background: "var(--panel-bg)", borderRadius: 12, border: "1px solid var(--glass-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700 }}>🩺 {t("السجل الطبي")}</div>
                             <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("العلاجات وخريطة الأسنان")}</div>
@@ -453,7 +453,7 @@ export default function Settings() {
                         </div>
 
                         {/* Daily Summary Toggle */}
-                        <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ padding: 16, background: "var(--panel-bg)", borderRadius: 12, border: "1px solid var(--glass-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700 }}>📋 {t("الملخص اليومي")}</div>
                             <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("لوحة الجرد اليومي")}</div>
@@ -467,7 +467,7 @@ export default function Settings() {
                         </div>
 
                         {/* Daily Schedule Toggle */}
-                        <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ padding: 16, background: "var(--panel-bg)", borderRadius: 12, border: "1px solid var(--glass-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700 }}>📅 {t("الجدول اليومي")}</div>
                             <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("جدول مواعيد اليوم ومتابعة الجلسات")}</div>
@@ -537,7 +537,7 @@ export default function Settings() {
 
                       {backupDiagResults && (
                         <div style={{ fontSize: 13, background: "rgba(0,0,0,0.2)", padding: 16, borderRadius: 12, display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 8, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 4 : 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--glass-border)", paddingBottom: 8, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 4 : 0 }}>
                             <span style={{ fontWeight: 600 }}>☁️ Cloudflare R2 (النسخ الاحتياطي المركزي للشركة):</span>
                             <span style={{ fontWeight: 700, color: backupDiagResults.r2?.status === "Success" ? "#10b981" : "#ef4444" }}>
                               {backupDiagResults.r2?.status === "Success" ? "✅ ناجح ومؤمن" : `❌ فشل (${backupDiagResults.r2?.error || "خطأ في الاتصال"})`}
@@ -555,13 +555,13 @@ export default function Settings() {
 
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                      <button onClick={handleDownloadBackup} 
-                       className="glass-panel" style={{ padding: 20, textAlign: "center", cursor: "pointer", border: "1px solid rgba(255,255,255,0.05)" }}>
+                       className="glass-panel" style={{ padding: 20, textAlign: "center", cursor: "pointer", border: "1px solid var(--glass-border)" }}>
                        <div style={{ fontSize: 24, marginBottom: 8 }}>📥</div>
                        <div style={{ fontWeight: 600, fontSize: 13 }}>{t("تحميل نسخة احتياطية")}</div>
                      </button>
 
                      <button onClick={() => document.getElementById('res-up').click()} 
-                       className="glass-panel" style={{ padding: 20, textAlign: "center", cursor: "pointer", border: "1px solid rgba(255,255,255,0.05)" }}>
+                       className="glass-panel" style={{ padding: 20, textAlign: "center", cursor: "pointer", border: "1px solid var(--glass-border)" }}>
                        <input type="file" id="res-up" hidden onChange={async (e) => {
                          const f=e.target.files[0]; if(!f) return;
                          setConfirmData({
@@ -612,7 +612,7 @@ export default function Settings() {
                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>💬 {t("ربط الواتساب المجاني")}</h3>
                 <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 24 }}>{t("امسح الـ QR Code التالي لربط واتساب العيادة بالنظام مجاناً.")}</p>
                 
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: 32, background: "rgba(255,255,255,0.02)", borderRadius: 20, border: "1px dashed rgba(255,255,255,0.1)" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: 32, background: "var(--panel-bg)", borderRadius: 20, border: "1px dashed var(--glass-border)" }}>
                    {qrStatus === "ready" ? (
                      <div style={{ textAlign: "center", color: "var(--success)" }}>
                         <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
@@ -654,7 +654,7 @@ export default function Settings() {
                      ].map(list => {
                         const currentList = getDynamicList(list.k, DEFAULT_LISTS[list.k]);
                         return (
-                          <div key={list.k} className="glass-panel" style={{ padding: 20, background: "rgba(255,255,255,0.02)" }}>
+                          <div key={list.k} className="glass-panel" style={{ padding: 20, background: "var(--panel-bg)" }}>
                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                                 <div style={{ fontWeight: 700, fontSize: 14 }}>{list.icon} {t(list.l)}</div>
                                 <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{currentList.length} {t("عنصر")}</div>
@@ -663,8 +663,8 @@ export default function Settings() {
                              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                                 {currentList.map((item, idx) => (
                                   <div key={idx} style={{ 
-                                    background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 8, fontSize: 12,
-                                    display: "flex", alignItems: "center", gap: 6, border: "1px solid rgba(255,255,255,0.05)"
+                                    background: "var(--panel-bg)", padding: "4px 10px", borderRadius: 8, fontSize: 12,
+                                    display: "flex", alignItems: "center", gap: 6, border: "1px solid var(--glass-border)"
                                   }}>
                                      {item}
                                      <span 
@@ -734,8 +734,8 @@ export default function Settings() {
                   {trashList.map(p => (
                     <div key={p.id} style={{
                       display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "14px 18px", background: "rgba(255,255,255,0.03)",
-                      borderRadius: 14, border: "1px solid rgba(255,255,255,0.06)",
+                      padding: "14px 18px", background: "var(--panel-bg)",
+                      borderRadius: 14, border: "1px solid var(--glass-border)",
                       gap: 12, flexWrap: "wrap"
                     }}>
                       <div style={{ flex: 1 }}>
@@ -794,7 +794,7 @@ export default function Settings() {
             <div className="glass-panel animate-fade" style={{ padding: 32 }}>
                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>🎨 {t("تفضيلات الواجهة واللغة")}</h3>
                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 20, background: "var(--panel-bg)", borderRadius: 16 }}>
                      <div>
                         <div style={{ fontWeight: 700 }}>{t("لغة النظام")}</div>
                         <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("تغيير اللغة بين العربية والإنجليزية")}</div>
@@ -804,7 +804,7 @@ export default function Settings() {
                      </button>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 20, background: "var(--panel-bg)", borderRadius: 16 }}>
                      <div>
                         <div style={{ fontWeight: 700 }}>{t("الوضع الليلي")} (Dark Mode)</div>
                         <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{t("تبديل مظهر الواجهة")}</div>

@@ -28,7 +28,7 @@ export default function Debts() {
         <div className="table-container">
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+              <tr style={{ background: "var(--panel-bg)" }}>
                 {[t("المريض"), t("الهاتف"), t("إجمالي العلاج"), t("المدفوع"), t("المبلغ المتبقي"), t("إجراء")].map(h => (
                   <th key={h} style={{ padding: "16px 20px", textAlign: "right", fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{h}</th>
                 ))}
@@ -36,7 +36,7 @@ export default function Debts() {
             </thead>
             <tbody>
               {list.map(x => (
-                <tr key={x.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <tr key={x.id} style={{ borderBottom: "1px solid var(--glass-border)" }}>
                   <td style={{ padding: "14px 20px", fontWeight: 600 }}>{x.first_name} {x.last_name}</td>
                   <td style={{ padding: "14px 20px", fontSize: 13, color: "var(--text-muted)" }}>{x.phone || "—"}</td>
                   <td style={{ padding: "14px 20px", fontSize: 13 }}>{(x.total_amt || 0).toLocaleString()} {t("د")}</td>

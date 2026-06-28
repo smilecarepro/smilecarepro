@@ -17,7 +17,7 @@ const ToothWidget = ({ surfaceStatus, onSurfaceClick }) => {
     if (surfaceStatus[surface] === 'composite') return "#4444ff";
     if (surfaceStatus[surface] === 'crown') return "#ffd700";
     if (surfaceStatus[surface] === 'extraction') return "#222222";
-    return hovered === surface ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.05)";
+    return hovered === surface ? "var(--panel-bg-hover)" : "var(--panel-bg)";
   };
 
   return (
@@ -224,8 +224,8 @@ export default function AdvancedMap({ patientId, initialData = {} }) {
              onClick={() => setAutoRotate(!autoRotate)}
              style={{ 
                position: 'absolute', top: 20, right: 20, zIndex: 10, 
-               background: autoRotate ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.1)', 
-               color: autoRotate ? '#3b82f6' : 'white', 
+               background: autoRotate ? 'rgba(59, 130, 246, 0.2)' : "var(--panel-bg-hover)", 
+               color: autoRotate ? '#3b82f6' : 'var(--text-main)', 
                padding: '10px 20px', borderRadius: 20, 
                border: autoRotate ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.2)', 
                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.3s',
@@ -235,7 +235,7 @@ export default function AdvancedMap({ patientId, initialData = {} }) {
           </button>
 
           <ErrorBoundary>
-            <Suspense fallback={<div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "white" }}>{t("جاري تحميل النموذج...")}</div>}>
+            <Suspense fallback={<div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "var(--text-main)" }}>{t("جاري تحميل النموذج...")}</div>}>
               <Canvas shadows camera={{ position: [0, 1, 7], fov: 50 }}>
                 <ambientLight intensity={1.5} />
                 <pointLight position={[10, 10, 10]} intensity={2} />
@@ -268,7 +268,7 @@ export default function AdvancedMap({ patientId, initialData = {} }) {
            <h3 style={{ margin: 0, color: 'var(--accent)' }}>📋 {t("الإجراءات الطبية (للحفظ)")}</h3>
            {selectedTooth ? (
              <div className="animate-fade">
-               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, background: "rgba(255,255,255,0.02)", padding: 16, borderRadius: 16 }}>
+               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, background: "var(--panel-bg)", padding: 16, borderRadius: 16 }}>
                   <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--primary)', wordBreak: "break-all" }}>
                     تم تحديد السن
                   </div>
@@ -290,7 +290,7 @@ export default function AdvancedMap({ patientId, initialData = {} }) {
                
              </div>
            ) : (
-             <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 20, padding: 32, background: "rgba(255,255,255,0.02)", borderRadius: 16 }}>
+             <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 20, padding: 32, background: "var(--panel-bg)", borderRadius: 16 }}>
                👆 يرجى النقر على أي سن للبدء.
              </div>
            )}

@@ -292,7 +292,7 @@ export default function DoctorDashboard() {
 
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                      <h2 style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, margin: 0, color: "white" }}>{app.patient_name}</h2>
+                      <h2 style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, margin: 0, color: "var(--text-main)" }}>{app.patient_name}</h2>
                       {app.status === "treating" && (
                         <span className="badge-treating animate-pulse" style={{ background: "#10b981", color: "white", padding: "3px 12px", borderRadius: 20, fontSize: 11, fontWeight: 800 }}>
                           {t("قيد المعالجة حالياً")}
@@ -330,7 +330,7 @@ export default function DoctorDashboard() {
                           fontSize: 14,
                           fontWeight: 800,
                           background: "linear-gradient(135deg, #10b981, #059669)",
-                          color: "white",
+                          color: "var(--text-main)",
                           border: "none",
                           cursor: "pointer",
                           display: "flex",
@@ -365,10 +365,10 @@ export default function DoctorDashboard() {
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
           <div>
             <div style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>{t("جلسة معالجة نشطة")} ⚡</div>
-            <h2 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 0 0", color: "white" }}>{activeSession.patientName}</h2>
+            <h2 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 0 0", color: "var(--text-main)" }}>{activeSession.patientName}</h2>
           </div>
           {activePatient && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, fontSize: 14, background: "rgba(255,255,255,0.02)", padding: "10px 20px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, fontSize: 14, background: "var(--panel-bg)", padding: "10px 20px", borderRadius: 12, border: "1px solid var(--glass-border)" }}>
               <div><span style={{ color: "var(--text-muted)" }}>{t("العمر")}:</span> <strong>{activePatient.age || t("غير مسجل")}</strong></div>
               <div><span style={{ color: "var(--text-muted)" }}>{t("الجنس")}:</span> <strong>{t(activePatient.gender) || t("غير مسجل")}</strong></div>
               {activePatient.systemic_conditions && (
@@ -407,7 +407,7 @@ export default function DoctorDashboard() {
                     <div style={{ 
                       height: 6, 
                       borderRadius: 3, 
-                      background: isCompleted ? "var(--success)" : isActive ? "var(--primary)" : "rgba(255,255,255,0.05)",
+                      background: isCompleted ? "var(--success)" : isActive ? "var(--primary)" : "var(--panel-bg)",
                       transition: "all 0.3s",
                       marginBottom: 8
                     }} />
@@ -446,7 +446,7 @@ export default function DoctorDashboard() {
                   >
                     🌐 {t("إجراء عام")}
                   </button>
-                  <div style={{ background: "rgba(255,255,255,0.05)", padding: 4, borderRadius: 12, display: "flex", gap: 4 }}>
+                  <div style={{ background: "var(--panel-bg)", padding: 4, borderRadius: 12, display: "flex", gap: 4 }}>
                     <button onClick={() => setMapMode("2D")} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 8, border: "none", background: mapMode === "2D" ? "var(--primary)" : "transparent", color: "white", fontWeight: 700, cursor: "pointer" }}>2D</button>
                     <button onClick={() => setMapMode("3D")} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 8, border: "none", background: mapMode === "3D" ? "var(--primary)" : "transparent", color: "white", fontWeight: 700, cursor: "pointer" }}>3D ✨</button>
                   </div>
@@ -490,7 +490,7 @@ export default function DoctorDashboard() {
               )}
 
               {sessionData.treatments?.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, borderTop: "1px solid var(--glass-border)", paddingTop: 16 }}>
                   <div>
                     <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: "var(--success)", fontWeight: 800 }}>✅ {t("إجراءات مضافة في هذه الجلسة:")}</h4>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -704,8 +704,8 @@ export default function DoctorDashboard() {
                 <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                   <h3 style={{ margin: 0, fontSize: 18 }}>🏁 {t("الخطوة 5: ملخص الجلسة النهائي")}</h3>
                   
-                  <div style={{ background: "rgba(255,255,255,0.02)", padding: 16, borderRadius: 16, border: "1px solid rgba(255,255,255,0.05)" }}>
-                    <div style={{ marginBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 10 }}>
+                  <div style={{ background: "var(--panel-bg)", padding: 16, borderRadius: 16, border: "1px solid var(--glass-border)" }}>
+                    <div style={{ marginBottom: 16, borderBottom: "1px solid var(--glass-border)", paddingBottom: 10 }}>
                       <strong>📝 {t("الإجراءات الطبية:")}</strong>
                       <ul style={{ paddingRight: 20, marginTop: 8, marginLeft: 0 }}>
                         {sessionData.treatments?.map((tr, i) => (
@@ -718,11 +718,11 @@ export default function DoctorDashboard() {
                     </div>
 
                     {sessionData.meds?.length > 0 && (
-                      <div style={{ marginBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 10 }}>
+                      <div style={{ marginBottom: 16, borderBottom: "1px solid var(--glass-border)", paddingBottom: 10 }}>
                         <strong>💊 {t("الأدوية الموصوفة:")}</strong>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                           {sessionData.meds.map((m, i) => (
-                            <span key={i} style={{ fontSize: 11, background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 8 }}>
+                            <span key={i} style={{ fontSize: 11, background: "var(--panel-bg)", padding: "4px 10px", borderRadius: 8 }}>
                               {m.name} ({m.form}) - {m.dose}
                             </span>
                           ))}

@@ -60,7 +60,7 @@ export default function TeethMap({ initial, pid, treatments, onToothClick, onAdd
   const lowerTeeth = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
 
   return (
-    <div className="animate-fade" style={{ direction: "ltr", color: "white" }}>
+    <div className="animate-fade" style={{ direction: "ltr", color: "var(--text-main)" }}>
       <style>{`
         .jaw-arch { display: flex; justify-content: space-between; gap: 4px; padding: 30px 0; position: relative; width: 100%; max-width: 900px; margin: 0 auto; }
         .tooth-container { transition: all 0.2s; flex: 1; display: flex; justify-content: center; transform-origin: center center; }
@@ -95,7 +95,7 @@ export default function TeethMap({ initial, pid, treatments, onToothClick, onAdd
       )}
 
 
-      <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 30, padding: "40px 20px", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{ background: "var(--panel-bg)", borderRadius: 30, padding: "40px 20px", border: "1px solid var(--glass-border)" }}>
         <div style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 2 }}>{t("الفك العلوي - Upper Arch")}</div>
         <div className="jaw-arch" style={{ marginBottom: 40 }}>
           {upperTeeth.map((id, i) => {
@@ -159,9 +159,9 @@ export default function TeethMap({ initial, pid, treatments, onToothClick, onAdd
         {Object.entries(statusColors).map(([name, color]) => (
           <div key={name} onClick={() => setSelectedStatus(name)} style={{ 
             padding: "8px 16px", borderRadius: 12, cursor: "pointer", fontSize: 12, fontWeight: 600,
-            background: selectedStatus === name ? color : "rgba(255,255,255,0.03)",
-            color: selectedStatus === name ? (color === "transparent" ? "white" : "#000") : "white",
-            border: `1px solid ${selectedStatus === name ? color : "rgba(255,255,255,0.1)"}`,
+            background: selectedStatus === name ? color : "var(--panel-bg)",
+            color: selectedStatus === name ? (color === "transparent" ? "white" : "#000") : "var(--text-main)",
+            border: `1px solid ${selectedStatus === name ? color : "var(--glass-border)"}`,
             transition: "all 0.2s",
             boxShadow: selectedStatus === name ? `0 0 15px ${color}40` : "none"
           }}>
@@ -172,7 +172,7 @@ export default function TeethMap({ initial, pid, treatments, onToothClick, onAdd
       )}
 
       {!readOnly && (
-        <div style={{ marginTop: 40, borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 20, direction: lang==="ar"?"rtl":"ltr" }}>
+        <div style={{ marginTop: 40, borderTop: "1px solid var(--glass-border)", paddingTop: 20, direction: lang==="ar"?"rtl":"ltr" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 15 }}>
             <h4 style={{ margin: 0 }}>📋 {t("سجل إجراءات")} {selectedTooth ? `${t("السن")} #${selectedTooth}` : t("الفك")}</h4>
             <div style={{ display: "flex", gap: 10 }}>
@@ -185,19 +185,19 @@ export default function TeethMap({ initial, pid, treatments, onToothClick, onAdd
 
           <div style={{ maxHeight: 350, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16, paddingRight: 10 }}>
             {sortedDates.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 30, color: "var(--text-muted)", background: "rgba(255,255,255,0.02)", borderRadius: 12, fontSize: 13 }}>
+              <div style={{ textAlign: "center", padding: 30, color: "var(--text-muted)", background: "var(--panel-bg)", borderRadius: 12, fontSize: 13 }}>
                 {t("لا توجد إجراءات مسجلة.")}
               </div>
             ) : (
               [...sortedDates].reverse().map((date, idx, arr) => (
-                <div key={date} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 12 }}>
+                <div key={date} style={{ borderBottom: "1px solid var(--glass-border)", paddingBottom: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--primary)" }} />
                      <div style={{ fontWeight: 800, fontSize: 13, color: "var(--primary)" }}>{t("الجلسة")} #{arr.length - idx} <span style={{ fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>({date})</span></div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingLeft: 18 }}>
                      {activeTreatments.filter(tr => (!selectedTooth || tr.tooth_number == selectedTooth) && (tr.date && tr.date.split(' ')[0] === date)).map((tr, i) => (
-                       <div key={i} style={{ display: "flex", gap: 12, padding: "8px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 8 }}>
+                       <div key={i} style={{ display: "flex", gap: 12, padding: "8px 12px", background: "var(--panel-bg)", borderRadius: 8 }}>
                           <div style={{ fontWeight: 800, color: "var(--accent)", fontSize: 12 }}>#{tr.tooth_number}</div>
                           <div style={{ flex: 1, fontSize: 13 }}>{tr.procedure} <span style={{ fontSize: 11, color: "var(--text-muted)", display: "block" }}>{tr.notes}</span></div>
                           <div style={{ fontSize: 11, color: "#10b981", fontWeight: 700 }}>{(tr.cost || 0).toLocaleString()} {t("د")}</div>
@@ -243,8 +243,8 @@ function ToothIcon({ id, status, surfaceData = {}, onSurfaceClick, onToothClick,
     >
       <div style={{ 
         width: "100%", height: "100%", 
-        background: color !== "transparent" ? `${color}33` : "rgba(255,255,255,0.03)",
-        border: isSelected ? "2px solid var(--primary)" : (isHovered ? "2px solid #fff" : `1px solid ${color !== "transparent" ? color : "rgba(255,255,255,0.15)"}`),
+        background: color !== "transparent" ? `${color}33` : "var(--panel-bg)",
+        border: isSelected ? "2px solid var(--primary)" : (isHovered ? "2px solid #fff" : `1px solid ${color !== "transparent" ? color : "var(--panel-bg-hover)"}`),
         borderRadius: isLower ? "10px 10px 4px 4px" : "4px 4px 10px 10px",
         position: "relative",
         boxShadow: isSelected ? `0 0 20px var(--primary)` : (isHovered ? `0 0 20px #fff4` : (color !== "transparent" ? `0 0 12px ${color}66` : "none")),
@@ -259,7 +259,7 @@ function ToothIcon({ id, status, surfaceData = {}, onSurfaceClick, onToothClick,
               style={{ 
                 gridArea: sid[0], 
                 background: surfaceData[sid] || "transparent", 
-                border: "1px solid rgba(255,255,255,0.15)",
+                border: "1px solid var(--glass-border)",
                 zIndex: 2
               }} 
             />

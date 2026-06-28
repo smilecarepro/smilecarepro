@@ -87,7 +87,7 @@ export default function AuditLog() {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {changes.map(k => (
-          <div key={k} style={{ padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div key={k} style={{ padding: "12px", background: "var(--panel-bg)", borderRadius: 8, border: "1px solid var(--glass-border)" }}>
             <div style={{ fontWeight: 700, color: "var(--primary)", fontSize: 12, marginBottom: 8 }}>{k.toUpperCase()}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13 }}>
               <div style={{ flex: 1, padding: 8, background: "rgba(239, 68, 68, 0.1)", color: "#f87171", borderRadius: 4, textDecoration: "line-through" }}>
@@ -132,7 +132,7 @@ export default function AuditLog() {
         <div className="glass-panel" style={{ padding: 0, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+              <tr style={{ background: "var(--panel-bg)", borderBottom: "1px solid var(--glass-border)" }}>
                 <th style={{ padding: "16px 24px", textAlign: "right", fontSize: 13, color: "var(--text-muted)" }}>الوقت</th>
                 {isManager && <th style={{ padding: "16px 24px", textAlign: "right", fontSize: 13, color: "var(--text-muted)" }}>العيادة</th>}
                 <th style={{ padding: "16px 24px", textAlign: "right", fontSize: 13, color: "var(--text-muted)" }}>المستخدم</th>
@@ -150,12 +150,12 @@ export default function AuditLog() {
                   key={log.id} 
                   onClick={() => setSelectedLog(log)}
                   style={{ 
-                    borderBottom: "1px solid rgba(255,255,255,0.03)", 
+                    borderBottom: "1px solid var(--glass-border)", 
                     transition: "background 0.2s",
                     cursor: "pointer",
                     background: selectedLog?.id === log.id ? "rgba(59, 130, 246, 0.1)" : "transparent"
                   }} 
-                  onMouseEnter={e => { if(selectedLog?.id !== log.id) e.currentTarget.style.background = "rgba(255,255,255,0.02)"}} 
+                  onMouseEnter={e => { if(selectedLog?.id !== log.id) e.currentTarget.style.background = "var(--panel-bg)"}} 
                   onMouseLeave={e => { if(selectedLog?.id !== log.id) e.currentTarget.style.background = "transparent"}}
                 >
                   <td style={{ padding: "16px 24px", fontSize: 14 }}>
@@ -203,7 +203,7 @@ export default function AuditLog() {
               <button onClick={() => setSelectedLog(null)} className="btn-ghost" style={{ padding: 4 }}>✕</button>
             </div>
             
-            <div style={{ marginBottom: 24, padding: "16px", background: "rgba(255,255,255,0.02)", borderRadius: 12 }}>
+            <div style={{ marginBottom: 24, padding: "16px", background: "var(--panel-bg)", borderRadius: 12 }}>
                 <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>الوصف الكامل:</div>
                 <div style={{ fontSize: 14, fontWeight: 500 }}>{selectedLog.description}</div>
             </div>

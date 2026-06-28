@@ -165,7 +165,7 @@ export default function Purchases() {
     <div className="animate-fade" style={{ padding: "20px 0", maxWidth: 1400, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
         <div>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: 'white', margin: 0 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: "var(--text-main)", margin: 0 }}>
             🛒 {user?.account_type === 'center_manager' ? t("المشتريات المركزية للمركز") : t("إدارة المشتريات")}
           </h2>
           <p style={{ color: 'var(--text-muted)', margin: "4px 0 0 0", fontSize: 14 }}>{t("نظام الطلبات والجرد الذكي المتصل بالمخزن")}</p>
@@ -206,7 +206,7 @@ export default function Purchases() {
                       <td style={{ fontWeight: 600 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           {isLow && <span style={{ color: 'var(--danger-text)' }}>⚠️</span>}
-                          <span style={{ color: isLow ? 'var(--danger-text)' : 'white' }}>{item.name}</span>
+                          <span style={{ color: isLow ? 'var(--danger-text)' : 'var(--text-main)' }}>{item.name}</span>
                         </div>
                       </td>
                       <td style={{ color: isLow ? 'var(--danger-text)' : 'var(--success-text)', fontWeight: 700 }}>
@@ -246,7 +246,7 @@ export default function Purchases() {
               <div key={order.id} className="stat-card-container" style={{ padding: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: 'white' }}>{t("طلب شراء")} #{order.id}</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-main)" }}>{t("طلب شراء")} #{order.id}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                       📅 {new Date(order.created_at).toLocaleString('ar-EG')}
                     </div>
@@ -386,10 +386,10 @@ export default function Purchases() {
               </table>
             </div>
 
-            <div style={{ marginTop: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: 24, borderRadius: 20, border: '1px solid var(--glass-border)' }}>
+            <div style={{ marginTop: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: "var(--panel-bg)", padding: 24, borderRadius: 20, border: '1px solid var(--glass-border)' }}>
               <div>
                 <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{t("المبلغ الإجمالي المستحق:")}</span>
-                <div style={{ fontSize: 32, fontWeight: 900, color: 'white' }}>
+                <div style={{ fontSize: 32, fontWeight: 900, color: "var(--text-main)" }}>
                     {viewingOrder.items.reduce((sum, i) => sum + ((i.received_qty || 0) * (i.price_per_unit || 0)), 0).toLocaleString()} <span style={{ fontSize: 16 }}>{t("د")}</span>
                 </div>
               </div>

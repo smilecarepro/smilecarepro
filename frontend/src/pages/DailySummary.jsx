@@ -152,7 +152,7 @@ export default function DailySummary() {
                   height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                   borderRadius: 8, fontSize: 13, cursor: "pointer", position: "relative",
                   background: isSel ? "var(--primary)" : isToday ? "rgba(24,95,165,0.2)" : "transparent",
-                  color: isSel ? "white" : isToday ? "var(--primary)" : "white",
+                  color: isSel ? "white" : isToday ? "var(--primary)" : "var(--text-main)",
                   fontWeight: isSel || isToday ? 700 : 400,
                   border: "1px solid transparent",
                   transition: "all 0.15s"
@@ -376,8 +376,8 @@ function FinanceCard({ title, val, cash, bank, icon, color }) {
       <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 700, marginBottom: 8 }}>{title}</div>
       <div style={{ fontSize: 28, fontWeight: 900, color, marginBottom: 12 }}>{fmt(val)} <span style={{ fontSize: 14 }}>{t("د")}</span></div>
       <div style={{ display: "flex", gap: 16, fontSize: 12 }}>
-         <div style={{ color: "var(--text-muted)" }}>💵 {t("نقداً")}: <span style={{ color: "white", fontWeight: 700 }}>{fmt(cash)}</span></div>
-         <div style={{ color: "var(--text-muted)" }}>🏦 {t("بنك")}: <span style={{ color: "white", fontWeight: 700 }}>{fmt(bank)}</span></div>
+         <div style={{ color: "var(--text-muted)" }}>💵 {t("نقداً")}: <span style={{ color: "var(--text-main)", fontWeight: 700 }}>{fmt(cash)}</span></div>
+         <div style={{ color: "var(--text-muted)" }}>🏦 {t("بنك")}: <span style={{ color: "var(--text-main)", fontWeight: 700 }}>{fmt(bank)}</span></div>
       </div>
       <div style={{ position: "absolute", top: 16, right: 16, fontSize: 24, opacity: 0.2 }}>{icon}</div>
     </div>
@@ -406,7 +406,7 @@ function EmptyState({ msg }) {
 
 const itemStyle = {
   display: "flex", justifyContent: "space-between", alignItems: "center",
-  padding: "12px 16px", background: "rgba(255,255,255,0.03)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)"
+  padding: "12px 16px", background: "var(--panel-bg)", borderRadius: 12, border: "1px solid var(--glass-border)"
 };
 
 const printStyles = `

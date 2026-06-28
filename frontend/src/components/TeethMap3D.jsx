@@ -229,12 +229,12 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
     <div className="animate-fade" style={noControls ? { height: "100%", width: "100%" } : { display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.8fr 1fr", gap: 24, minHeight: isMobile ? "auto" : 600 }}>
       <div className={noControls ? "" : "glass-panel"} style={{ position: "relative", background: noControls ? "transparent" : "#0a0f18", borderRadius: noControls ? 0 : 24, overflow: "hidden", border: "none", height: isMobile ? 400 : "auto" }}>
         {!noControls && (
-          <button onClick={() => setAutoRotate(!autoRotate)} style={{ position: 'absolute', top: 20, right: 20, zIndex: 10, background: autoRotate ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.05)', color: autoRotate ? '#3b82f6' : 'white', padding: '8px 16px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+          <button onClick={() => setAutoRotate(!autoRotate)} style={{ position: 'absolute', top: 20, right: 20, zIndex: 10, background: autoRotate ? 'rgba(59,130,246,0.2)' : "var(--panel-bg)", color: autoRotate ? '#3b82f6' : 'var(--text-main)', padding: '8px 16px', borderRadius: 20, border: '1px solid var(--glass-border)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
             {autoRotate ? t("⏸️ إيقاف") : t("🎬 دوران")}
           </button>
         )}
         <ErrorBoundary>
-          <Suspense fallback={<div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "white" }}>{t("جاري تحميل النموذج...")}</div>}>
+          <Suspense fallback={<div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "var(--text-main)" }}>{t("جاري تحميل النموذج...")}</div>}>
             <Canvas shadows camera={{ position: cameraPos, fov: 45 }} gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}>
               <ambientLight intensity={0.5} />
               <directionalLight 
@@ -285,7 +285,7 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
                
                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
                   {Object.entries(statusColors).map(([name, color]) => (
-                    <button key={name} onClick={() => setSelectedStatus(name)} style={{ flex: 1, minWidth: "80px", padding: "8px", borderRadius: 10, fontSize: 11, border: "none", cursor: "pointer", background: selectedStatus === name ? color : "rgba(255,255,255,0.05)", color: selectedStatus === name ? "white" : "var(--text-muted)", fontWeight: 700 }}>{t(name)}</button>
+                    <button key={name} onClick={() => setSelectedStatus(name)} style={{ flex: 1, minWidth: "80px", padding: "8px", borderRadius: 10, fontSize: 11, border: "none", cursor: "pointer", background: selectedStatus === name ? color : "var(--panel-bg)", color: selectedStatus === name ? "white" : "var(--text-muted)", fontWeight: 700 }}>{t(name)}</button>
                   ))}
                </div>
 
@@ -299,13 +299,13 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
 
                {/* 🦷 السجل التاريخي للسن المختار */}
                {toothTreatments.length > 0 && (
-                 <div className="animate-fade" style={{ marginTop: 20, padding: 12, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)" }}>
+                 <div className="animate-fade" style={{ marginTop: 20, padding: 12, background: "var(--panel-bg)", borderRadius: 12, border: "1px solid var(--glass-border)" }}>
                    <div style={{ fontSize: 13, color: "var(--primary)", marginBottom: 12, fontWeight: 700 }}>📜 {t("التاريخ الطبي للسن")}:</div>
                    <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 200, overflowY: "auto", paddingRight: 5 }}>
                      {toothTreatments.map((tr, i) => (
                        <div key={i} style={{ paddingBottom: 10, borderBottom: i < toothTreatments.length - 1 ? "1px dashed rgba(255,255,255,0.1)" : "none" }}>
                          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{tr.date}</div>
-                         <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginTop: 2 }}>{tr.procedure}</div>
+                         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)", marginTop: 2 }}>{tr.procedure}</div>
                          {tr.notes && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>{tr.notes}</div>}
                        </div>
                      ))}
@@ -315,14 +315,14 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
             </div>
           ) : (
             <div className="animate-fade" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-              <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", background: "rgba(255,255,255,0.02)", borderRadius: 16, marginBottom: 20 }}>
+              <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", background: "var(--panel-bg)", borderRadius: 16, marginBottom: 20 }}>
                 <div style={{ fontSize: 30, marginBottom: 8 }}>🖱️</div>
                 <div style={{ fontSize: 13 }}>{t("انقر على السن في الموديل لتغيير حالته أو بدء جلسة")}</div>
               </div>
               
               {/* 🦷 السجل التاريخي لجميع الأسنان */}
               {(treatments || []).length > 0 ? (
-                 <div style={{ flex: 1, padding: 12, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)" }}>
+                 <div style={{ flex: 1, padding: 12, background: "var(--panel-bg)", borderRadius: 12, border: "1px solid var(--glass-border)" }}>
                    <div style={{ fontSize: 13, color: "var(--primary)", marginBottom: 12, fontWeight: 700 }}>📜 {t("السجل العام لجميع الأسنان")}:</div>
                    <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 350, overflowY: "auto", paddingRight: 5 }}>
                      {(treatments || []).map((tr, i) => (
@@ -331,7 +331,7 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
                            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{tr.date}</div>
                            <div style={{ fontSize: 11, background: "var(--primary)", padding: "2px 6px", borderRadius: 6, fontWeight: 800 }}>#{tr.tooth_number}</div>
                          </div>
-                         <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginTop: 2 }}>{tr.procedure}</div>
+                         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-main)", marginTop: 2 }}>{tr.procedure}</div>
                          {tr.notes && <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>{tr.notes}</div>}
                        </div>
                      ))}

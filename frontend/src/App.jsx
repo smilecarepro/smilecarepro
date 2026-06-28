@@ -177,7 +177,7 @@ export default function App() {
               {!isOnline && (
                 <div style={{
                   background: 'linear-gradient(90deg, #ff416c, #ff4b2b)',
-                  color: 'white',
+                  color: "var(--text-main)",
                   padding: '8px 20px',
                   textAlign: 'center',
                   fontSize: '13px',
@@ -196,7 +196,7 @@ export default function App() {
 
                 <div style={{
                   background: 'linear-gradient(90deg, #0061ff, #6033ff)',
-                  color: 'white',
+                  color: "var(--text-main)",
                   padding: '10px 20px',
                   textAlign: 'center',
                   fontSize: '13px',
@@ -213,7 +213,7 @@ export default function App() {
                   {announcement}
                   <button 
                     onClick={() => setAnnouncement("")}
-                    style={{ position: 'absolute', right: '15px', background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}
+                    style={{ position: 'absolute', right: '15px', background: "var(--panel-bg-hover)", border: 'none', color: 'white', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}
                   >✕</button>
                 </div>
               )}

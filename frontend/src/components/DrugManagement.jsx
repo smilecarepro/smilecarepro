@@ -167,7 +167,7 @@ export default function DrugManagement() {
   return (
     <div className="animate-fade" style={{ direction: "ltr", textAlign: "left" }} ref={formRef}>
       <div className="glass-panel" style={{ padding: 0, marginBottom: 32, overflow: "hidden", border: editingId ? "2px solid var(--primary)" : "1px solid rgba(255,255,255,0.1)" }}>
-        <div style={{ background: editingId ? "var(--primary)" : "rgba(255,255,255,0.05)", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ background: editingId ? "var(--primary)" : "var(--panel-bg)", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: editingId ? "white" : "inherit" }}>
             {editingId ? t("تعديل بيانات الدواء") : t("إضافة دواء جديد للقاعدة")}
           </h3>
@@ -200,20 +200,20 @@ export default function DrugManagement() {
               {PHARMA_FORMS.map(form => (
                 <button key={form} onClick={() => toggleForm(form)} style={{
                     padding: "8px 16px", borderRadius: "12px", fontSize: 13, cursor: "pointer", border: "1px solid", transition: "all 0.2s",
-                    borderColor: newDrug.forms.includes(form) ? "var(--primary)" : "rgba(255,255,255,0.1)",
-                    background: newDrug.forms.includes(form) ? "var(--primary)" : "rgba(255,255,255,0.03)",
+                    borderColor: newDrug.forms.includes(form) ? "var(--primary)" : "var(--panel-bg-hover)",
+                    background: newDrug.forms.includes(form) ? "var(--primary)" : "var(--panel-bg)",
                     color: newDrug.forms.includes(form) ? "white" : "var(--text-muted)",
                   }}> {form} </button>
               ))}
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20, marginBottom: 32, padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20, marginBottom: 32, padding: 20, background: "var(--panel-bg)", borderRadius: 16 }}>
             <div>
               <label style={lblStyle}>{t("الجرعة")}</label>
               <div style={{ display: "flex", alignItems: "center" }}>
                 <input type="number" className="glass-input" style={{ width: "100%", borderTopRightRadius: 0, borderBottomRightRadius: 0 }} value={newDrug.doseValue} onChange={e => setNewDrug({...newDrug, doseValue: e.target.value})} placeholder="500" />
-                <div style={{ background: "rgba(255,255,255,0.1)", padding: "10px 14px", border: "1px solid rgba(255,255,255,0.2)", borderLeft: "none", borderTopRightRadius: 8, borderBottomRightRadius: 8, minWidth: 50, textAlign: "center", fontWeight: 700 }}>
+                <div style={{ background: "var(--panel-bg-hover)", padding: "10px 14px", border: "1px solid var(--glass-border)", borderLeft: "none", borderTopRightRadius: 8, borderBottomRightRadius: 8, minWidth: 50, textAlign: "center", fontWeight: 700 }}>
                   {getUnit() || "--"}
                 </div>
               </div>
@@ -284,7 +284,7 @@ export default function DrugManagement() {
       <div className="table-container">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", textAlign: "left" }}>
+            <tr style={{ borderBottom: "1px solid var(--glass-border)", textAlign: "left" }}>
               <th style={{ padding: 12, color: "var(--text-muted)", fontSize: 12 }}>{t("الحالة")}</th>
               <th style={{ padding: 12, color: "var(--text-muted)", fontSize: 12 }}>{t("الاسم والتصنيف")}</th>
               <th style={{ padding: 12, color: "var(--text-muted)", fontSize: 12 }}>{t("الجرعة والنمط")}</th>
@@ -293,7 +293,7 @@ export default function DrugManagement() {
           </thead>
           <tbody>
             {filteredDrugs.map(d => (
-              <tr key={d.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <tr key={d.id} style={{ borderBottom: "1px solid var(--glass-border)" }}>
                 <td style={{ padding: 12 }}>
                   <button onClick={() => toggleFav(d.id)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>
                     {d.is_favorite ? "⭐" : "☆"}
@@ -305,13 +305,13 @@ export default function DrugManagement() {
                 </td>
                 <td style={{ padding: 12, fontSize: 12 }}>
                   <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 4 }}>
-                    {(d.forms || []).map(f => <span key={f} style={{background: "rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: 4}}>{f}</span>)}
+                    {(d.forms || []).map(f => <span key={f} style={{background: "var(--panel-bg-hover)", padding: "2px 6px", borderRadius: 4}}>{f}</span>)}
                   </div>
                   <div style={{ color: "var(--primary)", fontWeight: "bold" }}>{d.doses?.adult?.[0]}</div>
                 </td>
                 <td style={{ padding: 12, width: 160 }}>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => handleEdit(d)} className="btn-ghost" style={{ color: "var(--primary)", padding: "4px 12px", border: "1px solid rgba(255,255,255,0.1)", fontSize: 12 }}>{t("تعديل")}</button>
+                    <button onClick={() => handleEdit(d)} className="btn-ghost" style={{ color: "var(--primary)", padding: "4px 12px", border: "1px solid var(--glass-border)", fontSize: 12 }}>{t("تعديل")}</button>
                     <button onClick={() => handleRemove(d.id)} className="btn-ghost" style={{ color: "#ef4444", padding: "4px 12px", border: "1px solid rgba(239,68,68,0.2)", fontSize: 12 }}>{t("حذف")}</button>
                   </div>
                 </td>

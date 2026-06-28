@@ -76,7 +76,7 @@ export default function Expenses() {
         <div className="table-container">
           <table className="mobile-card-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+              <tr style={{ background: "var(--panel-bg)" }}>
                 {[t("التاريخ"), t("الفئة"), t("الملاحظات"), t("طريقة الدفع"), t("المبلغ"), !isSecretary && t("إجراء")].filter(Boolean).map(h => (
                   <th key={h} style={{ padding: "16px 20px", textAlign: "right", fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{h}</th>
                 ))}
@@ -84,10 +84,10 @@ export default function Expenses() {
             </thead>
             <tbody>
                {list.map(e => (
-                <tr key={e.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <tr key={e.id} style={{ borderBottom: "1px solid var(--glass-border)" }}>
                   <td data-label={t("التاريخ")} style={{ padding: "14px 20px", fontSize: 13, color: "var(--text-muted)" }}>{e.date}</td>
                   <td data-label={t("الفئة")} style={{ padding: "14px 20px" }}>
-                    <span style={{ fontSize: 12, padding: "4px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid var(--glass-border)" }}>{t(e.category)}</span>
+                    <span style={{ fontSize: 12, padding: "4px 10px", borderRadius: 8, background: "var(--panel-bg)", border: "1px solid var(--glass-border)" }}>{t(e.category)}</span>
                   </td>
                   <td data-label={t("الملاحظات")} style={{ padding: "14px 20px", fontSize: 13 }}>{e.notes || "—"}</td>
                   <td data-label={t("طريقة الدفع")} style={{ padding: "14px 20px" }}>

@@ -142,7 +142,7 @@ export default function DatePicker({ value, onChange, minDate, maxDate, style = 
           zIndex: 9999,
           background: "rgba(15, 23, 42, 0.95)",
           backdropFilter: "blur(24px)",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
+          border: "1px solid var(--glass-border)",
           borderRadius: "16px",
           padding: "16px",
           boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)",
@@ -154,9 +154,9 @@ export default function DatePicker({ value, onChange, minDate, maxDate, style = 
               type="button"
               onClick={handlePrevMonth}
               style={{
-                background: "rgba(255, 255, 255, 0.05)",
+                background: "var(--panel-bg)",
                 border: "none",
-                color: "#fff",
+                color: "var(--text-main)",
                 width: "32px",
                 height: "32px",
                 borderRadius: "8px",
@@ -166,8 +166,8 @@ export default function DatePicker({ value, onChange, minDate, maxDate, style = 
                 justifyContent: "center",
                 transition: "all 0.2s"
               }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--panel-bg-hover)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--panel-bg)"}
             >
               {lang === 'ar' ? '▶' : '◀'}
             </button>
@@ -180,9 +180,9 @@ export default function DatePicker({ value, onChange, minDate, maxDate, style = 
               type="button"
               onClick={handleNextMonth}
               style={{
-                background: "rgba(255, 255, 255, 0.05)",
+                background: "var(--panel-bg)",
                 border: "none",
-                color: "#fff",
+                color: "var(--text-main)",
                 width: "32px",
                 height: "32px",
                 borderRadius: "8px",
@@ -192,8 +192,8 @@ export default function DatePicker({ value, onChange, minDate, maxDate, style = 
                 justifyContent: "center",
                 transition: "all 0.2s"
               }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)"}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--panel-bg-hover)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--panel-bg)"}
             >
               {lang === 'ar' ? '◀' : '▶'}
             </button>
@@ -244,8 +244,8 @@ export default function DatePicker({ value, onChange, minDate, maxDate, style = 
                   style={{
                     padding: "8px 0",
                     border: "none",
-                    background: isSelected ? "var(--primary)" : isToday ? "rgba(255, 255, 255, 0.1)" : "transparent",
-                    color: disabled ? "rgba(255,255,255,0.2)" : isSelected ? "#fff" : "rgba(255,255,255,0.8)",
+                    background: isSelected ? "var(--primary)" : isToday ? "var(--panel-bg-hover)" : "transparent",
+                    color: disabled ? "var(--text-faint)" : isSelected ? "#fff" : "var(--text-main)",
                     borderRadius: "8px",
                     cursor: disabled ? "not-allowed" : "pointer",
                     fontWeight: isSelected || isToday ? 800 : 500,
@@ -255,12 +255,12 @@ export default function DatePicker({ value, onChange, minDate, maxDate, style = 
                   }}
                   onMouseEnter={e => {
                     if (!isSelected && !disabled) {
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+                      e.currentTarget.style.background = "var(--panel-bg-hover)";
                     }
                   }}
                   onMouseLeave={e => {
                     if (!isSelected && !disabled) {
-                      e.currentTarget.style.background = isToday ? "rgba(255, 255, 255, 0.1)" : "transparent";
+                      e.currentTarget.style.background = isToday ? "var(--panel-bg-hover)" : "transparent";
                     }
                   }}
                 >
@@ -286,16 +286,16 @@ export default function DatePicker({ value, onChange, minDate, maxDate, style = 
               style={{
                 flex: 1,
                 padding: "8px",
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "#fff",
+                background: "var(--panel-bg)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-main)",
                 borderRadius: "8px",
                 fontSize: "12px",
                 cursor: "pointer",
                 transition: "all 0.2s"
               }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--panel-bg-hover)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--panel-bg)"}
             >
               {t("اليوم")}
             </button>

@@ -606,7 +606,7 @@ export default function SecretaryDashboard() {
                   {/* Patient Name */}
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                      <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "white" }}>{app.patient_name}</h3>
+                      <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--text-main)" }}>{app.patient_name}</h3>
                       {app.status === "treating" && (
                         <span style={{ background: "#10b981", color: "white", padding: "2px 8px", borderRadius: 12, fontSize: 10, fontWeight: 700 }}>
                           {t("عند الطبيب 🩺")}
@@ -768,8 +768,8 @@ export default function SecretaryDashboard() {
                           setSearchQuery(`${p.first_name} ${p.last_name}`);
                           setSearchResults([]);
                         }}
-                        style={{ padding: "10px 16px", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+                        style={{ padding: "10px 16px", cursor: "pointer", borderBottom: "1px solid var(--glass-border)" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "var(--panel-bg-hover)"}
                         onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                       >
                         {p.first_name} {p.last_name} ({p.phone || t("بلا هاتف")})
@@ -825,7 +825,7 @@ export default function SecretaryDashboard() {
                     <button key={s} onClick={() => setAptForm({ ...aptForm, status: s })}
                       style={{
                         flex: "1 1 100px", padding: "10px 4px", borderRadius: 10, border: `2px solid ${aptForm.status === s ? sc.color : "transparent"}`,
-                        background: aptForm.status === s ? sc.bg : "rgba(255,255,255,0.04)",
+                        background: aptForm.status === s ? sc.bg : "var(--panel-bg)",
                         color: aptForm.status === s ? sc.color : "var(--text-muted)",
                         fontWeight: 600, cursor: "pointer", fontSize: 12, transition: "all 0.15s"
                       }}>
@@ -877,7 +877,7 @@ export default function SecretaryDashboard() {
                         setSearchQuery(`${p.first_name} ${p.last_name}`);
                         setSearchResults([]);
                       }}
-                      style={{ padding: "10px 16px", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                      style={{ padding: "10px 16px", cursor: "pointer", borderBottom: "1px solid var(--glass-border)" }}
                     >
                       {p.first_name} {p.last_name} ({p.phone || t("بلا هاتف")})
                     </div>
@@ -887,7 +887,7 @@ export default function SecretaryDashboard() {
             </div>
 
             {selectedPatient && (
-              <div style={{ background: "rgba(255,255,255,0.02)", padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ background: "var(--panel-bg)", padding: 12, borderRadius: 12, border: "1px solid var(--glass-border)" }}>
                 <div><strong>{t("الدين المتبقي الحالي:")}</strong> <span style={{ color: "#ef4444", fontWeight: 700 }}>{selectedPatient.debt.toLocaleString()} د.ع</span></div>
               </div>
             )}
@@ -1003,7 +1003,7 @@ export default function SecretaryDashboard() {
 
               <button 
                 className="btn-secondary" 
-                style={{ marginTop: 10, width: "100%", padding: "12px", border: "none", background: "rgba(255,255,255,0.05)" }}
+                style={{ marginTop: 10, width: "100%", padding: "12px", border: "none", background: "var(--panel-bg)" }}
                 onClick={() => {
                   setCheckoutApt(null);
                   setPaymentSuccess(false);
@@ -1017,8 +1017,8 @@ export default function SecretaryDashboard() {
               
               {/* Wizard Steps indicator */}
               <div style={{ display: "flex", gap: 10 }}>
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: checkoutStep >= 0 ? "var(--primary)" : "rgba(255,255,255,0.05)" }} />
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: checkoutStep >= 1 ? "var(--primary)" : "rgba(255,255,255,0.05)" }} />
+                <div style={{ flex: 1, height: 6, borderRadius: 3, background: checkoutStep >= 0 ? "var(--primary)" : "var(--panel-bg)" }} />
+                <div style={{ flex: 1, height: 6, borderRadius: 3, background: checkoutStep >= 1 ? "var(--primary)" : "var(--panel-bg)" }} />
               </div>
 
               {/* Step 1: Prescription & Treatments details */}
@@ -1029,7 +1029,7 @@ export default function SecretaryDashboard() {
                     {checkoutSession?.treatments?.length > 0 ? (
                       <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead>
-                          <tr style={{ background: "rgba(255,255,255,0.03)", fontSize: 12, color: "var(--text-muted)" }}>
+                          <tr style={{ background: "var(--panel-bg)", fontSize: 12, color: "var(--text-muted)" }}>
                             <th style={{ padding: 10, textAlign: "right" }}>{t("السن")}</th>
                             <th style={{ padding: 10, textAlign: "right" }}>{t("الإجراء")}</th>
                             <th style={{ padding: 10, textAlign: "right" }}>{t("ملاحظات")}</th>
@@ -1037,7 +1037,7 @@ export default function SecretaryDashboard() {
                         </thead>
                         <tbody>
                           {checkoutSession.treatments.map((tr, i) => (
-                            <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                            <tr key={i} style={{ borderBottom: "1px solid var(--glass-border)" }}>
                               <td style={{ padding: 10, fontWeight: 700 }}>{tr.tooth_number === "General" ? t("إجراء عام") : `#${tr.tooth_number}`}</td>
                               <td style={{ padding: 10 }}>{tr.procedure}</td>
                               <td style={{ padding: 10, color: "var(--text-muted)", fontSize: 12 }}>{tr.notes || "—"}</td>
@@ -1050,7 +1050,7 @@ export default function SecretaryDashboard() {
                     )}
                   </div>
 
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+                  <div style={{ borderTop: "1px solid var(--glass-border)", paddingTop: 16 }}>
                     <h3 style={{ margin: "0 0 12px 0", fontSize: 16, color: "#ec4899" }}>💊 {t("الوصفة الطبية المكتوبة")}</h3>
                     {checkoutSession?.prescription ? (
                       <div style={{ background: "rgba(236, 72, 153, 0.05)", border: "1px solid rgba(236, 72, 153, 0.15)", borderRadius: 12, padding: 14 }}>
@@ -1092,8 +1092,8 @@ export default function SecretaryDashboard() {
                   
                   {checkoutPatient && (
                     <div style={{ 
-                      background: "rgba(255,255,255,0.02)", 
-                      border: "1px solid rgba(255,255,255,0.05)", 
+                      background: "var(--panel-bg)", 
+                      border: "1px solid var(--glass-border)", 
                       borderRadius: 16, 
                       padding: 16, 
                       display: "flex", 
@@ -1132,9 +1132,9 @@ export default function SecretaryDashboard() {
                                     width: 120, 
                                     padding: "6px 10px", 
                                     borderRadius: 8, 
-                                    border: "1px solid rgba(255,255,255,0.15)", 
+                                    border: "1px solid var(--glass-border)", 
                                     background: "#0d1527", 
-                                    color: "white", 
+                                    color: "var(--text-main)", 
                                     textAlign: "right",
                                     fontSize: 14,
                                     fontWeight: "bold"
@@ -1146,7 +1146,7 @@ export default function SecretaryDashboard() {
                             <div style={{ 
                               display: "flex", 
                               justifyContent: "space-between", 
-                              borderTop: "1px dashed rgba(255,255,255,0.08)", 
+                              borderTop: "1px dashed var(--glass-border)", 
                               paddingTop: 10,
                               background: "rgba(0, 210, 255, 0.05)",
                               padding: "8px 12px",
@@ -1158,7 +1158,7 @@ export default function SecretaryDashboard() {
                             <div style={{ 
                               display: "flex", 
                               justifyContent: "space-between",
-                              borderTop: "1px dashed rgba(255,255,255,0.08)",
+                              borderTop: "1px dashed var(--glass-border)",
                               paddingTop: 10,
                               color: "#ef4444"
                             }}>
@@ -1446,13 +1446,13 @@ function Modal({ title, onClose, children, width = 500 }) {
     }}>
       <div className="glass-panel animate-fade" style={{ 
         width: "100%", maxWidth: width, borderRadius: 24, padding: 28,
-        border: "1px solid rgba(255, 255, 255, 0.15)",
+        border: "1px solid var(--glass-border)",
         boxShadow: "0 25px 80px rgba(0, 0, 0, 0.5)",
         background: "rgba(15, 23, 42, 0.98)"
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{title}</h3>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.05)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 12 }}>✕</button>
+          <button onClick={onClose} style={{ background: "var(--panel-bg)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 12 }}>✕</button>
         </div>
         <div style={{ maxHeight: "calc(80vh - 100px)", overflowY: "auto", paddingRight: 4 }}>
           {children}

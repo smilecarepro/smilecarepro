@@ -181,7 +181,7 @@ export default function Layout({ children }) {
                       <span style={{ fontSize: 10, opacity: 0.5 }}>{desktopMoreOpen ? "▲" : "▼"}</span>
                     </div>
                     {desktopMoreOpen && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingRight: 24, marginTop: 4, borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2, paddingRight: 24, marginTop: 4, borderRight: "1px solid var(--glass-border)" }}>
                         {l.children.map(child => (
                           <NavLink key={child.to} to={child.to}
                             className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
@@ -250,7 +250,7 @@ export default function Layout({ children }) {
                 position: "fixed", top: 0, left: 0, width: "100%", zIndex: 10002,
                 background: "linear-gradient(90deg, #185FA5, #00D2FF)", padding: "10px 20px",
                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                color: "white", fontWeight: 800, border: "none", borderRadius: 0,
+                color: "var(--text-main)", fontWeight: 800, border: "none", borderRadius: 0,
                 boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -264,7 +264,7 @@ export default function Layout({ children }) {
                     window.location.href = "/center";
                   }}
                   className="btn-primary"
-                  style={{ background: "rgba(255,255,255,0.2)", border: "1px solid white", padding: "6px 16px", fontSize: 13 }}
+                  style={{ background: "var(--panel-bg-hover)", border: "1px solid white", padding: "6px 16px", fontSize: 13 }}
                 >
                   🚪 {t("خروج والعودة للمركز")}
                 </button>
@@ -286,7 +286,7 @@ export default function Layout({ children }) {
                     window.location.reload(); // Refresh to clear previous state and fetch new data
                   }}
                   className="glass-input"
-                  style={{ padding: "4px 8px", fontSize: 13, background: "transparent", border: "none", color: "white" }}
+                  style={{ padding: "4px 8px", fontSize: 13, background: "transparent", border: "none", color: "var(--text-main)" }}
                 >
                   <option value="">-- {t("اختر الطبيب")} --</option>
                   {user.assigned_doctors.map(d => (
@@ -350,7 +350,7 @@ export default function Layout({ children }) {
                     transition: "all 0.2s ease-in-out",
                     border: "1px solid rgba(239, 68, 68, 0.4)",
                     background: "linear-gradient(135deg, #ef4444, #dc2626)",
-                    color: "white",
+                    color: "var(--text-main)",
                     boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)"
                   }}
                 >
@@ -377,7 +377,7 @@ export default function Layout({ children }) {
               position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
               padding: "12px 24px", borderRadius: 12, zIndex: 10000,
               background: toast.type === 'error' ? 'var(--danger)' : 'var(--success)',
-              color: 'white', fontWeight: 600, boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+              color: "var(--text-main)", fontWeight: 600, boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
               display: "flex", alignItems: "center", gap: 10
             }}>
               <span style={{ fontSize: 18 }}>{toast.type === 'error' ? '⚠️' : '✅'}</span>
@@ -404,20 +404,20 @@ export default function Layout({ children }) {
                 gap: "12px",
                 boxShadow: "0 25px 80px rgba(0,0,0,0.7)",
                 background: "rgba(15, 23, 42, 0.98)",
-                border: "1px solid rgba(255,255,255,0.15)",
+                border: "1px solid var(--glass-border)",
                 borderRadius: "28px"
               }}>
                 <div style={{ gridColumn: "1/-1", fontSize: 11, fontWeight: 800, color: "var(--text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1, textAlign: "center", opacity: 0.7 }}>{t("جميع الأقسام")}</div>
                 {mobileSecondaryLinks.map(l => (
                   <NavLink key={l.to} to={l.to} onClick={() => setShowMore(false)}
                     className="nav-link" style={{
-                      background: "rgba(255,255,255,0.03)", padding: "16px 8px",
+                      background: "var(--panel-bg)", padding: "16px 8px",
                       borderRadius: "20px", flexDirection: "column",
-                      justifyContent: "center", gap: 8, border: "1px solid rgba(255,255,255,0.05)",
+                      justifyContent: "center", gap: 8, border: "1px solid var(--glass-border)",
                       textAlign: "center"
                     }}>
                     <span style={{ fontSize: 26, filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.2))" }}>{l.icon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "white" }}>{t(l.label)}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-main)" }}>{t(l.label)}</span>
                   </NavLink>
                 ))}
               </div>
@@ -443,14 +443,14 @@ export default function Layout({ children }) {
             >
               <div style={{
                 width: 42, height: 42, borderRadius: "50%",
-                background: showMore ? "var(--accent)" : "rgba(255,255,255,0.05)",
+                background: showMore ? "var(--accent)" : "var(--panel-bg)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                 transform: showMore ? "rotate(135deg)" : "rotate(0)",
                 boxShadow: showMore ? "0 0 20px var(--accent-glow)" : "none",
                 marginBottom: 4
               }}>
-                <span style={{ fontSize: 24, color: "white" }}>+</span>
+                <span style={{ fontSize: 24, color: "var(--text-main)" }}>+</span>
               </div>
               <span className="nav-label">{t("المزيد")}</span>
             </button>

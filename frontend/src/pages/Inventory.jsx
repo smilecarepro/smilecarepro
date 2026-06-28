@@ -239,7 +239,7 @@ export default function Inventory() {
           <div key={item.id} className="glass-panel" style={{ 
             padding: 24, 
             border: item.stock <= item.min_stock ? "1px solid rgba(239, 68, 68, 0.4)" : "1px solid rgba(255,255,255,0.05)",
-            background: item.stock <= item.min_stock ? "rgba(239, 68, 68, 0.03)" : "rgba(255,255,255,0.02)"
+            background: item.stock <= item.min_stock ? "rgba(239, 68, 68, 0.03)" : "var(--panel-bg)"
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                <div>
@@ -254,7 +254,7 @@ export default function Inventory() {
                )}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: 16, borderRadius: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--panel-bg)", padding: 16, borderRadius: 16 }}>
                <div style={{ textAlign: "center", flex: 1 }}>
                   <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>{t("الرصيد الحالي")}</div>
                    <div style={{ fontSize: 24, fontWeight: 900, color: item.stock <= item.min_stock ? "var(--danger)" : "var(--primary)" }}>
@@ -281,7 +281,7 @@ export default function Inventory() {
 
             {/* Batches List */}
             {item.batches && item.batches.length > 0 && (
-              <div style={{ marginTop: 16, borderTop: '1px dashed rgba(255,255,255,0.05)', paddingTop: 12 }}>
+              <div style={{ marginTop: 16, borderTop: '1px dashed var(--glass-border)', paddingTop: 12 }}>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 700 }}>{t("وجبات الصلاحية:")}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {item.batches.map(b => {
@@ -304,7 +304,7 @@ export default function Inventory() {
                     return (
                       <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, background: 'rgba(0,0,0,0.15)', padding: '6px 10px', borderRadius: 8 }}>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <span style={{ fontWeight: 700, color: 'white' }}>{b.quantity} {item.unit}</span>
+                          <span style={{ fontWeight: 700, color: "var(--text-main)" }}>{b.quantity} {item.unit}</span>
                           <span style={{ color: 'var(--text-muted)' }}>- {b.expiry_date}</span>
                         </div>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -330,8 +330,8 @@ export default function Inventory() {
 
             {/* Add Batch Form */}
             {activeAddBatchId === item.id ? (
-              <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: 'white' }}>➕ {t("إضافة دفعة جديدة")}</div>
+              <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: "var(--panel-bg)", border: '1px solid var(--glass-border)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 8, color: "var(--text-main)" }}>➕ {t("إضافة دفعة جديدة")}</div>
                 <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input 

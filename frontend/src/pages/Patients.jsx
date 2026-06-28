@@ -98,7 +98,7 @@ export default function Patients() {
         <div className="table-container">
           <table className="mobile-card-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+              <tr style={{ background: "var(--panel-bg)" }}>
                 {[t("المريض"), t("الهاتف"), t("التواصل"), t("العمر"), t("آخر زيارة"), t("المستحق"), t("الحالة")].map(h => (
                   <th key={h} style={{ padding: "16px 20px", textAlign: "right", fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>{h}</th>
                 ))}
@@ -136,7 +136,7 @@ export default function Patients() {
                     <td data-label={t("الحالة")} style={{ padding: "14px 20px" }}>
                       <span style={{ 
                         fontSize: 11, padding: "4px 10px", borderRadius: 20,
-                        background: p.is_ongoing ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.08)",
+                        background: p.is_ongoing ? "rgba(16, 185, 129, 0.1)" : "var(--panel-bg-hover)",
                         color: p.is_ongoing ? "#10b981" : "var(--text-muted)"
                       }}>{t(p.is_ongoing ? "مستمر" : "منتهي")}</span>
                     </td>
