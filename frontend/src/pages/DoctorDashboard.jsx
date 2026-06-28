@@ -424,8 +424,9 @@ export default function DoctorDashboard() {
             </div>
           </div>
 
-          <div className="active-step-layout" style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.2fr 1fr", gap: 24, alignItems: "start" }}>
+          <div className="active-step-layout" style={{ display: "grid", gridTemplateColumns: isMobile || step > 0 ? "1fr" : "1.2fr 1fr", gap: 24, alignItems: "start" }}>
             
+            {step === 0 && (
             <div className="glass-panel" style={{ padding: 24, minHeight: 400, borderRadius: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <h3 style={{ margin: 0, fontSize: 18 }}>🗺️ {t("خريطة الأسنان")}</h3>
@@ -488,6 +489,8 @@ export default function DoctorDashboard() {
                 </div>
               )}
             </div>
+            )}
+
 
             <div className="glass-panel" style={{ padding: 24, borderRadius: 20 }}>
               
