@@ -418,7 +418,7 @@ export default function PatientProfile() {
       )}
 
       <style>{`
-        .profile-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; }
+        .profile-layout { display: grid; grid-template-columns: 1fr 280px; gap: 32px; }
         .form-section { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
         .finance-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
         .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; }
@@ -469,7 +469,7 @@ export default function PatientProfile() {
         .icon-btn:hover { transform: scale(1.08); filter: brightness(1.2); }
 
         @media (max-width: 1200px) {
-          .profile-layout { grid-template-columns: 1fr 280px; gap: 24px; }
+          .profile-layout { grid-template-columns: 1fr 250px; gap: 24px; }
         }
         @media (max-width: 992px) {
           .profile-layout { grid-template-columns: 1fr; }

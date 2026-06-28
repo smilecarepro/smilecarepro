@@ -258,12 +258,11 @@ def _recalc_patient_debt(patient_id):
 def download_invoice_pdf(id):
     from flask import send_file
     import io
-    from pdf_utils import get_pdf_styles, add_header_footer, force_english
+    from pdf_utils import get_pdf_styles, add_header_footer, arabic_text
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
     from reportlab.lib.units import mm
     from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-
+    
     inv = g.db.execute("""
         SELECT i.*, p.first_name || ' ' || p.last_name AS patient_name, p.phone, p.total_agreed_price 
         FROM invoices i 
@@ -281,45 +280,84 @@ def download_invoice_pdf(id):
     current_total_paid = stats['total_paid']
     
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=60*mm, bottomMargin=45*mm)
+    # Thermal receipt width ~80mm
+    receipt_width = 80*mm
+    receipt_height = 200*mm 
+    doc = SimpleDocTemplate(buf, pagesize=(receipt_width, receipt_height), leftMargin=4*mm, rightMargin=4*mm, topMargin=10*mm, bottomMargin=10*mm)
     styles = get_pdf_styles()
+    
+    # Adjust styles for receipt
+    styles["title"].fontSize = 14
+    styles["title"].spaceAfter = 10
+    styles["normal"].fontSize = 9
+    styles["label"].fontSize = 8
+    styles["value"].fontSize = 9
+    styles["normal"].alignment = 1 # center alignment
+    styles["label"].alignment = 1
+    styles["value"].alignment = 1
+
     story = []
 
-    story.append(Paragraph("Payment Receipt", styles["title"]))
-    story.append(Spacer(1, 10*mm))
+    # Simple Header for receipt
+    story.append(Paragraph(arabic_text(clinic.get("clinic_name", "عيادة طب الأسنان")), styles["title"]))
+    if clinic.get("phone"):
+        story.append(Paragraph(arabic_text(clinic.get("phone")), styles["normal"]))
+    story.append(Spacer(1, 5*mm))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.black))
+    story.append(Spacer(1, 5*mm))
+
+    story.append(Paragraph(arabic_text("وصل قبض"), styles["title"]))
+    story.append(Spacer(1, 5*mm))
 
     # Patient & Invoice Info
     info_data = [
-        [Paragraph("Patient Name", styles["label"]), Paragraph("Invoice ID", styles["label"]), Paragraph("Date", styles["label"])],
-        [Paragraph(force_english(inv['patient_name']), styles["value"]), Paragraph(f"#{inv['id']}", styles["value"]), Paragraph(inv['date'], styles["value"])]
+        [Paragraph(arabic_text("رقم الوصل:"), styles["label"]), Paragraph(f"#{inv['id']}", styles["value"])],
+        [Paragraph(arabic_text("التاريخ:"), styles["label"]), Paragraph(inv['date'], styles["value"])],
+        [Paragraph(arabic_text("المريض:"), styles["label"]), Paragraph(arabic_text(inv['patient_name']), styles["value"])]
     ]
-    t = Table(info_data, colWidths=[90*mm, 40*mm, 40*mm])
-    t.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), ('LINEBELOW', (0,0), (-1,0), 1, colors.lightgrey), ('PADDING', (0,0), (-1,-1), 8)]))
+    t = Table(info_data, colWidths=[25*mm, 45*mm])
+    t.setStyle(TableStyle([
+        ('ALIGN', (0,0), (0,-1), 'RIGHT'),
+        ('ALIGN', (1,0), (1,-1), 'LEFT'),
+        ('PADDING', (0,0), (-1,-1), 2)
+    ]))
     story.append(t)
-    story.append(Spacer(1, 15*mm))
-
-    # Financial Details
-    story.append(Paragraph("Financial Details", styles["label"]))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#185FA5")))
+    story.append(Spacer(1, 5*mm))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.black, lineCap='round', dash=(2,2)))
     story.append(Spacer(1, 5*mm))
 
+    # Financial Details
+    story.append(Paragraph(arabic_text("التفاصيل المالية"), styles["title"]))
+    story.append(Spacer(1, 3*mm))
+
     fin_data = [
-        ["Total Treatment Price:", f"{(limit or 0):,.0f} IQD"],
-        ["Previous Total Paid:", f"{(current_total_paid - inv['paid_amount']):,.0f} IQD"],
-        ["Current Payment:", f"{inv['paid_amount']:,.0f} IQD"],
-        ["New Total Paid:", f"{current_total_paid:,.0f} IQD"],
-        ["Remaining Balance:", f"{(limit - current_total_paid):,.0f} IQD"]
+        [arabic_text("المبلغ الكلي:"), f"{(limit or 0):,.0f} {arabic_text('دينار')}"],
+        [arabic_text("المدفوع سابقاً:"), f"{(current_total_paid - inv['paid_amount']):,.0f} {arabic_text('دينار')}"],
+        [arabic_text("الدفعة الحالية:"), f"{inv['paid_amount']:,.0f} {arabic_text('دينار')}"],
+        [arabic_text("المجموع المدفوع:"), f"{current_total_paid:,.0f} {arabic_text('دينار')}"],
+        [arabic_text("المتبقي:"), f"{(limit - current_total_paid):,.0f} {arabic_text('دينار')}"]
     ]
     
     for label, val in fin_data:
-        row = [Paragraph(label, styles["normal"]), Paragraph(val, styles["value"])]
-        ft = Table([row], colWidths=[120*mm, 50*mm])
-        ft.setStyle(TableStyle([('ALIGN', (1,0), (1,0), 'RIGHT'), ('BOTTOMPADDING', (0,0), (-1,-1), 10)]))
+        row = [Paragraph(val, styles["value"]), Paragraph(label, styles["label"])]
+        ft = Table([row], colWidths=[35*mm, 35*mm])
+        ft.setStyle(TableStyle([
+            ('ALIGN', (0,0), (0,0), 'LEFT'),
+            ('ALIGN', (1,0), (1,0), 'RIGHT'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4)
+        ]))
         story.append(ft)
 
-    story.append(Spacer(1, 20*mm))
-    story.append(Paragraph(f"Notes: {force_english(inv['notes']) or '-'}", styles["normal"]))
+    story.append(Spacer(1, 5*mm))
+    story.append(HRFlowable(width="100%", thickness=1, color=colors.black, dash=(2,2)))
+    story.append(Spacer(1, 5*mm))
+    
+    notes_text = inv['notes'] or '-'
+    story.append(Paragraph(f"{arabic_text('ملاحظات:')} {arabic_text(notes_text)}", styles["normal"]))
+    
+    story.append(Spacer(1, 10*mm))
+    story.append(Paragraph(arabic_text("نتمنى لكم دوام الصحة والعافية"), styles["normal"]))
 
-    doc.build(story, onFirstPage=lambda c, d: add_header_footer(c, d, clinic), onLaterPages=lambda c, d: add_header_footer(c, d, clinic))
+    doc.build(story)
     buf.seek(0)
     return send_file(buf, mimetype="application/pdf", as_attachment=False, download_name=f"receipt_{id}.pdf")

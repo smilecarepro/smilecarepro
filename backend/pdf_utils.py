@@ -8,44 +8,33 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-def force_english(text):
+def arabic_text(text):
     if not text: return ""
     text = str(text)
-    # Mapping for common Arabic terms to English for technical documents
-    mapping = {
-        "ملغ": "mg", "غم": "g", "أيام": "days", "يوم": "day", "ساعة": "hour", "ساعات": "hours",
-        "مرة": "time", "مرات": "times", "قبل الاكل": "before food", "بعد الاكل": "after food",
-        "عند اللزوم": "as needed", "كبسول": "capsule", "حبوب": "tablet", "شراب": "syrup",
-        "حقنة": "injection", "يومياً": "daily", "د.ع": "IQD", "دينار": "IQD"
-    }
-    for ar_term, en_term in mapping.items():
-        text = text.replace(ar_term, en_term)
-    
-    # Remove any remaining Arabic characters to ensure PDF stability
-    text = re.sub(r'[\u0600-\u06FF]+', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+        reshaped = arabic_reshaper.reshape(text)
+        return get_display(reshaped)
+    except Exception:
+        return text
 
 def get_pdf_fonts():
-    # Try common paths for Windows/Linux
-    font_paths = [
-        r"C:\Windows\Fonts\arial.ttf",
-        r"C:\Windows\Fonts\arialbd.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-    ]
+    import os
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    font_reg = os.path.join(base_dir, "fonts", "Cairo-Regular.ttf")
+    font_bld = os.path.join(base_dir, "fonts", "Cairo-Bold.ttf")
     
     reg_font = 'Helvetica'
     bld_font = 'Helvetica-Bold'
     
-    # Try to register Arial if on Windows, else fallback
     try:
-        pdfmetrics.registerFont(TTFont('ArabicFont', r"C:\Windows\Fonts\arial.ttf"))
-        pdfmetrics.registerFont(TTFont('ArabicFont-Bold', r"C:\Windows\Fonts\arialbd.ttf"))
+        pdfmetrics.registerFont(TTFont('ArabicFont', font_reg))
+        pdfmetrics.registerFont(TTFont('ArabicFont-Bold', font_bld))
         reg_font = 'ArabicFont'
         bld_font = 'ArabicFont-Bold'
-    except:
-        pass
+    except Exception as e:
+        print("Font load error:", e)
         
     return reg_font, bld_font
 
