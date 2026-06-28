@@ -1170,6 +1170,7 @@ export default function PatientProfile() {
                          </div>
                        )}
                     </div>
+                    )}
                   </div>
                 )}
 
