@@ -223,7 +223,7 @@ def download_daily_summary_pdf():
             return jsonify({"error": "Unauthorized"}), 403
     from flask import send_file
     import io
-    from pdf_utils import get_pdf_styles, add_header_footer, force_english
+    from pdf_utils import get_pdf_styles, add_header_footer, arabic_text
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
     from reportlab.lib.units import mm
     from reportlab.lib import colors
@@ -246,55 +246,79 @@ def download_daily_summary_pdf():
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=60*mm, bottomMargin=45*mm)
     styles = get_pdf_styles()
+    
+    styles["title"].alignment = 1
+    styles["normal"].alignment = 2 # Right align
+    styles["label"].alignment = 2
+    styles["value"].alignment = 2
+
     story = []
 
-    story.append(Paragraph(f"Daily Financial Summary - {target_date}", styles["title"]))
+    story.append(Paragraph(f"{arabic_text('الملخص المالي اليومي')} - {target_date}", styles["title"]))
     story.append(Spacer(1, 10*mm))
 
     # Revenue Table
-    story.append(Paragraph("Revenue (Payments Received)", styles["label"]))
+    story.append(Paragraph(arabic_text("الإيرادات (المدفوعات المستلمة)"), styles["label"]))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#10b981")))
     story.append(Spacer(1, 4*mm))
     
     if rev_rows:
-        rev_data = [["Patient", "Method", "Amount"]]
+        rev_data = [[arabic_text("المبلغ"), arabic_text("طريقة الدفع"), arabic_text("المريض")]]
         for r in rev_rows:
-            rev_data.append([force_english(r['p_name']), r['payment_method'], f"{r['paid_amount']:,.0f}"])
+            rev_data.append([
+                Paragraph(f"{r['paid_amount']:,.0f}", styles["value"]),
+                Paragraph(arabic_text(r['payment_method']), styles["value"]),
+                Paragraph(arabic_text(r['p_name']), styles["value"])
+            ])
         
-        rt = Table(rev_data, colWidths=[100*mm, 35*mm, 35*mm])
-        rt.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), ('PADDING', (0,0), (-1,-1), 6)]))
+        rt = Table(rev_data, colWidths=[35*mm, 35*mm, 100*mm])
+        rt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), 
+            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), 
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('ALIGN', (0,0), (-1,-1), 'RIGHT')
+        ]))
         story.append(rt)
     else:
-        story.append(Paragraph("No revenue recorded today.", styles["normal"]))
+        story.append(Paragraph(arabic_text("لا توجد إيرادات مسجلة."), styles["normal"]))
 
     story.append(Spacer(1, 15*mm))
 
     # Expenses Table
-    story.append(Paragraph("Expenses (Payments Made)", styles["label"]))
+    story.append(Paragraph(arabic_text("المصروفات"), styles["label"]))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#ef4444")))
     story.append(Spacer(1, 4*mm))
     
     if exp_rows:
-        exp_data = [["Category", "Description", "Amount"]]
+        exp_data = [[arabic_text("المبلغ"), arabic_text("الوصف"), arabic_text("الفئة")]]
         for e in exp_rows:
-            exp_data.append([force_english(e['category']), force_english(e['description']), f"{e['amount']:,.0f}"])
+            exp_data.append([
+                Paragraph(f"{e['amount']:,.0f}", styles["value"]),
+                Paragraph(arabic_text(e['description']), styles["value"]),
+                Paragraph(arabic_text(e['category']), styles["value"])
+            ])
         
-        et = Table(exp_data, colWidths=[40*mm, 95*mm, 35*mm])
-        et.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), ('PADDING', (0,0), (-1,-1), 6)]))
+        et = Table(exp_data, colWidths=[35*mm, 95*mm, 40*mm])
+        et.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), 
+            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), 
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('ALIGN', (0,0), (-1,-1), 'RIGHT')
+        ]))
         story.append(et)
     else:
-        story.append(Paragraph("No expenses recorded today.", styles["normal"]))
+        story.append(Paragraph(arabic_text("لا توجد مصروفات مسجلة."), styles["normal"]))
 
     story.append(Spacer(1, 20*mm))
     
     # Final Totals
     total_data = [
-        ["Total Revenue:", f"{total_rev:,.0f} IQD"],
-        ["Total Expenses:", f"{total_exp:,.0f} IQD"],
-        ["Net Cash Flow:", f"{(total_rev - total_exp):,.0f} IQD"]
+        [f"{total_rev:,.0f} {arabic_text('دينار')}", arabic_text("إجمالي الإيرادات:")],
+        [f"{total_exp:,.0f} {arabic_text('دينار')}", arabic_text("إجمالي المصروفات:")],
+        [f"{(total_rev - total_exp):,.0f} {arabic_text('دينار')}", arabic_text("صافي التدفق النقدي:")]
     ]
-    for lbl, val in total_data:
-        row = [Paragraph(f"<b>{lbl}</b>", styles["normal"]), Paragraph(f"<b>{val}</b>", styles["value"])]
+    for val, lbl in total_data:
+        row = [Paragraph(f"<b>{val}</b>", styles["value"]), Paragraph(f"<b>{lbl}</b>", styles["normal"])]
         story.append(Table([row], colWidths=[130*mm, 40*mm]))
 
     doc.build(story, onFirstPage=lambda c, d: add_header_footer(c, d, clinic), onLaterPages=lambda c, d: add_header_footer(c, d, clinic))

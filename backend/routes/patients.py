@@ -474,7 +474,7 @@ def download_patient_report_pdf(id):
             return jsonify({"error": "Unauthorized"}), 403
     from flask import send_file
     import io
-    from pdf_utils import get_pdf_styles, add_header_footer, force_english
+    from pdf_utils import get_pdf_styles, add_header_footer, arabic_text
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
     from reportlab.lib.units import mm
     from reportlab.lib import colors
@@ -493,62 +493,90 @@ def download_patient_report_pdf(id):
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=60*mm, bottomMargin=45*mm)
     styles = get_pdf_styles()
+    
+    styles["title"].alignment = 1
+    styles["normal"].alignment = 2 # Right align
+    styles["label"].alignment = 2
+    styles["value"].alignment = 2
+
     story = []
 
-    story.append(Paragraph(f"Patient Medical Report", styles["title"]))
+    story.append(Paragraph(arabic_text("التقرير الطبي للمريض"), styles["title"]))
     story.append(Spacer(1, 10*mm))
 
     # Basic Info Table
-    story.append(Paragraph("Patient Information", styles["label"]))
+    story.append(Paragraph(arabic_text("معلومات المريض"), styles["label"]))
     info_data = [
-        ["Full Name:", force_english(f"{p['first_name']} {p['last_name']}")],
-        ["Phone:", p['phone']],
-        ["Age / Gender:", f"{p['age']} / {p['gender']}"],
-        ["Occupation:", force_english(p['occupation']) or "-"],
-        ["Conditions:", force_english(p['systemic_conditions']) or "None"]
+        [arabic_text(f"{p['first_name']} {p['last_name']}"), arabic_text("الاسم الكامل:")],
+        [p['phone'], arabic_text("رقم الهاتف:")],
+        [arabic_text(f"{p['age']} / {p['gender']}"), arabic_text("العمر / الجنس:")],
+        [arabic_text(p['occupation'] or "-"), arabic_text("المهنة:")],
+        [arabic_text(p['systemic_conditions'] or "لا يوجد"), arabic_text("الحالة الصحية:")]
     ]
-    for lbl, val in info_data:
-        story.append(Table([[Paragraph(lbl, styles["normal"]), Paragraph(val, styles["value"])]], colWidths=[40*mm, 130*mm]))
+    for val, lbl in info_data:
+        story.append(Table([[Paragraph(val, styles["value"]), Paragraph(lbl, styles["normal"])]], colWidths=[130*mm, 40*mm]))
 
     story.append(Spacer(1, 10*mm))
 
     # Treatments
-    story.append(Paragraph("Treatment History", styles["label"]))
+    story.append(Paragraph(arabic_text("سجل العلاجات"), styles["label"]))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#185FA5")))
     story.append(Spacer(1, 4*mm))
     
     if treatments:
-        t_data = [["Date", "Tooth", "Procedure", "Cost"]]
+        # Columns: Cost, Procedure, Tooth, Date
+        t_data = [[arabic_text("التكلفة"), arabic_text("الإجراء الطّبي"), arabic_text("السن"), arabic_text("التاريخ")]]
         for t in treatments:
-            t_data.append([t['date'], str(t['tooth_number']), force_english(t['procedure']), f"{t['cost']:,.0f}"])
+            t_data.append([
+                Paragraph(f"{t['cost']:,.0f}", styles["value"]),
+                Paragraph(arabic_text(t['procedure']), styles["value"]), 
+                Paragraph(str(t['tooth_number']), styles["value"]), 
+                Paragraph(t['date'], styles["value"])
+            ])
         
-        tt = Table(t_data, colWidths=[30*mm, 20*mm, 90*mm, 30*mm])
-        tt.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), ('PADDING', (0,0), (-1,-1), 6)]))
+        tt = Table(t_data, colWidths=[30*mm, 90*mm, 20*mm, 30*mm])
+        tt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), 
+            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), 
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('ALIGN', (0,0), (-1,-1), 'RIGHT')
+        ]))
         story.append(tt)
     else:
-        story.append(Paragraph("No treatments recorded.", styles["normal"]))
+        story.append(Paragraph(arabic_text("لا توجد علاجات مسجلة."), styles["normal"]))
 
     story.append(Spacer(1, 10*mm))
 
     # Financial Status
-    story.append(Paragraph("Financial History (Payments)", styles["label"]))
+    story.append(Paragraph(arabic_text("السجل المالي (المدفوعات)"), styles["label"]))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#10b981")))
     story.append(Spacer(1, 4*mm))
     
     if invoices:
-        inv_data = [["Date", "Status", "Method", "Paid Amount"]]
+        # Columns: Paid Amount, Method, Status, Date
+        inv_data = [[arabic_text("المبلغ المدفوع"), arabic_text("طريقة الدفع"), arabic_text("الحالة"), arabic_text("التاريخ")]]
         for inv in invoices:
-            inv_data.append([inv['date'], force_english(inv['status']), inv['payment_method'], f"{inv['paid_amount']:,.0f}"])
+            inv_data.append([
+                Paragraph(f"{inv['paid_amount']:,.0f}", styles["value"]),
+                Paragraph(arabic_text(inv['payment_method']), styles["value"]),
+                Paragraph(arabic_text(inv['status']), styles["value"]),
+                Paragraph(inv['date'], styles["value"])
+            ])
         
-        it = Table(inv_data, colWidths=[35*mm, 35*mm, 40*mm, 60*mm])
-        it.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), ('PADDING', (0,0), (-1,-1), 6)]))
+        it = Table(inv_data, colWidths=[60*mm, 40*mm, 35*mm, 35*mm])
+        it.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), 
+            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), 
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('ALIGN', (0,0), (-1,-1), 'RIGHT')
+        ]))
         story.append(it)
         
         total_paid = sum(i['paid_amount'] for i in invoices)
         story.append(Spacer(1, 5*mm))
-        story.append(Paragraph(f"<b>Total Amount Paid: {total_paid:,.0f} IQD</b>", styles["value"]))
+        story.append(Paragraph(f"<b>{arabic_text('إجمالي المبلغ المدفوع:')} {total_paid:,.0f} {arabic_text('دينار')}</b>", styles["value"]))
     else:
-        story.append(Paragraph("No payments recorded.", styles["normal"]))
+        story.append(Paragraph(arabic_text("لا توجد مدفوعات مسجلة."), styles["normal"]))
 
     doc.build(story, onFirstPage=lambda c, d: add_header_footer(c, d, clinic), onLaterPages=lambda c, d: add_header_footer(c, d, clinic))
     buf.seek(0)
