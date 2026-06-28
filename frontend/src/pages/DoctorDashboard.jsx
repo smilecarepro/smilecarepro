@@ -424,103 +424,101 @@ export default function DoctorDashboard() {
             </div>
           </div>
 
-          <div className="active-step-layout" style={{ display: "grid", gridTemplateColumns: isMobile || step > 0 ? "1fr" : "1.2fr 1fr", gap: 24, alignItems: "start" }}>
+          <div className="active-step-layout" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 24, alignItems: "start" }}>
             
             {step === 0 && (
-            <div className="glass-panel" style={{ padding: 24, minHeight: 400, borderRadius: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h3 style={{ margin: 0, fontSize: 18 }}>🗺️ {t("خريطة الأسنان")}</h3>
-                <div style={{ background: "rgba(255,255,255,0.05)", padding: 4, borderRadius: 12, display: "flex", gap: 4 }}>
-                  <button onClick={() => setMapMode("2D")} style={{ padding: "6px 16px", fontSize: 12, borderRadius: 8, border: "none", background: mapMode === "2D" ? "var(--primary)" : "transparent", color: "white", fontWeight: 700, cursor: "pointer" }}>2D</button>
-                  <button onClick={() => setMapMode("3D")} style={{ padding: "6px 16px", fontSize: 12, borderRadius: 8, border: "none", background: mapMode === "3D" ? "var(--primary)" : "transparent", color: "white", fontWeight: 700, cursor: "pointer" }}>3D ✨</button>
-                </div>
-              </div>
-
-              {mapMode === "2D" ? (
-                <TeethMap 
-                  pid={activeSession.patientId} 
-                  initial={sessionData.teeth || {}} 
-                  treatments={activePatient?.treatments || []}
-                  onToothClick={(tid) => {
-                    if (tid !== "Manual") {
-                      updateSessionData({ current: { ...sessionData.current, tooth: tid } });
-                      updateSessionStep(1);
-                    }
-                  }}
-                  onAddTreatment={(tid) => {
-                    updateSessionData({ current: { ...sessionData.current, tooth: tid } });
-                    updateSessionStep(1);
-                  }}
-                />
-              ) : (
-                <TeethMap3D 
-                  pid={activeSession.patientId} 
-                  data={sessionData.teeth || {}} 
-                  treatments={activePatient?.treatments || []}
-                  onChange={(newData) => updateSessionData({ teeth: newData })}
-                  focusedTooth={sessionData.current?.tooth}
-                  onToothClick={(tid) => {
-                    if (tid !== "Manual") {
-                      updateSessionData({ current: { ...sessionData.current, tooth: tid } });
-                      updateSessionStep(1);
-                    }
-                  }}
-                />
-              )}
-
-              {sessionData.treatments?.length > 0 && (
-                <div style={{ marginTop: 24, borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
-                  <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: "var(--success)", fontWeight: 800 }}>✅ {t("إجراءات مضافة في هذه الجلسة:")}</h4>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {sessionData.treatments.map((tr, i) => (
-                      <span key={i} style={{ 
-                        fontSize: 12, 
-                        background: "rgba(0, 210, 255, 0.15)", 
-                        color: "var(--primary)", 
-                        padding: "6px 14px", 
-                        borderRadius: 12,
-                        border: "1px solid rgba(0, 210, 255, 0.2)",
-                        fontWeight: 700
-                      }}>
-                        {tr.tooth === "General" ? `🌐 ${t("عام")}` : `#${tr.tooth}`} : {tr.procedure}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            )}
-
-
-            <div className="glass-panel" style={{ padding: 24, borderRadius: 20 }}>
-              
-              {step === 0 && (
-                <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <h3 style={{ margin: "0 0 8px 0", fontSize: 18 }}>🦷 {t("الخطوة 1: اختر السن المطلوب علاجه")}</h3>
-                  <p style={{ color: "var(--text-muted)", fontSize: 14, lineHeight: 1.6 }}>
-                    {t("يرجى الضغط على السن المطلوب علاجه من خريطة الأسنان الجانبية، أو الضغط على الزر أدناه لتسجيل إجراء طبي عام يشمل كامل الأسنان.")}
+            <div className="glass-panel animate-fade" style={{ padding: 24, minHeight: 400, borderRadius: 20 }}>
+              <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", gap: 16, marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ margin: "0 0 8px 0", fontSize: 20 }}>🦷 {t("الخطوة 1: اختر السن المطلوب علاجه")}</h3>
+                  <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 14 }}>
+                    {t("انقر على السن من الخريطة بالأسفل، أو اضغط الزر لاختيار إجراء طبي عام يشمل كافة الأسنان.")}
                   </p>
-                  
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                   <button 
                     onClick={() => {
                       updateSessionData({ current: { ...sessionData.current, tooth: "General" } });
                       updateSessionStep(1);
                     }}
                     className="btn-secondary"
-                    style={{ width: "100%", height: 50, borderRadius: 12, fontWeight: 800, marginTop: 12 }}
+                    style={{ padding: "10px 20px", borderRadius: 12, fontWeight: 800 }}
                   >
-                    🌐 {t("إجراء عام (كافة الأسنان)")}
+                    🌐 {t("إجراء عام")}
                   </button>
-
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 40 }}>
-                    {sessionData.treatments?.length > 0 && (
-                      <button className="btn-primary" onClick={() => updateSessionStep(2)}>
-                        {t("التالي: الوصفة الطبية")} →
-                      </button>
-                    )}
+                  <div style={{ background: "rgba(255,255,255,0.05)", padding: 4, borderRadius: 12, display: "flex", gap: 4 }}>
+                    <button onClick={() => setMapMode("2D")} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 8, border: "none", background: mapMode === "2D" ? "var(--primary)" : "transparent", color: "white", fontWeight: 700, cursor: "pointer" }}>2D</button>
+                    <button onClick={() => setMapMode("3D")} style={{ padding: "8px 16px", fontSize: 13, borderRadius: 8, border: "none", background: mapMode === "3D" ? "var(--primary)" : "transparent", color: "white", fontWeight: 700, cursor: "pointer" }}>3D ✨</button>
                   </div>
                 </div>
+              </div>
+
+              {mapMode === "2D" ? (
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <TeethMap 
+                    pid={activeSession.patientId} 
+                    initial={sessionData.teeth || {}} 
+                    treatments={activePatient?.treatments || []}
+                    onToothClick={(tid) => {
+                      if (tid !== "Manual") {
+                        updateSessionData({ current: { ...sessionData.current, tooth: tid } });
+                        updateSessionStep(1);
+                      }
+                    }}
+                    onAddTreatment={(tid) => {
+                      updateSessionData({ current: { ...sessionData.current, tooth: tid } });
+                      updateSessionStep(1);
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ height: 500, width: "100%" }}>
+                  <TeethMap3D 
+                    pid={activeSession.patientId} 
+                    data={sessionData.teeth || {}} 
+                    treatments={activePatient?.treatments || []}
+                    onChange={(newData) => updateSessionData({ teeth: newData })}
+                    focusedTooth={sessionData.current?.tooth}
+                    onToothClick={(tid) => {
+                      if (tid !== "Manual") {
+                        updateSessionData({ current: { ...sessionData.current, tooth: tid } });
+                        updateSessionStep(1);
+                      }
+                    }}
+                  />
+                </div>
               )}
+
+              {sessionData.treatments?.length > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+                  <div>
+                    <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: "var(--success)", fontWeight: 800 }}>✅ {t("إجراءات مضافة في هذه الجلسة:")}</h4>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {sessionData.treatments.map((tr, i) => (
+                        <span key={i} style={{ 
+                          fontSize: 12, 
+                          background: "rgba(0, 210, 255, 0.15)", 
+                          color: "var(--primary)", 
+                          padding: "6px 14px", 
+                          borderRadius: 12,
+                          border: "1px solid rgba(0, 210, 255, 0.2)",
+                          fontWeight: 700
+                        }}>
+                          {tr.tooth === "General" ? `🌐 ${t("عام")}` : `#${tr.tooth}`} : {tr.procedure}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <button className="btn-primary" onClick={() => updateSessionStep(2)} style={{ padding: "10px 24px" }}>
+                    {t("التالي: الوصفة الطبية")} →
+                  </button>
+                </div>
+              )}
+            </div>
+            )}
+
+            {(step > 0) && (
+            <div className="glass-panel animate-fade" style={{ padding: 24, borderRadius: 20 }}>
 
               {step === 1 && (
                 <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
