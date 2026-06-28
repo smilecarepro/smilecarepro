@@ -3,6 +3,7 @@ import { getDoctors, createDoctor, deleteDoctor, updateDoctor, getAdminSettings,
 
 import { useLanguage } from "../LanguageContext";
 import { useAuth } from "../AuthContext";
+import DatePicker from "../components/DatePicker";
 
 export default function Admin() {
   const { logout } = useAuth();

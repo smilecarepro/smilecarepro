@@ -11,6 +11,7 @@ import PrescriptionModal from "../components/PrescriptionModal";
 import TeethMap from "../components/TeethMap";
 import TeethMap3D from "../components/TeethMap3D";
 import AdvancedMap from "./AdvancedMap";
+import DatePicker from "../components/DatePicker";
 
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
@@ -973,162 +974,188 @@ export default function PatientProfile() {
                   </div>
                 )}
 
-               {sessionStep === 1 && (
-                 <div className="animate-fade">
-                   <h3 style={{ marginBottom: 20 }}>🦷 {t("خطوة 2: حدد السن المطلوب علاجه")}</h3>
-                    {sessionData.treatments.length > 0 && (
-                      <div style={{ marginBottom: 15, padding: 12, background: "rgba(16, 185, 129, 0.1)", borderRadius: 12, border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--success)" }}>✅ {t("تمت إضافة")}: </span>
-                        {sessionData.treatments.map((tr, i) => <span key={i} style={{ fontSize: 13, background: "var(--primary)", padding: "2px 8px", borderRadius: 8, marginLeft: 5 }}>#{tr.tooth}</span>)}
+               
+                {sessionStep > 0 && sessionStep < 5 && (
+                  <div className="animate-fade" style={{ display: "grid", gridTemplateColumns: isMobile || sessionStep > 1 ? "1fr" : "1.2fr 1fr", gap: 24, alignItems: "start" }}>
+                    
+                    {/* Right Panel: Teeth Map (Only in Step 1) */}
+                    {sessionStep === 1 && (
+                      <div className="glass-panel" style={{ padding: 24, minHeight: 400, borderRadius: 20 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                          <h3 style={{ margin: 0, fontSize: 18 }}>🗺️ {t("خريطة الأسنان")}</h3>
+                        </div>
+                        <TeethMap3D 
+                          pid={id} 
+                          data={sessionData.teeth} 
+                          onChange={(newData) => setSessionData({...sessionData, teeth: newData})}
+                          treatments={patient.treatments || []} 
+                          focusedTooth={sessionData.current.tooth}
+                          onToothClick={(tid) => {
+                            if (tid !== "Manual") {
+                              setSessionData({...sessionData, current: { ...sessionData.current, tooth: tid }});
+                              setSessionStep(2);
+                            }
+                          }} 
+                        />
                       </div>
                     )}
-                    <TeethMap3D 
-                      pid={id} 
-                      data={sessionData.teeth} 
-                      onChange={(newData) => setSessionData({...sessionData, teeth: newData})}
-                      treatments={patient.treatments || []} 
-                      focusedTooth={sessionData.current.tooth}
-                      onToothClick={(tid) => {
-                        if (tid !== "Manual") {
-                          setSessionData({...sessionData, current: { ...sessionData.current, tooth: tid }});
-                          setSessionStep(2);
-                        }
-                      }} 
-                    />
-                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20 }}>
-                     <button className="btn-ghost" onClick={() => setSessionStep(0)}>← {t("السابق")}</button>
-                     {sessionData.treatments.length > 0 ? (
-                        <button className="btn-primary" onClick={() => setSessionStep(3)}>{t("التالي: الوصفة الطبية")} →</button>
-                      ) : (
-                        <button className="btn-ghost" onClick={() => {
-                          setSessionData({...sessionData, current: { ...sessionData.current, tooth: "General" }});
-                          setSessionStep(2);
-                        }}>{t("إجراء عام (كافة الأسنان)")} →</button>
-                      )}
-                   </div>
-                 </div>
-               )}
 
-               {sessionStep === 2 && (
-                 <div className="animate-fade" style={{ maxWidth: 500, margin: "0 auto" }}>
-                   <h3 style={{ marginBottom: 20 }}>📋 {t("خطوة 3: تفاصيل الإجراء")} ({sessionData.current.tooth === "General" ? t("إجراء عام") : `#${sessionData.current.tooth}`})</h3>
-                   <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                      <select 
-                        className="glass-input" 
-                        value={sessionData.current.procedure} 
-                        onChange={e => setSessionData({...sessionData, current: { ...sessionData.current, procedure: e.target.value }})}
-                        style={{ width: "100%" }}
-                      >
-                        <option value="" disabled>{t("-- اختر الإجراء --")}</option>
-                        {getDynamicList("treatment_types", ["فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"]).map((trt, i) => (
-                          <option key={i} value={trt}>{trt}</option>
-                        ))}
-                      </select>
-
-                      
-                      {/* Previous History for this tooth */}
-                      {sessionData.current.tooth && sessionData.current.tooth !== "General" && patient.treatments?.some(tr => String(tr.tooth_number) === String(sessionData.current.tooth)) && (
-                        <div style={{ background: "rgba(245, 158, 11, 0.05)", padding: 12, borderRadius: 12, border: "1px solid rgba(245, 158, 11, 0.2)", fontSize: 11 }}>
-                          <div style={{ color: "#f59e0b", fontWeight: 800, marginBottom: 6, fontSize: 10 }}>🕒 {t("تاريخ العمل على هذا السن")}:</div>
-                          {patient.treatments.filter(tr => String(tr.tooth_number) === String(sessionData.current.tooth)).slice(-2).reverse().map((tr, i) => (
-                            <div key={i} style={{ marginBottom: 4, opacity: 0.8 }}>
-                              • {tr.date}: <strong>{tr.procedure}</strong>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <textarea className="glass-input" placeholder={t("ملاحظات طبية")} style={{ minHeight: 120 }} value={sessionData.current.notes} onChange={e => setSessionData({...sessionData, current: { ...sessionData.current, notes: e.target.value }})} />
-                      
-                      <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
-                        <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setSessionStep(1)}>← {t("رجوع للخريطة")}</button>
-                        <button className="btn-ghost" style={{ flex: 1, borderColor: "var(--primary)" }} onClick={() => {
-                            if (!sessionData.current.procedure) return alert(t("يرجى إدخال الإجراء أولاً"));
-                            const fixedToothId = sessionData.current.tooth ? String(sessionData.current.tooth) : "General";
-                            setSessionData({
-                              ...sessionData,
-                              treatments: [...sessionData.treatments, { ...sessionData.current, tooth: fixedToothId }],
-                              current: { tooth: "", procedure: "", notes: "" }
-                            });
-                            setSessionStep(1);
-                         }}>➕ {t("حفظ وإضافة سن آخر")}</button>
-                      </div>
-                      
-                      <button className="btn-primary" style={{ width: "100%", marginTop: 10 }} onClick={() => {
-                          if (!sessionData.current.procedure && sessionData.treatments.length === 0) return alert(t("يرجى إدخال إجراء واحد على الأقل"));
-                          let finalTreatments = [...sessionData.treatments];
-                          if (sessionData.current.procedure) {
-                            // Ensure tooth ID is normalized and fixed
-                            const fixedToothId = sessionData.current.tooth ? String(sessionData.current.tooth) : "General";
-                            finalTreatments.push({ ...sessionData.current, tooth: fixedToothId });
-                          }
-                          setSessionData({...sessionData, treatments: finalTreatments, current: { tooth: "", procedure: "", notes: "" }});
-                          setSessionStep(3);
-                      }}>{t("حفظ والذهاب للوصفة")} →</button>
-                   </div>
-                 </div>
-               )}
-
-               {sessionStep === 3 && (
-                 <div className="animate-fade">
-                   <h3 style={{ marginBottom: 20 }}>💊 {t("خطوة 4: كتابة الوصفة (اختياري)")}</h3>
-                   <PrescriptionModal 
-                      patient={patient} 
-                      onClose={() => setSessionStep(4)} 
-                      onAdd={(meds) => setSessionData(prev => ({...prev, meds}))}
-                      initialMeds={sessionData.meds}
-                      initialDiagnosis={sessionData.treatments.map(t => t.procedure).join(", ")}
-                      isWizard
-                   />
-                   <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 20 }}>
-                     <button className="btn-secondary" style={{ padding: "12px 30px" }} onClick={() => setSessionStep(2)}>← {t("السابق")}</button>
-                     <button className="btn-primary" style={{ padding: "12px 40px" }} onClick={() => setSessionStep(4)}>{t("التالي: إضافة صورة")} →</button>
-                   </div>
-                 </div>
-               )}
-
-               {sessionStep === 4 && (
-                 <div className="animate-fade" style={{ maxWidth: 500, margin: "0 auto", textAlign: "center" }}>
-                   <h3 style={{ marginBottom: 20 }}>📸 {t("خطوة 5: إضافة صورة (اختياري)")}</h3>
-                   <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 20 }}>{t("يمكنك التقاط صورة أو رفع صورة للمريض في هذه الجلسة. هذه الصورة لن تظهر في الطباعة المرفقة.")}</p>
-                   
-                   <div style={{ marginBottom: 30 }}>
-                     <input type="file" id="session-photo-upload" accept="image/*" hidden onChange={e => {
-                       const f = e.target.files[0];
-                       if (f) {
-                         const reader = new FileReader();
-                         reader.onloadend = () => setSessionData({...sessionData, photo: reader.result});
-                         reader.readAsDataURL(f);
-                       }
-                     }} />
-                     <label htmlFor="session-photo-upload" style={{ 
-                       display: "block", height: 200, border: "2px dashed var(--primary)", 
-                       borderRadius: 16, background: "rgba(0,210,255,0.05)", cursor: "pointer", 
-                       overflow: "hidden", position: "relative" 
-                     }}>
-                       {sessionData.photo ? (
-                         <img src={sessionData.photo} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                       ) : (
-                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
-                           <span style={{ fontSize: 40, marginBottom: 10 }}>📷</span>
-                           <span style={{ color: "var(--primary)", fontWeight: 600 }}>{t("انقر هنا لاختيار أو التقاط صورة")}</span>
+                    {/* Left Panel: Wizard Content */}
+                    <div className="glass-panel" style={{ padding: 24, borderRadius: 20 }}>
+                       {sessionStep === 1 && (
+                         <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                           <h3 style={{ margin: "0 0 8px 0", fontSize: 18 }}>🦷 {t("خطوة 2: اختر السن المطلوب علاجه")}</h3>
+                           <p style={{ color: "var(--text-muted)", fontSize: 14, lineHeight: 1.6 }}>
+                             {t("يرجى الضغط على السن المطلوب علاجه من خريطة الأسنان الجانبية، أو الضغط على الزر أدناه لتسجيل إجراء طبي عام يشمل كامل الأسنان.")}
+                           </p>
+                            {sessionData.treatments.length > 0 && (
+                              <div style={{ padding: 12, background: "rgba(16, 185, 129, 0.1)", borderRadius: 12, border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--success)" }}>✅ {t("تمت إضافة")}: </span>
+                                {sessionData.treatments.map((tr, i) => <span key={i} style={{ fontSize: 13, background: "var(--primary)", padding: "2px 8px", borderRadius: 8, marginLeft: 5 }}>{tr.tooth === "General" ? "عام" : `#${tr.tooth}`}</span>)}
+                              </div>
+                            )}
+                           <button 
+                             onClick={() => {
+                               setSessionData({...sessionData, current: { ...sessionData.current, tooth: "General" }});
+                               setSessionStep(2);
+                             }}
+                             className="btn-secondary"
+                             style={{ width: "100%", height: 50, borderRadius: 12, fontWeight: 800, marginTop: 12 }}
+                           >
+                             🌐 {t("إجراء عام (كافة الأسنان)")}
+                           </button>
+                           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20 }}>
+                             <button className="btn-ghost" onClick={() => setSessionStep(0)}>← {t("السابق")}</button>
+                             {sessionData.treatments.length > 0 && (
+                                <button className="btn-primary" onClick={() => setSessionStep(3)}>{t("التالي: الوصفة الطبية")} →</button>
+                             )}
+                           </div>
                          </div>
                        )}
-                     </label>
-                     {sessionData.photo && (
-                       <button className="btn-ghost" style={{ marginTop: 10, color: "var(--danger)" }} onClick={() => setSessionData({...sessionData, photo: null})}>
-                         🗑️ {t("إزالة الصورة")}
-                       </button>
-                     )}
-                   </div>
 
-                   <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
-                     <button className="btn-secondary" style={{ padding: "12px 30px" }} onClick={() => setSessionStep(3)}>← {t("السابق")}</button>
-                     <button className="btn-primary" style={{ padding: "12px 40px" }} onClick={() => setSessionStep(5)}>{t("التالي: الملخص النهائي")} →</button>
-                   </div>
-                 </div>
-               )}
+                       {sessionStep === 2 && (
+                         <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                           <h3 style={{ margin: 0, fontSize: 18 }}>📋 {t("خطوة 3: تفاصيل الإجراء")} ({sessionData.current.tooth === "General" ? t("إجراء عام") : `#${sessionData.current.tooth}`})</h3>
+                           
+                              <label className="input-label" style={{ fontWeight: 700, margin: 0 }}>{t("الإجراء الطبي")}</label>
+                              <select 
+                                className="glass-input" 
+                                value={sessionData.current.procedure} 
+                                onChange={e => setSessionData({...sessionData, current: { ...sessionData.current, procedure: e.target.value }})}
+                                style={{ width: "100%", height: 48 }}
+                              >
+                                <option value="" disabled>{t("-- اختر الإجراء --")}</option>
+                                {getDynamicList("treatment_types", ["فحص دوري", "تنظيف أسنان", "حشو ضرس", "خلع ضرس", "علاج عصب", "تلبيس ضرس", "تقويم أسنان", "تبييض أسنان", "زراعة", "أشعة", "استشارة", "أخرى"]).map((trt, i) => (
+                                  <option key={i} value={trt}>{trt}</option>
+                                ))}
+                              </select>
 
-               {sessionStep === 5 && (
+                              {/* Previous History for this tooth */}
+                              {sessionData.current.tooth && sessionData.current.tooth !== "General" && patient.treatments?.some(tr => String(tr.tooth_number) === String(sessionData.current.tooth)) && (
+                                <div style={{ background: "rgba(245, 158, 11, 0.05)", padding: 12, borderRadius: 12, border: "1px solid rgba(245, 158, 11, 0.2)", fontSize: 11 }}>
+                                  <div style={{ color: "#f59e0b", fontWeight: 800, marginBottom: 6, fontSize: 10 }}>🕒 {t("تاريخ العمل على هذا السن")}:</div>
+                                  {patient.treatments.filter(tr => String(tr.tooth_number) === String(sessionData.current.tooth)).slice(-2).reverse().map((tr, i) => (
+                                    <div key={i} style={{ marginBottom: 4, opacity: 0.8 }}>
+                                      • {tr.date}: <strong>{tr.procedure}</strong>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              <label className="input-label" style={{ fontWeight: 700, margin: 0 }}>{t("ملاحظات طبية")}</label>
+                              <textarea className="glass-input" placeholder={t("ملاحظات طبية")} style={{ minHeight: 120, padding: 12 }} value={sessionData.current.notes} onChange={e => setSessionData({...sessionData, current: { ...sessionData.current, notes: e.target.value }})} />
+                              
+                              <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+                                <button className="btn-secondary" style={{ flex: 1 }} onClick={() => setSessionStep(1)}>← {t("رجوع")}</button>
+                                <button className="btn-ghost" style={{ flex: 1, borderColor: "var(--primary)" }} onClick={() => {
+                                    if (!sessionData.current.procedure) return alert(t("يرجى إدخال الإجراء أولاً"));
+                                    const fixedToothId = sessionData.current.tooth ? String(sessionData.current.tooth) : "General";
+                                    setSessionData({
+                                      ...sessionData,
+                                      treatments: [...sessionData.treatments, { ...sessionData.current, tooth: fixedToothId }],
+                                      current: { tooth: "", procedure: "", notes: "" }
+                                    });
+                                    setSessionStep(1);
+                                 }}>➕ {t("حفظ وإضافة سن آخر")}</button>
+                              </div>
+                              
+                              <button className="btn-primary" style={{ width: "100%", height: 48, marginTop: 10 }} onClick={() => {
+                                  if (!sessionData.current.procedure && sessionData.treatments.length === 0) return alert(t("يرجى إدخال إجراء واحد على الأقل"));
+                                  let finalTreatments = [...sessionData.treatments];
+                                  if (sessionData.current.procedure) {
+                                    const fixedToothId = sessionData.current.tooth ? String(sessionData.current.tooth) : "General";
+                                    finalTreatments.push({ ...sessionData.current, tooth: fixedToothId });
+                                  }
+                                  setSessionData({...sessionData, treatments: finalTreatments, current: { tooth: "", procedure: "", notes: "" }});
+                                  setSessionStep(3);
+                              }}>{t("حفظ والذهاب للوصفة")} →</button>
+                         </div>
+                       )}
+
+                       {sessionStep === 3 && (
+                         <div className="animate-fade">
+                           <h3 style={{ marginBottom: 20 }}>💊 {t("خطوة 4: كتابة الوصفة (اختياري)")}</h3>
+                           <PrescriptionModal 
+                              patient={patient} 
+                              onClose={() => setSessionStep(4)} 
+                              onAdd={(meds) => setSessionData(prev => ({...prev, meds}))}
+                              initialMeds={sessionData.meds}
+                              initialDiagnosis={sessionData.treatments.map(t => t.procedure).join(", ")}
+                              isWizard
+                           />
+                           <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 20 }}>
+                             <button className="btn-secondary" style={{ padding: "12px 30px" }} onClick={() => setSessionStep(2)}>← {t("السابق")}</button>
+                             <button className="btn-primary" style={{ padding: "12px 40px" }} onClick={() => setSessionStep(4)}>{t("التالي: إضافة صورة")} →</button>
+                           </div>
+                         </div>
+                       )}
+
+                       {sessionStep === 4 && (
+                         <div className="animate-fade" style={{ textAlign: "center" }}>
+                           <h3 style={{ marginBottom: 20 }}>📸 {t("خطوة 5: إضافة صورة (اختياري)")}</h3>
+                           <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 20 }}>{t("يمكنك التقاط صورة أو رفع صورة للمريض في هذه الجلسة. هذه الصورة لن تظهر في الطباعة المرفقة.")}</p>
+                           
+                           <div style={{ marginBottom: 30 }}>
+                             <input type="file" id="session-photo-upload" accept="image/*" hidden onChange={e => {
+                               const f = e.target.files[0];
+                               if (f) {
+                                 const reader = new FileReader();
+                                 reader.onloadend = () => setSessionData({...sessionData, photo: reader.result});
+                                 reader.readAsDataURL(f);
+                               }
+                             }} />
+                             <label htmlFor="session-photo-upload" style={{ 
+                               display: "block", height: 200, border: "2px dashed var(--primary)", 
+                               borderRadius: 16, background: "rgba(0,210,255,0.05)", cursor: "pointer", 
+                               overflow: "hidden", position: "relative" 
+                             }}>
+                               {sessionData.photo ? (
+                                 <img src={sessionData.photo} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                               ) : (
+                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                                   <span style={{ fontSize: 40, marginBottom: 10 }}>📷</span>
+                                   <span style={{ color: "var(--primary)", fontWeight: 600 }}>{t("انقر هنا لاختيار أو التقاط صورة")}</span>
+                                 </div>
+                               )}
+                             </label>
+                             {sessionData.photo && (
+                               <button className="btn-ghost" style={{ marginTop: 10, color: "var(--danger)" }} onClick={() => setSessionData({...sessionData, photo: null})}>
+                                 🗑️ {t("إزالة الصورة")}
+                               </button>
+                             )}
+                           </div>
+
+                           <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+                             <button className="btn-secondary" style={{ padding: "12px 30px" }} onClick={() => setSessionStep(3)}>← {t("السابق")}</button>
+                             <button className="btn-primary" style={{ padding: "12px 40px" }} onClick={() => setSessionStep(5)}>{t("التالي: الملخص النهائي")} →</button>
+                           </div>
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                )}
+
+                {sessionStep === 5 && (
                  <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                    <div id="printable-session-summary" style={{ 
                      background: "white", 

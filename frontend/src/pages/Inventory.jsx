@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { getInventory, addInventoryItem, updateInventoryItem, updateInventoryStock, deleteInventoryItem, getPurchases, addInventoryBatch, deleteInventoryBatch } from "../api";
 import ConfirmModal from "../components/ConfirmModal";
 import { useSettings } from "../SettingsContext";
+import DatePicker from "../components/DatePicker";
 
 export default function Inventory() {
   const { t } = useLanguage();

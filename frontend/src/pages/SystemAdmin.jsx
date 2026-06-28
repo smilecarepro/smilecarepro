@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getClinics, addClinic, deleteClinic } from "../api";
 import { useLanguage } from "../LanguageContext";
+import DatePicker from "../components/DatePicker";
 
 export default function SystemAdmin() {
   const { t } = useLanguage();

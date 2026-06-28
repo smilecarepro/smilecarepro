@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 import { getExpenses, addExpense, deleteExpense } from "../api";
 import ConfirmModal from "../components/ConfirmModal";
 import { useSettings } from "../SettingsContext";
+import DatePicker from "../components/DatePicker";
 
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 

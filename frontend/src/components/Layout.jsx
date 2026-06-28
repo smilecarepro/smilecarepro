@@ -12,7 +12,7 @@ const links = [
   { to: "/appointments", label: "المواعيد", icon: "📅", mobile: true },
   { to: "/invoices", label: "الفواتير", icon: "💰", mobile: true },
   { to: "/prescriptions", label: "الوصفات", icon: "📝" },
-  { to: "/messages", label: "المراسلات", icon: "💬", mobile: true },
+  { to: "/messages", label: "سجل المتابعة", icon: "📜", mobile: true },
   { to: "/reports", label: "التقارير", icon: "📈" },
   { to: "/drugs", label: "الأدوية", icon: "💊" },
   { to: "/inventory", label: "المخزن", icon: "📦" },
@@ -37,7 +37,7 @@ const centerLinks = [
   { to: "/center/audit-log", label: "سجل العمليات", icon: "🔎" },
   { to: "/inventory", label: "المخزن المركزي", icon: "📦", mobile: true },
   { to: "/center/expenses", label: "المصاريف العامة", icon: "📉" },
-  { to: "/messages", label: "المراسلات", icon: "💬", mobile: true },
+  { to: "/messages", label: "سجل المتابعة", icon: "💬", mobile: true },
   { to: "/settings", label: "الإعدادات", icon: "⚙️" },
 ];
 
@@ -114,7 +114,7 @@ export default function Layout({ children }) {
     if (l.adminOnly && user?.role !== "admin") return false;
 
     // Hide Messaging for Single Doctor accounts
-    if (user?.account_type === 'single_doctor' && l.label === "المراسلات") return false;
+    if (user?.account_type === 'single_doctor' && l.label === "سجل المتابعة") return false;
 
     const restrictedForCenterStaff = ["المشتريات", "التقارير"];
     if (user?.account_type === 'single_doctor' && user?.center_id && restrictedForCenterStaff.includes(l.label)) return false;
@@ -124,7 +124,7 @@ export default function Layout({ children }) {
       if (l.label === "الفواتير" && settings?.sec_perm_invoices === "none") return false;
       if (l.label === "المصاريف" && settings?.sec_perm_expenses === "none") return false;
       if (l.label === "المخزن" && settings?.sec_perm_inventory === "none") return false;
-      if (l.label === "المراسلات" && settings?.sec_perm_messages === "0") return false;
+      if (l.label === "سجل المتابعة" && settings?.sec_perm_messages === "0") return false;
       if (l.label === "الأدوية") return false;
     }
 
@@ -204,7 +204,7 @@ export default function Layout({ children }) {
                 >
                   <span style={{ fontSize: 18 }}>{l.icon}</span>
                   {t(l.label)}
-                  {l.label === "المراسلات" && unreadMsgCount > 0 && (
+                  {l.label === "سجل المتابعة" && unreadMsgCount > 0 && (
                     <span style={badgeStyle}>{unreadMsgCount}</span>
                   )}
                 </NavLink>

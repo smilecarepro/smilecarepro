@@ -1,188 +1,96 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "../LanguageContext";
-import { useAuth } from "../AuthContext";
-import { getChatContacts, getChatHistory, sendChatMessage } from "../api";
+import { getAppointments } from "../api";
 
 export default function Messages() {
-  const { t } = useLanguage();
-  const { user } = useAuth();
-  const [contacts, setContacts] = useState([]);
-  const [selectedContact, setSelectedContact] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
+  const { t, lang } = useLanguage();
+  const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [chatLoading, setChatLoading] = useState(false);
-  const scrollRef = useRef(null);
 
   useEffect(() => {
-    getChatContacts()
-      .then(setContacts)
+    getAppointments()
+      .then(data => {
+        // Filter out completed or cancelled appointments, only keep booked/upcoming ones
+        const upcoming = data.filter(a => a.status === 'booked' || a.status === 'missed');
+        // Sort by date ascending
+        upcoming.sort((a, b) => new Date(a.date) - new Date(b.date));
+        setAppointments(upcoming);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  // Poll for new messages every 5 seconds if a chat is selected
-  useEffect(() => {
-    let interval;
-    if (selectedContact) {
-      const fetchHistory = () => {
-        getChatHistory(selectedContact.username).then(setMessages);
-      };
-      fetchHistory();
-      interval = setInterval(fetchHistory, 5000);
+  const handleWhatsApp = (phone) => {
+    if (!phone) return alert(t("لا يوجد رقم هاتف"));
+    // Format phone number, assuming Iraqi numbers usually start with 07 or +964
+    let formatted = phone.trim();
+    if (formatted.startsWith('0')) {
+      formatted = '+964' + formatted.substring(1);
     }
-    return () => clearInterval(interval);
-  }, [selectedContact]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedContact) return;
-
-    const msgData = {
-      receiver_username: selectedContact.username,
-      message: newMessage.trim()
-    };
-
-    // Optimistic update
-    const tempMsg = {
-      id: Date.now(),
-      sender_username: user.username,
-      message: newMessage.trim(),
-      timestamp: new Date().toISOString(),
-      is_read: 0
-    };
-    setMessages([...messages, tempMsg]);
-    setNewMessage("");
-
-    try {
-      await sendChatMessage(msgData);
-    } catch (e) {
-      alert("Failed to send message");
-    }
+    window.open(`https://wa.me/${formatted.replace(/\D/g, '')}`, '_blank');
   };
 
-  const getRoleIcon = (type) => {
-    if (type === 'manager') return "👑";
-    if (type === 'doctor') return "👨‍⚕️";
-    if (type === 'secretary') return "👩‍💻";
-    return "👤";
+  const handleSMS = (phone) => {
+    if (!phone) return alert(t("لا يوجد رقم هاتف"));
+    window.open(`sms:${phone.replace(/\D/g, '')}`, '_self');
   };
-
-  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>{t("جاري تحميل جهات الاتصال...")}</div>;
 
   return (
-    <div className="animate-fade" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 0, height: "calc(100vh - 120px)", borderRadius: 24, overflow: "hidden", border: "1px solid var(--glass-border)", background: "rgba(255,255,255,0.02)" }}>
-      {/* Sidebar */}
-      <div style={{ borderLeft: "1px solid var(--glass-border)", background: "rgba(255,255,255,0.02)", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: 24, borderBottom: "1px solid var(--glass-border)" }}>
-           <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>💬 {t("المراسلات")}</h3>
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: 12 }} className="custom-scrollbar">
-          {contacts.map(contact => (
-            <div 
-              key={contact.username} 
-              onClick={() => setSelectedContact(contact)}
-              style={{
-                padding: "12px 16px", borderRadius: 12, cursor: "pointer", marginBottom: 8,
-                background: selectedContact?.username === contact.username ? "var(--primary)" : "transparent",
-                color: selectedContact?.username === contact.username ? "white" : "inherit",
-                transition: "all 0.2s"
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-                  {getRoleIcon(contact.type)}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{contact.display_name}</div>
-                  <div style={{ fontSize: 10, opacity: 0.7 }}>{contact.type === 'manager' ? t("المدير العام") : contact.type === 'doctor' ? t("طبيب") : t("سكرتارية")}</div>
-                </div>
-              </div>
-            </div>
-          ))}
-          {contacts.length === 0 && (
-            <div style={{ textAlign: "center", padding: 40, opacity: 0.5, fontSize: 12 }}>{t("لا توجد جهات اتصال متاحة")}</div>
-          )}
-        </div>
-      </div>
-
-      {/* Chat Window */}
-      <div style={{ display: "flex", flexDirection: "column", background: "rgba(0,0,0,0.1)" }}>
-        {selectedContact ? (
-          <>
-            {/* Header */}
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--glass-border)", display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.02)" }}>
-               <div style={{ fontSize: 24 }}>{getRoleIcon(selectedContact.type)}</div>
-               <div>
-                  <div style={{ fontWeight: 800 }}>{selectedContact.display_name}</div>
-                  <div style={{ fontSize: 11, color: "var(--primary-glow)" }}>● {t("نشط الآن")}</div>
-               </div>
-            </div>
-
-            {/* Messages Area */}
-            <div 
-              ref={scrollRef}
-              style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 12 }}
-              className="custom-scrollbar"
-            >
-              {messages.map((m, idx) => {
-                const isMe = m.sender_username === user.username;
-                return (
-                  <div key={m.id} style={{ alignSelf: isMe ? "flex-start" : "flex-end", maxWidth: "70%" }}>
-                    <div style={{ 
-                      padding: "12px 18px", borderRadius: 16, fontSize: 14, lineHeight: 1.5,
-                      background: isMe ? "var(--primary)" : "rgba(255,255,255,0.05)",
-                      color: isMe ? "white" : "inherit",
-                      border: isMe ? "none" : "1px solid var(--glass-border)",
-                      borderTopRightRadius: isMe ? 4 : 16,
-                      borderTopLeftRadius: isMe ? 16 : 4
-                    }}>
-                      {m.message}
-                    </div>
-                    <div style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 4, textAlign: isMe ? "left" : "right", padding: "0 4px" }}>
-                      {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                    </div>
-                  </div>
-                );
-              })}
-              {messages.length === 0 && (
-                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3 }}>
-                   <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 48, marginBottom: 16 }}>👋</div>
-                      <div>{t("ابدأ المراسلة مع")} {selectedContact.display_name}</div>
-                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Input Area */}
-            <form onSubmit={handleSend} style={{ padding: 24, borderTop: "1px solid var(--glass-border)", background: "rgba(255,255,255,0.02)" }}>
-              <div style={{ display: "flex", gap: 12 }}>
-                <input 
-                  className="glass-input"
-                  style={{ flex: 1, padding: "12px 20px", borderRadius: 12 }}
-                  placeholder={t("اكتب رسالتك هنا...")}
-                  value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
-                />
-                <button type="submit" className="btn-primary" style={{ padding: "0 24px", borderRadius: 12 }}>
-                   {t("إرسال")} 🚀
-                </button>
-              </div>
-            </form>
-          </>
+    <div className="animate-fade" style={{ padding: 20 }}>
+      <div className="glass-panel" style={{ padding: 24, borderRadius: 20 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}>📜 {t("جدول المراجعات والمواعيد القادمة")}</h2>
+        
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
+            <div className="page-loader-spinner" style={{ margin: "0 auto 16px" }} />
+            {t("جاري التحميل...")}
+          </div>
         ) : (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2 }}>
-             <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 100, marginBottom: 20 }}>💬</div>
-                <h3 style={{ fontSize: 24, fontWeight: 800 }}>{t("مرحباً بك في بريد المركز")}</h3>
-                <p>{t("اختر جهة اتصال من القائمة لبدء محادثة خاصة وآمنة")}</p>
-             </div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="mobile-card-table" style={{ width: "100%", textAlign: lang === "ar" ? "right" : "left", borderCollapse: "collapse" }}>
+              <thead style={{ background: "rgba(255,255,255,0.02)" }}>
+                <tr style={{ color: "var(--text-muted)", fontSize: 14 }}>
+                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>#</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{t("أسم المريض")}</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{t("التاريخ والوقت")}</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{t("رقم الهاتف")}</th>
+                  <th style={{ padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)", textAlign: "center" }}>{t("الاجراء")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {appointments.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
+                      📭 {t("لا توجد مواعيد قادمة")}
+                    </td>
+                  </tr>
+                ) : appointments.map((apt, index) => (
+                  <tr key={apt.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)", transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.02)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <td style={{ padding: "16px" }}>{index + 1}</td>
+                    <td style={{ padding: "16px", fontWeight: 700 }}>{apt.patient_name}</td>
+                    <td style={{ padding: "16px", color: "var(--text-muted)" }} dir="ltr">
+                      {apt.date} - {apt.time || ""}
+                    </td>
+                    <td style={{ padding: "16px", color: "var(--text-muted)" }} dir="ltr">{apt.patient_phone || t("غير متوفر")}</td>
+                    <td style={{ padding: "16px", display: "flex", gap: 8, justifyContent: "center" }}>
+                      <button 
+                        onClick={() => handleWhatsApp(apt.patient_phone)}
+                        className="btn-ghost" 
+                        style={{ background: "rgba(37, 211, 102, 0.1)", color: "#25D366", borderColor: "rgba(37, 211, 102, 0.3)", padding: "8px 16px", fontWeight: 700 }}
+                      >
+                         تواصل عبر واتساب
+                      </button>
+                      <button 
+                        onClick={() => handleSMS(apt.patient_phone)}
+                        className="btn-ghost" 
+                        style={{ background: "rgba(0, 210, 255, 0.1)", color: "var(--primary)", borderColor: "rgba(0, 210, 255, 0.3)", padding: "8px 16px", fontWeight: 700 }}
+                      >
+                         ارسال رسالة SMS
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

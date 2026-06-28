@@ -427,8 +427,8 @@ export default function Settings() {
                         {/* Messages Toggle */}
                         <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div>
-                            <div style={{ fontSize: 13, fontWeight: 700 }}>💬 {t("المراسلات الداخلية")}</div>
-                            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("شات المراسلات")}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>💬 {t("سجل المتابعة الداخلية")}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{t("شات سجل المتابعة")}</div>
                           </div>
                           <div onClick={() => {
                             const current = form.sec_perm_messages !== "0" ? "0" : "1";

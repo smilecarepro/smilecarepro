@@ -18,6 +18,8 @@ import {
 import { useLanguage } from "../LanguageContext";
 import { useSettings } from "../SettingsContext";
 import { useAuth } from "../AuthContext";
+import DatePicker from "../components/DatePicker";
+import TimePicker from "../components/TimePicker";
 
 const format12h = (timeStr, lang = "ar") => {
   if (!timeStr) return "";
@@ -535,7 +537,7 @@ export default function SecretaryDashboard() {
             <strong>{t("إضافة صرفيات +")}</strong>
           </button>
           
-          <button onClick={() => nav("/appointments", { state: { openArchive: true } })} className="quick-btn-luxury" style={{ borderColor: "#f59e0b" }}>
+          <button onClick={() => nav("/messages")} className="quick-btn-luxury" style={{ borderColor: "#f59e0b" }}>
             <span style={{ fontSize: 20 }}>📜</span>
             <strong>{t("سجل المتابعة")}</strong>
           </button>

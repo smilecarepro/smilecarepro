@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getInventory, getPurchases, createPurchase, updatePurchase, finalizePurchase, deletePurchase } from '../api';
 import { useLanguage } from '../LanguageContext';
 import { useAuth } from '../AuthContext';
+import DatePicker from "../components/DatePicker";
 
 export default function Purchases() {
   const { t } = useLanguage();
