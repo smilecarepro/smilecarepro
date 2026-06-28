@@ -223,7 +223,7 @@ export default function SecretaryDashboard() {
   };
 
   // Print Receipt HTML template in iframe
-  const printReceiptIframe = (receipt) => {
+  const printReceiptIframe = (receipt, session) => {
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
@@ -260,14 +260,42 @@ export default function SecretaryDashboard() {
             <div class="header-text">
               ${settings?.clinic_logo ? `<img src="${BASE + settings.clinic_logo}" class="logo" />` : ''}
               <h2>${settings?.clinic_name || "SmileCare Clinic"}</h2>
-              <div class="subtitle">وصل استلام مالي (Receipt)</div>
+              <div class="subtitle">ملخص الجلسة والوصل المالي</div>
             </div>
           `}
           <div class="content">
-            ${settings?.receipt_header ? '<div style="text-align: center; margin-bottom: 10px;"><div class="subtitle">وصل استلام مالي (Receipt)</div></div>' : ''}
-            <div class="receipt-box">
+            ${settings?.receipt_header ? '<div style="text-align: center; margin-bottom: 10px;"><div class="subtitle">ملخص الجلسة والوصل المالي</div></div>' : ''}
+            <div class="receipt-box" style="margin-bottom: 10px;">
               <div class="row"><span class="label">التاريخ:</span><span class="val">${receipt.date}</span></div>
               <div class="row"><span class="label">اسم المريض:</span><span class="val">${receipt.patient_name}</span></div>
+            </div>
+
+            ${session?.treatments?.length > 0 ? `
+            <div class="receipt-box" style="margin-bottom: 10px; padding: 15px;">
+              <div style="font-weight: 700; color: #00d2ff; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">🦷 تفاصيل الجلسة الطبية:</div>
+              <table style="width: 100%; border-collapse: collapse; text-align: right; font-size: 14px;">
+                <thead>
+                  <tr style="background: #f1f5f9;">
+                    <th style="padding: 5px; border-bottom: 1px solid #e5e7eb; color: #666;">السن</th>
+                    <th style="padding: 5px; border-bottom: 1px solid #e5e7eb; color: #666;">الإجراء</th>
+                    <th style="padding: 5px; border-bottom: 1px solid #e5e7eb; color: #666;">التكلفة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${session.treatments.map(tr => `
+                    <tr>
+                      <td style="padding: 5px; border-bottom: 1px dashed #e5e7eb; font-weight: bold;">${tr.tooth === "General" ? '🌐 عام' : '#' + (tr.tooth_number || tr.tooth)}</td>
+                      <td style="padding: 5px; border-bottom: 1px dashed #e5e7eb; font-weight: bold;">${tr.procedure}</td>
+                      <td style="padding: 5px; border-bottom: 1px dashed #e5e7eb; font-weight: bold;">${parseFloat(tr.cost || 0).toLocaleString()}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            ` : ''}
+
+            <div class="receipt-box">
+              <div style="font-weight: 700; color: #00d2ff; margin-bottom: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">💰 التفاصيل المالية:</div>
               
               <div class="row"><span class="label">الديون السابقة:</span><span class="val">${receipt.prev_debt.toLocaleString()} د.ع</span></div>
               <div class="row"><span class="label">تكلفة علاج اليوم:</span><span class="val">${receipt.today_cost.toLocaleString()} د.ع</span></div>
@@ -343,7 +371,7 @@ export default function SecretaryDashboard() {
         total_outstanding: totalOutstanding,
         paid: paidAmt,
         remaining: remainingDebt
-      });
+      }, checkoutSession);
 
       // Update appointment status to completed in database
       await updateAppointment(checkoutApt.id, { status: "completed" });
@@ -1150,7 +1178,7 @@ export default function SecretaryDashboard() {
                       onClick={submitCheckoutPayment}
                       disabled={savingPayment}
                     >
-                      {savingPayment ? t("جاري التحصيل...") : `🖨️ ${t("تحصيل وطباعة الوصل")}`}
+                      {savingPayment ? t("جاري التحصيل...") : `🖨️ ${t("تحصيل وطباعة الملخص والوصل")}`}
                     </button>
                   </div>
                 </div>
