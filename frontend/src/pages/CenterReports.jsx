@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
+import DatePicker from "../components/DatePicker";
 
 export default function CenterReports() {
   const { t } = useLanguage();
