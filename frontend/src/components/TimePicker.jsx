@@ -117,12 +117,12 @@ export default function TimePicker({ value, onChange }) {
           justifyContent: "space-between",
           cursor: "pointer",
           width: "100%",
-          padding: "10px 14px",
+          padding: "12px 16px",
           userSelect: "none"
         }}
       >
         <span>{displayTime()}</span>
-        <span style={{ fontSize: 16, opacity: 0.7 }}>⏰</span>
+        <span style={{ fontSize: 18, opacity: 0.7 }}>⏰</span>
       </div>
 
       {isOpen && (

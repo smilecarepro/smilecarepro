@@ -229,7 +229,7 @@ export default function Admin() {
                 </div>
                 <div className="form-group">
                   <label>تاريخ انتهاء الاشتراك</label>
-                  <input type="date" value={formData.expiry_date} onChange={e => setFormData({...formData, expiry_date: e.target.value})} />
+                  <DatePicker value={formData.expiry_date} onChange={val => setFormData({...formData, expiry_date: val})} />
                 </div>
                 <div className="form-group">
                   <label>نوع الحساب</label>

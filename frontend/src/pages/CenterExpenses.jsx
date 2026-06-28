@@ -64,7 +64,7 @@ export default function CenterExpenses() {
             </div>
             <div>
               <label style={lblStyle}>{t("التاريخ")}</label>
-              <input type="date" className="glass-input" style={{ width: "100%" }} value={newExpense.date} onChange={e => setNewExpense({...newExpense, date: e.target.value})} />
+              <DatePicker value={newExpense.date} onChange={val => setNewExpense({...newExpense, date: val})} />
             </div>
 
             <div style={{ gridColumn: "span 2" }}>

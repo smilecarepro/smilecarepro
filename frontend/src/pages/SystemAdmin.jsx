@@ -78,7 +78,7 @@ export default function SystemAdmin() {
               <input style={adminInp} placeholder="Clinic Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
               <input style={adminInp} placeholder="Doctor Name" value={form.doctor} onChange={e => setForm({...form, doctor: e.target.value})} />
               <input style={adminInp} placeholder="Activation Code" value={form.code} onChange={e => setForm({...form, code: e.target.value})} />
-              <input style={adminInp} type="date" value={form.expiry} onChange={e => setForm({...form, expiry: e.target.value})} />
+              <DatePicker value={form.expiry} onChange={val => setForm({...form, expiry: val})} />
               <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
                 <button onClick={() => setModal(false)} style={{ flex: 1, padding: 12, borderRadius: 10, background: "transparent", border: "1px solid #334155", color: "white" }}>Cancel</button>
                 <button onClick={save} style={{ flex: 1, padding: 12, borderRadius: 10, background: "white", color: "black", fontWeight: 700, border: "none" }}>Register</button>

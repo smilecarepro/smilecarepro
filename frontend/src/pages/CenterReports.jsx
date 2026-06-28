@@ -56,23 +56,11 @@ export default function CenterReports() {
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
              <label style={{ fontSize: 10, color: "var(--text-dim)" }}>{t("من")}</label>
-             <input 
-               type="date" 
-               className="glass-input" 
-               value={dates.start_date}
-               onChange={e => setDates({...dates, start_date: e.target.value})}
-               style={{ padding: "8px 12px", fontSize: 12 }}
-             />
+             <DatePicker value={dates.start_date} onChange={val => setDates({...dates, start_date: val})} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
              <label style={{ fontSize: 10, color: "var(--text-dim)" }}>{t("إلى")}</label>
-             <input 
-               type="date" 
-               className="glass-input" 
-               value={dates.end_date}
-               onChange={e => setDates({...dates, end_date: e.target.value})}
-               style={{ padding: "8px 12px", fontSize: 12 }}
-             />
+             <DatePicker value={dates.end_date} onChange={val => setDates({...dates, end_date: val})} />
           </div>
           <button className="btn-primary" onClick={fetchData} style={{ padding: "10px 20px", marginTop: 14 }}>
             🔄 {t("تحديث")}

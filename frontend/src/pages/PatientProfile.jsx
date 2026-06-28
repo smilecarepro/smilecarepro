@@ -892,7 +892,7 @@ export default function PatientProfile() {
             </div>
             <div>
               <label style={lblStyle}>{t("التاريخ")}</label>
-              <input type="date" className="glass-input" style={{ width: "100%" }} value={editTreatmentForm.date} onChange={e => setEditTreatmentForm({...editTreatmentForm, date: e.target.value})} />
+              <DatePicker value={editTreatmentForm.date} onChange={val => setEditTreatmentForm({...editTreatmentForm, date: val})} />
             </div>
             <div>
               <label style={lblStyle}>{t("ملاحظات")}</label>

@@ -213,7 +213,7 @@ export default function Inventory() {
              {!editingId && (
                <div>
                   <label style={lblStyle}>{t("تاريخ صلاحية الرصيد")}</label>
-                  <input type="date" className="glass-input" style={{ width: "100%", padding: '9px 10px' }} value={newItem.expiry_date || ""} onChange={e => setNewItem({...newItem, expiry_date: e.target.value})} />
+                  <DatePicker value={newItem.expiry_date || ""} onChange={val => setNewItem({...newItem, expiry_date: val})} />
                </div>
              )}
              <div>
@@ -340,12 +340,7 @@ export default function Inventory() {
                       style={{ flex: 1, minHeight: 34, padding: '4px 8px', fontSize: 12 }} 
                       id={`new-batch-qty-${item.id}`}
                     />
-                    <input 
-                      type="date" 
-                      className="glass-input" 
-                      style={{ flex: 1.5, minHeight: 34, padding: '4px 8px', fontSize: 12 }} 
-                      id={`new-batch-expiry-${item.id}`}
-                    />
+                    <DatePicker value={""} />
                   </div>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                     <button 

@@ -373,13 +373,7 @@ export default function Purchases() {
                       </td>
                       <td>
                         {viewingOrder.status === 'completed' ? (item.expiry_date || '---') : (
-                          <input 
-                            type="date" 
-                            className="glass-input" 
-                            style={{ minHeight: 38, padding: '4px 8px' }}
-                            value={item.expiry_date || ""}
-                            onChange={(e) => handleUpdateItem(item.id, 'expiry_date', e.target.value)}
-                          />
+                          <DatePicker value={item.expiry_date || ""} onChange={val => handleUpdateItem(item.id, 'expiry_date', val)} />
                         )}
                       </td>
                       <td style={{ fontWeight: 800, color: 'var(--primary-light)' }}>

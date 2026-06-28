@@ -163,7 +163,7 @@ export default function CenterDoctors() {
                 </div>
                 <div>
                   <label style={lblStyle}>{t("تاريخ انتهاء الاشتراك")}</label>
-                  <input type="date" className="glass-input" style={{ width: "100%" }} value={editFormData.expiry_date} onChange={e => setEditFormData({...editFormData, expiry_date: e.target.value})} />
+                  <DatePicker value={editFormData.expiry_date} onChange={val => setEditFormData({...editFormData, expiry_date: val})} />
                 </div>
                 <div>
                   <label style={lblStyle}>{t("تغيير كلمة المرور")}</label>

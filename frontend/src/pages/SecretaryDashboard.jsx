@@ -782,11 +782,11 @@ export default function SecretaryDashboard() {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
               <div>
                 <label className="input-label">{t("التاريخ *")}</label>
-                <input type="date" className="glass-input" value={aptForm.date} onChange={e => setAptForm({...aptForm, date: e.target.value})} style={{ width: "100%" }} />
+                <DatePicker value={aptForm.date} onChange={val => setAptForm({...aptForm, date: val})} />
               </div>
               <div>
                 <label className="input-label">{t("الوقت *")}</label>
-                <input type="time" className="glass-input" value={aptForm.time} onChange={e => setAptForm({...aptForm, time: e.target.value})} style={{ width: "100%" }} />
+                <TimePicker value={aptForm.time} onChange={val => setAptForm({...aptForm, time: val})} />
               </div>
             </div>
 
@@ -946,7 +946,7 @@ export default function SecretaryDashboard() {
 
             <div>
               <label style={lblStyle}>{t("تاريخ الصرف")}</label>
-              <input type="date" className="glass-input" value={expenseForm.date} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} style={{ width: "100%" }} />
+              <DatePicker value={expenseForm.date} onChange={val => setExpenseForm({...expenseForm, date: val})} />
             </div>
 
             <div>

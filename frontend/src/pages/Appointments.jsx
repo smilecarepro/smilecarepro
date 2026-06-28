@@ -884,8 +884,7 @@ export default function Appointments() {
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
                 <div>
                   <label style={lblStyle}>{t("التاريخ *")}</label>
-                  <input type="date" className="glass-input" style={{ width: "100%" }}
-                    value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+                  <DatePicker value={form.date} onChange={val => setForm({ ...form, date: val })} />
                 </div>
                 <div>
                   <label style={lblStyle}>{t("الوقت *")}</label>
@@ -1079,13 +1078,7 @@ export default function Appointments() {
                   style={{ minHeight: 40, width: isMobile ? "100%" : 160 }}
                 />
               ) : (
-                <input 
-                  type="date" 
-                  className="glass-input" 
-                  value={archiveDay} 
-                  onChange={(e) => setArchiveDay(e.target.value)}
-                  style={{ minHeight: 40, width: isMobile ? "100%" : 160 }}
-                />
+                <DatePicker value={archiveDay} onChange={val => setArchiveDay(val)} />
               )}
 
               {/* Search input */}

@@ -308,7 +308,7 @@ export default function Invoices() {
                     <option value="Card">{t("بطاقة")}</option>
                   </select>
                 </div>
-                <div><label style={lblStyle}>{t("التاريخ")}</label><input type="date" className="glass-input" style={{ width: "100%" }} value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
+                <div><label style={lblStyle}>{t("التاريخ")}</label><DatePicker value={form.date} onChange={val => setForm({ ...form, date: val })} /></div>
               </div>
               <div><label style={lblStyle}>{t("ملاحظات")}</label><input className="glass-input" style={{ width: "100%" }} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
             </div>
@@ -361,7 +361,7 @@ export default function Invoices() {
                     <option value="Card">{t("بطاقة")}</option>
                   </select>
                 </div>
-                <div><label style={lblStyle}>{t("التاريخ")}</label><input type="date" className="glass-input" style={{ width: "100%" }} value={editForm.date} onChange={e => setEditForm({ ...editForm, date: e.target.value })} /></div>
+                <div><label style={lblStyle}>{t("التاريخ")}</label><DatePicker value={editForm.date} onChange={val => setEditForm({ ...editForm, date: val })} /></div>
               </div>
               <div><label style={lblStyle}>{t("ملاحظات")}</label><input className="glass-input" style={{ width: "100%" }} value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} /></div>
             </div>

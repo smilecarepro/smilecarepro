@@ -119,7 +119,7 @@ export default function Expenses() {
               </div>
               <div className="grid-2">
                 <div><label style={lblStyle}>{t("المبلغ")}</label><input type="number" className="glass-input" style={{ width: "100%" }} value={form.amount} onChange={v => setForm({ ...form, amount: v.target.value })} /></div>
-                <div><label style={lblStyle}>{t("التاريخ")}</label><input type="date" className="glass-input" style={{ width: "100%" }} value={form.date} onChange={v => setForm({ ...form, date: v.target.value })} /></div>
+                <div><label style={lblStyle}>{t("التاريخ")}</label><DatePicker value={form.date} onChange={val => setForm({ ...form, date: val })} /></div>
               </div>
 
               <div>
