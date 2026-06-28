@@ -213,7 +213,7 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
   };
 
   // Smart Camera Positioning
-  let cameraPos = forceFullView ? (isMobile ? [0, 30, 240] : [0, 15, 100]) : [0, 8, 60];
+  let cameraPos = forceFullView ? (isMobile ? [0, 15, 120] : [0, 5, 65]) : [0, 8, 60];
   const targetTooth = forceFullView ? null : (selectedTooth || focusedTooth || (noControls && treatments?.length > 0 ? treatments[0].tooth_number : null));
 
   if (targetTooth) {
@@ -235,7 +235,7 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
         )}
         <ErrorBoundary>
           <Suspense fallback={<div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "white" }}>{t("جاري تحميل النموذج...")}</div>}>
-            <Canvas shadows camera={{ position: cameraPos, fov: 45 }} gl={{ antialias: true, alpha: true }}>
+            <Canvas shadows camera={{ position: cameraPos, fov: 45 }} gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}>
               <ambientLight intensity={0.5} />
               <directionalLight 
                 position={[10, 20, 10]} 

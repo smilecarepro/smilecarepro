@@ -340,17 +340,6 @@ export default function SecretaryDashboard() {
         });
       }
 
-      // Print Receipt
-      printReceiptIframe({
-        date: todayStr,
-        patient_name: checkoutPatient.first_name + " " + checkoutPatient.last_name,
-        prev_debt: prevDebt,
-        today_cost: todayCost,
-        total_outstanding: totalOutstanding,
-        paid: paidAmt,
-        remaining: remainingDebt
-      }, checkoutSession);
-
       // Update appointment status to completed in database
       await updateAppointment(checkoutApt.id, { status: "completed" });
 
@@ -359,17 +348,21 @@ export default function SecretaryDashboard() {
       setHiddenIds(newHidden);
       sessionStorage.setItem('today_hidden_ids', JSON.stringify(newHidden));
 
-      // Close Wizard
-      setCheckoutApt(null);
-      setCheckoutPatient(null);
-      setCheckoutSession(null);
-      setPaidToday("");
-      setTodayCostInput("");
+      setCheckoutApt({...checkoutApt, paymentDetails: {
+        date: todayStr,
+        patient_name: checkoutPatient.first_name + " " + checkoutPatient.last_name,
+        prev_debt: prevDebt,
+        today_cost: todayCost,
+        total_outstanding: totalOutstanding,
+        paid: paidAmt,
+        remaining: remainingDebt
+      }});
+      console.log('SUCCESS HIT'); setPaymentSuccess(true);
+      setSavingPayment(false);
       loadSchedule();
     } catch (e) {
       console.error(e);
       alert(t("فشل تسجيل الدفعة وإكمال التخليص"));
-    } finally {
       setSavingPayment(false);
     }
   };
@@ -969,11 +962,55 @@ export default function SecretaryDashboard() {
 
       {/* ── Checkout Wizard Modal (Finished Patients) ── */}
       {checkoutApt && (
-        <Modal title={t("نافذة التخليص والتحصيل المالي الذكي")} onClose={() => setCheckoutApt(null)} width={700}>
+        <Modal title={paymentSuccess ? t("✅ تمت العملية بنجاح") : t("نافذة التخليص والتحصيل المالي الذكي")} onClose={() => {
+          setCheckoutApt(null);
+          setPaymentSuccess(false);
+        }} width={700}>
           {checkoutLoading ? (
             <div style={{ textAlign: "center", padding: 60 }}>
               <div className="page-loader-spinner" style={{ margin: "0 auto 16px" }} />
               {t("جاري تحميل الملخص الجلسة والوصفة الطبية والديون...")}
+            </div>
+          ) : paymentSuccess ? (
+            <div className="animate-fade" style={{ display: "flex", flexDirection: "column", gap: 20, textAlign: "center", padding: "20px 0" }}>
+              <div style={{ 
+                width: 80, height: 80, background: "rgba(16, 185, 129, 0.1)", borderRadius: "50%", 
+                display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto",
+                color: "#10b981", fontSize: 40, border: "2px solid rgba(16, 185, 129, 0.3)"
+              }}>✓</div>
+              <h3 style={{ margin: 0, fontSize: 22, color: "var(--text-light)" }}>{t("تم تسجيل الدفعة وحفظ الجلسة بنجاح!")}</h3>
+              <p style={{ color: "var(--text-muted)", margin: 0 }}>{t("ماذا تود أن تطبع الآن؟")}</p>
+              
+              <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
+                <button 
+                  className="btn-primary" 
+                  style={{ flex: 1, padding: "16px", height: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, background: "linear-gradient(135deg, #3b82f6, #2563eb)", border: "none" }}
+                  onClick={() => printReceiptIframe(checkoutApt.paymentDetails, checkoutSession)}
+                >
+                  <span style={{ fontSize: 24 }}>🧾</span>
+                  <span>{t("طباعة الوصل المالي")}</span>
+                </button>
+
+                <button 
+                  className="btn-secondary" 
+                  style={{ flex: 1, padding: "16px", height: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, borderColor: "rgba(16, 185, 129, 0.3)", color: "#10b981", background: "rgba(16, 185, 129, 0.05)" }}
+                  onClick={() => window.print()}
+                >
+                  <span style={{ fontSize: 24 }}>📋</span>
+                  <span>{t("طباعة الملخص الطبي")}</span>
+                </button>
+              </div>
+
+              <button 
+                className="btn-secondary" 
+                style={{ marginTop: 10, width: "100%", padding: "12px", border: "none", background: "rgba(255,255,255,0.05)" }}
+                onClick={() => {
+                  setCheckoutApt(null);
+                  setPaymentSuccess(false);
+                }}
+              >
+                {t("إنهاء وإغلاق")}
+              </button>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1300,19 +1337,30 @@ export default function SecretaryDashboard() {
 
       {/* CSS for print Medical Summary */}
       <style>{`
+        .printable-only-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          z-index: -9999;
+          opacity: 0.01;
+          pointer-events: none;
+        }
         @media print {
           body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           body * { visibility: hidden; }
           #printable-session-summary, #printable-session-summary * { visibility: visible; }
           #printable-session-summary { 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
+            position: absolute !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
             background: white !important; 
             padding: 20px !important;
             margin: 0 !important;
             box-shadow: none !important;
+            opacity: 1 !important;
+            z-index: 99999 !important;
           }
           .no-print { display: none !important; visibility: hidden !important; }
         }
@@ -1320,7 +1368,7 @@ export default function SecretaryDashboard() {
 
       {/* Hidden Medical Summary for Print */}
       {paymentSuccess && checkoutPatient && checkoutSession && (
-        <div id="printable-session-summary" className="no-print" style={{ background: "white", color: "black", padding: "40px" }}>
+        <div id="printable-session-summary" className="printable-only-container" style={{ background: "white", color: "black", padding: "40px" }}>
           <div style={{ textAlign: "center", borderBottom: "2px solid #3b82f6", paddingBottom: "20px", marginBottom: "30px" }}>
              <h2 style={{ margin: 0, color: "#0f172a" }}>{settings?.clinic_name || 'SmileCare Clinic'}</h2>
              <h3 style={{ margin: "5px 0", color: "#334155" }}>{t("تقرير الجلسة العلاجية")}</h3>
@@ -1329,7 +1377,7 @@ export default function SecretaryDashboard() {
           <div style={{ display: "flex", gap: "40px", marginBottom: "30px", padding: "15px", background: "#f8fafc", borderRadius: "8px" }}>
             <div><span style={{ color: "#64748b" }}>{t("المريض")}:</span> <strong style={{ fontSize: "16px", marginLeft: "8px" }}>{checkoutPatient.first_name + " " + checkoutPatient.last_name}</strong></div>
             <div><span style={{ color: "#64748b" }}>{t("العمر")}:</span> <strong style={{ fontSize: "16px", marginLeft: "8px" }}>{checkoutPatient.age}</strong></div>
-            <div><span style={{ color: "#64748b" }}>{t("الجنس")}:</span> <strong style={{ fontSize: "16px", marginLeft: "8px" }}>{checkoutPatient.gender}</strong></div>
+            <div><span style={{ color: "#64748b" }}>{t("الجنس")}:</span> <strong style={{ fontSize: "16px", marginLeft: "8px" }}>{checkoutPatient.gender === "Male" ? t("ذكر") : t("أنثى")}</strong></div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
             <div>
