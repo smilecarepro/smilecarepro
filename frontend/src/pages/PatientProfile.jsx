@@ -799,7 +799,7 @@ export default function PatientProfile() {
                   {canEditPrescription(pr) && (
                     <button onClick={() => setEditingPrescription(pr)} className="btn-ghost" style={{ color: "var(--primary)" }}>✏️</button>
                   )}
-                  <button onClick={() => window.open(getPrescriptionPDFUrl(pr.id), "_blank")} className="btn-ghost">🖨</button>
+                  <button onClick={() => setViewingPrescription(pr)} className="btn-ghost">🖨</button>
                 </div>
               </div>
             ))}
@@ -1629,7 +1629,7 @@ function ClinicalTimeline({ patient, treatments, prescriptions, visits, pid }) {
                                            session.prescriptions.map((pr, i) => (
                                              <div key={i} style={{ fontSize: 13 }}>
                                                <div style={{ fontWeight: 700 }}>{pr.meds}</div>
-                                               <button onClick={() => window.open(getPrescriptionPDFUrl(pr.id), "_blank")} className="btn-ghost no-print" style={{ padding: "4px 8px", fontSize: 11, marginTop: 8 }}>📄 {t("تحميل PDF")}</button>
+                                               <button onClick={() => setViewingPrescription(pr)} className="btn-ghost no-print" style={{ padding: "4px 8px", fontSize: 11, marginTop: 8 }}>📄 {t("عرض الطباعة")}</button>
                                              </div>
                                            ))
                                          ) : <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("لم يتم صرف أدوية")}</div>}

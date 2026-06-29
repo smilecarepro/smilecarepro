@@ -4,6 +4,36 @@ import { createSmartPrescription, getPrescriptionPDFUrl, getSettings, getTemplat
 import { useLanguage } from "../LanguageContext";
 import { useSettings } from "../SettingsContext";
 
+const translateToAr = (str) => {
+  if (!str) return "";
+  const s = String(str).toLowerCase();
+  
+  if (s.includes("once daily")) return str.replace(/Once daily/i, "مرة يومياً");
+  if (s.includes("twice daily")) return str.replace(/Twice daily/i, "مرتين يومياً");
+  if (s.includes("three times daily")) return str.replace(/Three times daily/i, "ثلاث مرات يومياً");
+  if (s.includes("four times daily")) return str.replace(/Four times daily/i, "أربع مرات يومياً");
+  if (s.includes("every 8 hours")) return str.replace(/Every 8 hours/i, "كل 8 ساعات");
+  if (s.includes("every 12 hours")) return str.replace(/Every 12 hours/i, "كل 12 ساعة");
+  if (s.includes("as needed")) return str.replace(/As needed/i, "عند اللزوم");
+  
+  if (s === "1 day") return "يوم واحد";
+  if (s === "2 days") return "يومين";
+  if (s === "3 days") return "3 أيام";
+  if (s === "4 days") return "4 أيام";
+  if (s === "5 days") return "5 أيام";
+  if (s === "7 days" || s === "1 week") return "7 أيام";
+  if (s === "10 days") return "10 أيام";
+  if (s === "14 days" || s === "2 weeks") return "14 يوم";
+  if (s === "21 days" || s === "3 weeks") return "21 يوم";
+  if (s === "30 days" || s === "1 month") return "شهر واحد";
+  
+  let res = String(str);
+  res = res.replace(/\bmg\b/ig, "مجم");
+  res = res.replace(/\bml\b/ig, "مل");
+  res = res.replace(/\bg\b/ig, "جم");
+  return res;
+};
+
 // Static fallbacks removed - now handled via getDynamicList
 
 export default function PrescriptionModal({ patient, onClose, onRefresh, existingData, isWizard = false, onAdd, initialMeds, initialDiagnosis, isEditing = false }) {
@@ -20,7 +50,13 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
   const [diagnosis, setDiagnosis] = useState(existingData?.diagnosis || initialDiagnosis || "");
   const [drugs, setDrugs] = useState(() => {
     try {
-      return existingData?.drugs_json ? JSON.parse(existingData.drugs_json) : (initialMeds || []);
+      let raw = existingData?.drugs_json ? JSON.parse(existingData.drugs_json) : (initialMeds || []);
+      return raw.map(d => ({
+        ...d,
+        dose: translateToAr(d.dose),
+        timing: translateToAr(d.timing),
+        duration: translateToAr(d.duration)
+      }));
     } catch (e) {
       console.error("Prescription parsing error:", e);
       return [];
@@ -49,10 +85,17 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
   function addDrug(drugOrDrugs) {
     if (isReadOnly) return;
     let newDrugs;
+    const processDrug = d => ({
+      ...d,
+      dose: translateToAr(d.dose),
+      timing: translateToAr(d.timing),
+      duration: translateToAr(d.duration)
+    });
+    
     if (Array.isArray(drugOrDrugs)) {
-      newDrugs = [...drugs, ...drugOrDrugs];
+      newDrugs = [...drugs, ...drugOrDrugs.map(processDrug)];
     } else {
-      newDrugs = [...drugs, drugOrDrugs];
+      newDrugs = [...drugs, processDrug(drugOrDrugs)];
     }
     setDrugs(newDrugs);
     if (onAdd) onAdd(newDrugs);
@@ -82,7 +125,12 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
         } else {
           d.warnings = []; // Fallback if drug is deleted
         }
-        return d;
+        return {
+          ...d,
+          dose: translateToAr(d.dose),
+          timing: translateToAr(d.timing),
+          duration: translateToAr(d.duration)
+        };
       });
       addDrug(processedDrugs);
     } catch(err) {
@@ -110,6 +158,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
     doc.open();
     
     const drugsHtml = drugs.map((d, i) => {
+      const displayForm = d.form ? ({"Tablets": "حبوب", "Syrup": "شراب", "Capsules": "كبسولات", "Injection": "حقن", "Cream": "كريم", "Ointment": "مرهم", "Drops": "قطرات", "Gel": "جل", "Mouthwash": "غسول فم", "Spray": "بخاخ", "Suspension": "معلق"}[d.form] || d.form) : "";
       let warningsHtml = "";
       if (d.warnings && d.warnings.length > 0) {
         warningsHtml = d.warnings.map(w => `
@@ -122,8 +171,9 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
       
       return `
         <li style="margin-bottom: 12px; font-size: 14px; padding: 10px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; list-style: none;">
-           <div style="font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 8px;">
-             ${i + 1}. ${d.name} <span style="font-weight: 400; font-size: 12px; color: #64748b; margin-left: 6px;">(${d.form})</span>
+           <div style="font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 8px; display: flex; align-items: baseline; gap: 6px;">
+             <span style="direction: ltr; display: inline-block;">${i + 1}. ${d.name}</span>
+             ${displayForm ? `<span style="font-weight: 400; font-size: 12px; color: #64748b;">(${displayForm})</span>` : ''}
            </div>
            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
              <div style="display: flex; align-items: center; gap: 4px;">
@@ -166,8 +216,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
             .info-row { display: flex; gap: 8px; align-items: center; }
             .label { font-weight: 600; font-size: 14px; }
             .val { font-size: 14px; border-bottom: 1px solid transparent; }
-            .rx-box { position: relative; min-height: 300px; border: 1px solid #f1f5f9; border-radius: 8px; padding: 20px; margin-top: 20px; }
-            .rx-mark { position: absolute; top: 10px; left: 15px; font-size: 32px; font-weight: 800; opacity: 0.1; }
+            .rx-box { min-height: 300px; border: 1px solid #f1f5f9; border-radius: 8px; padding: 20px; margin-top: 20px; }
             .signature { margin-top: 40px; text-align: right; padding-right: 40px; }
             @page { size: A4 portrait; margin: 0; }
           </style>
@@ -191,8 +240,10 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
               ${diagnosis ? `<div style="font-size: 16px; margin-bottom: 20px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 5px;">${diagnosis}</div>` : ''}
 
               <div class="rx-box">
-                <div class="rx-mark">الوصفة</div>
-                <ul style="padding: 0; margin: 0;">
+                <div style="font-size: 28px; font-weight: 800; color: #1e293b; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; font-family: serif; font-style: italic;">
+                  Rx
+                </div>
+                <ul style="padding: 0; margin: 0; list-style-type: none;">
                   ${drugsHtml}
                 </ul>
               </div>
@@ -390,17 +441,21 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
 
           {/* Rx Area */}
           <div style={{ position: "relative", minHeight: 300, border: "1px solid #f1f5f9", borderRadius: 8, padding: isMobile ? "25px 10px 15px 10px" : 20 }}>
-             <div style={{ position: "absolute", top: 10, left: 15, fontSize: 32, fontWeight: 800, opacity: 0.1 }}>الوصفة</div>
+             <div style={{ fontSize: 28, fontWeight: 800, color: "#1e293b", marginBottom: 20, borderBottom: "2px solid #e2e8f0", paddingBottom: 10, display: "flex", alignItems: "center", gap: 10, fontFamily: "serif", fontStyle: "italic" }}>
+               Rx
+             </div>
              
              <ul style={{ listStyleType: "none", paddingLeft: 0, margin: 0 }}>
-               {drugs.map((d, i) => (
+               {drugs.map((d, i) => {
+                 const displayForm = d.form ? ({"Tablets": "حبوب", "Syrup": "شراب", "Capsules": "كبسولات", "Injection": "حقن", "Cream": "كريم", "Ointment": "مرهم", "Drops": "قطرات", "Gel": "جل", "Mouthwash": "غسول فم", "Spray": "بخاخ", "Suspension": "معلق"}[d.form] || d.form) : "";
+                 return (
                  <li key={i} style={{ marginBottom: 12, fontSize: 14, position: "relative", padding: "10px 12px", borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                      <div style={{ flex: 1 }}>
                        {/* Drug Name & Form */}
-                       <div style={{ fontWeight: 700, fontSize: 15, color: "#1e293b", marginBottom: 8 }}>
-                         {i + 1}. {d.name}
-                         <span style={{ fontWeight: 400, fontSize: 12, color: "#64748b", marginLeft: 6 }}>({d.form})</span>
+                       <div style={{ fontWeight: 700, fontSize: 15, color: "#1e293b", marginBottom: 8, display: "flex", alignItems: "baseline", gap: 6 }}>
+                         <span style={{direction: "ltr", display: "inline-block"}}>{i + 1}. {d.name}</span>
+                         {displayForm && <span style={{ fontWeight: 400, fontSize: 12, color: "#64748b" }}>({displayForm})</span>}
                        </div>
                        {/* Inline Dropdowns Row */}
                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -422,7 +477,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                          <span style={{ color: "#cbd5e1" }}>·</span>
                          {/* Timing */}
                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>Frequency:</span>
+                           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>التكرار:</span>
                            {isReadOnly ? (
                              <span style={{ fontSize: 13, color: "#334155" }}>{d.timing}</span>
                            ) : (
@@ -432,7 +487,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                                 style={rxSelectStyle}
                               >
                                 {getDynamicList('med_frequencies', [
-                                  "Once daily", "Twice daily", "Three times daily", "Four times daily", "Every 8 hours", "Every 12 hours", "As needed"
+                                  "مرة يومياً", "مرتين يومياً", "ثلاث مرات يومياً", "أربع مرات يومياً", "كل 8 ساعات", "كل 12 ساعة", "عند اللزوم"
                                 ]).map(o => <option key={o} value={o}>{o}</option>)}
                               </select>
                            )}
@@ -450,7 +505,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                                 style={rxSelectStyle}
                               >
                                 {getDynamicList('med_durations', [
-                                  "1 day", "2 days", "3 days", "4 days", "5 days", "7 days", "10 days", "14 days", "21 days", "30 days"
+                                  "يوم واحد", "يومين", "3 أيام", "4 أيام", "5 أيام", "7 أيام", "10 أيام", "14 يوم", "21 يوم", "شهر واحد"
                                 ]).map(o => <option key={o} value={o}>{o}</option>)}
                               </select>
                            )}
@@ -479,11 +534,14 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                          </div>
                        </div>
                      {!isReadOnly && (
-                       <button onClick={() => removeDrug(i)} className="delete-btn" style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
+                       <button onClick={() => removeDrug(i)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16 }}>
+                         🗑
+                       </button>
                      )}
                    </div>
                  </li>
-               ))}
+                 );
+               })}
              </ul>
 
                {!isReadOnly && (

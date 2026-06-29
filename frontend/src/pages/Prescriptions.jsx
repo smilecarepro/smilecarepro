@@ -195,19 +195,10 @@ function PrescriptionCard({ pr, settings, onClick }) {
       </div>
       
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-        <button onClick={async (e) => {
-          e.stopPropagation();
-          try {
-            const url = getPrescriptionPDFUrl(pr.id);
-            const user = JSON.parse(localStorage.getItem("clinic_user") || "{}");
-            const res = await fetch(url, { headers: { "Authorization": `Bearer ${user.token}` } });
-            const blob = await res.blob();
-            window.open(URL.createObjectURL(blob), "_blank");
-          } catch (err) {
-            console.error("Print error:", err);
-            alert("فشل في طباعة الوصفة");
-          }
-        }} className="btn-ghost" style={{ fontSize: 11, padding: "4px 12px", border: "1px solid var(--glass-border)" }}>🖨 Print</button>
+          <button onClick={(e) => {
+            e.stopPropagation();
+            onClick(); // Opens the modal which has the native print button
+          }} className="btn-ghost" style={{ fontSize: 11, padding: "4px 12px", border: "1px solid var(--glass-border)" }}>🖨 طباعة</button>
       </div>
     </div>
   );

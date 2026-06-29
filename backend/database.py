@@ -31,6 +31,8 @@ def get_master_db():
     conn = sqlite3.connect(MASTER_DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
     return conn
 
 def get_clinic_db_path(username):
@@ -66,6 +68,8 @@ def get_db(username=None):
                     conn = sqlite3.connect(db_path)
                     conn.row_factory = sqlite3.Row
                     conn.execute("PRAGMA journal_mode=WAL;")
+                    conn.execute("PRAGMA synchronous=NORMAL;")
+                    conn.execute("PRAGMA busy_timeout=5000;")
                     init_global_manager_schema(conn)
                     g.user = data
                     return conn
@@ -84,6 +88,8 @@ def get_db(username=None):
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
     init_clinic_schema(conn)
     return conn
 
@@ -462,7 +468,9 @@ def cleanup_trash_patients():
             try:
                 conn = sqlite3.connect(db_path)
                 conn.row_factory = sqlite3.Row
-                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA journal_mode=WAL;")
+                conn.execute("PRAGMA synchronous=NORMAL;")
+                conn.execute("PRAGMA busy_timeout=5000;")
                 # Find expired trash patients
                 expired = conn.execute(
                     "SELECT id FROM patients WHERE deleted_at IS NOT NULL AND deleted_at < ?",
