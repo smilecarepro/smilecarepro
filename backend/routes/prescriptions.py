@@ -93,7 +93,8 @@ def download_pdf(rid):
         # 2. Patient Info Table
         p_name = (patient["first_name"] + " " + patient["last_name"]) if patient else ""
         p_age = str(patient["age"]) if patient else ""
-        p_gender = str(patient["gender"]) if patient else ""
+        p_gender_raw = str(patient["gender"]) if patient else ""
+        p_gender = "ذكر" if p_gender_raw == 'M' else "أنثى" if p_gender_raw == 'F' else p_gender_raw
         date_str = str(rx["date"])
         
         info_data = [
@@ -119,29 +120,29 @@ def download_pdf(rid):
         story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#185FA5")))
         story.append(Spacer(1, 10*mm))
 
-        # 3. Rx Symbol (Always LTR)
-        story.append(Paragraph("<font size='36' face='ArabicFont-Bold' color='#185FA5'>Rx</font>", styles["Normal"]))
-        story.append(Spacer(1, 12*mm))
+        # 3. Rx Symbol -> Arabic Title
+        story.append(Paragraph(f"<font size='18' color='#185FA5'><b>{arabic_text('العلاج المطلوب:')}</b></font>", styles["title"]))
+        story.append(Spacer(1, 8*mm))
 
         # 4. Drugs List
-        # Drugs usually aligned Left even in Arabic prescriptions
+        # Fully Arabic Prescription -> Right Aligned
         drug_name_style = styles["normal"].clone("dn")
-        drug_name_style.alignment = 0 # Left align for drug names
+        drug_name_style.alignment = 2 # Right align
         drug_name_style.fontSize = 13
         drug_name_style.fontName = styles["fonts"][1] # Bold
         drug_name_style.leading = 18
 
         drug_detail_style = styles["normal"].clone("dd")
-        drug_detail_style.alignment = 0 # Left align
+        drug_detail_style.alignment = 2 # Right align
         drug_detail_style.fontSize = 11
         drug_detail_style.color = colors.darkslategray
-        drug_detail_style.leftIndent = 10
+        drug_detail_style.rightIndent = 10
 
         drug_note_style = styles["normal"].clone("dnote")
-        drug_note_style.alignment = 0
+        drug_note_style.alignment = 2 # Right align
         drug_note_style.fontSize = 10
         drug_note_style.color = colors.grey
-        drug_note_style.leftIndent = 10
+        drug_note_style.rightIndent = 10
         drug_note_style.topIndent = 2
 
         for d in drugs:
@@ -201,3 +202,32 @@ def download_pdf(rid):
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+@prescriptions_bp.route('/templates', methods=['GET'])
+@db_required
+def get_templates():
+    rows = g.db.execute('SELECT * FROM prescription_templates ORDER BY created_at DESC').fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@prescriptions_bp.route('/templates', methods=['POST'])
+@db_required
+def create_template():
+    data = request.json
+    name = data.get('name')
+    drugs_json = data.get('drugs_json', '[]')
+    if not name:
+        return jsonify({'error': 'Name is required'}), 400
+    try:
+        g.db.execute('INSERT INTO prescription_templates (name, drugs_json) VALUES (?, ?)', (name, json.dumps(drugs_json) if isinstance(drugs_json, list) else drugs_json))
+        return jsonify({'success': True})
+    except Exception as e:
+        if 'UNIQUE' in str(e):
+            return jsonify({'error': 'Name already exists'}), 400
+        return jsonify({'error': str(e)}), 500
+
+@prescriptions_bp.route('/templates/<int:id>', methods=['DELETE'])
+@db_required
+def delete_template(id):
+    g.db.execute('DELETE FROM prescription_templates WHERE id=?', (id,))
+    return jsonify({'success': True})

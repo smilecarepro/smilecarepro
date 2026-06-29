@@ -504,19 +504,36 @@ export default function PatientProfile() {
 
         {/* ── Ongoing / Done toggle ── */}
         <div style={{
-          background: isOngoing ? "#10b981" : "#64748b",
-          padding: isMobile ? "6px 16px" : "8px 24px",
-          borderRadius: 30, display: "flex", alignItems: "center", gap: 10,
+          display: "flex", alignItems: "center", gap: 10,
           cursor: canEditPatient ? "pointer" : "default",
-          marginRight: isDoctor ? 0 : "auto"
+          marginRight: isDoctor ? 0 : "auto",
+          background: "var(--panel-bg)",
+          padding: isMobile ? "6px 12px" : "8px 16px",
+          borderRadius: 20,
+          border: "1px solid var(--glass-border)"
         }} onClick={() => {
           if (!canEditPatient) return;
           const next = !isOngoing;
           setIsOngoing(next);
           saveProfile({ is_ongoing: next ? 1 : 0 });
         }}>
-          <span style={{ fontWeight: 700, color: "var(--text-main)", fontSize: isMobile ? 12 : 14 }}>{isOngoing ? t("مستمر") : t("منتهي")}</span>
-          <div style={{ width: isMobile ? 18 : 24, height: isMobile ? 18 : 24, borderRadius: "50%", background: "white" }} />
+          <span style={{ fontWeight: 700, color: isOngoing ? "#10b981" : "#64748b", fontSize: isMobile ? 12 : 14 }}>
+            {isOngoing ? t("مستمر") : t("منتهي")}
+          </span>
+          <div style={{ 
+            width: isMobile ? 40 : 50, height: isMobile ? 22 : 28, 
+            borderRadius: 30, background: isOngoing ? "#10b981" : "#64748b",
+            position: "relative", transition: "all 0.3s ease"
+          }}>
+            <div style={{ 
+              width: isMobile ? 18 : 24, height: isMobile ? 18 : 24, 
+              borderRadius: "50%", background: "white",
+              position: "absolute", top: 2, 
+              left: lang === "ar" ? (isOngoing ? 2 : (isMobile ? 20 : 24)) : (isOngoing ? (isMobile ? 20 : 24) : 2),
+              transition: "all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1)",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+            }} />
+          </div>
         </div>
       </div>
 
@@ -590,8 +607,34 @@ export default function PatientProfile() {
                 </div>
                 {showMedicalTabs && (
                   <div className="input-group full-width">
-                    <label className="input-label">{t("أمراض مزمنة")}</label>
-                    <textarea className="glass-input" style={{ minHeight: 80, padding: 12 }} value={localConditions} onChange={e => setLocalConditions(e.target.value)} onBlur={() => canEditPatient && localConditions !== patient.systemic_conditions && saveProfile({ systemic_conditions: localConditions })} readOnly={!canEditPatient} />
+                    <label className="input-label" style={{ marginBottom: 12 }}>{t("التاريخ الطبي والأمراض المزمنة")}</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {["كلى", "كبد", "ضغط دم", "سكري", "حساسية", "صرع", ...((patient?.gender === 'أنثى' || patient?.gender === 'Female') ? ["حمل", "رضاعة"] : [])].map(cond => {
+                        const active = localConditions && localConditions.split(",").map(c => c.trim()).includes(cond);
+                        return (
+                          <button
+                            key={cond}
+                            onClick={() => {
+                              if (!canEditPatient) return;
+                              const currentList = localConditions ? localConditions.split(",").map(s => s.trim()).filter(Boolean) : [];
+                              const newList = active ? currentList.filter(c => c !== cond) : [...currentList, cond];
+                              const newStr = newList.join(", ");
+                              setLocalConditions(newStr);
+                              saveProfile({ systemic_conditions: newStr });
+                            }}
+                            style={{
+                              padding: "8px 16px", borderRadius: "12px", fontSize: 13, cursor: canEditPatient ? "pointer" : "default",
+                              border: "1px solid", transition: "all 0.2s",
+                              borderColor: active ? "var(--primary)" : "var(--panel-bg-hover)",
+                              background: active ? "var(--primary)" : "var(--panel-bg)",
+                              color: active ? "white" : "var(--text-muted)"
+                            }}
+                          >
+                            {t(cond)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
                 <div className="input-group full-width">

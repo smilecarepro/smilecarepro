@@ -26,8 +26,8 @@ const StatItem = ({ label, value, color }) => {
   const { t } = useLanguage();
   return (
     <div className="glass-panel" style={{ padding: 16 }}>
-      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>{t(label)}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: color || "white" }}>{value}</div>
+      <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 6 }}>{t(label)}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: color || "var(--text-main)" }}>{value}</div>
     </div>
   );
 };

@@ -165,26 +165,29 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* Expiry Warning Banners */}
+      {/* Expiry Warning Cards */}
       {(expiredBatches.length > 0 || expiringSoonBatches.length > 0) && (
-        <div className="glass-panel animate-fade" style={{ padding: 20, marginBottom: 24, border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.05)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {expiredBatches.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#ef4444', fontWeight: 700, fontSize: 13 }}>
-                <span>🚨</span>
-                <span>
-                  {t("وجبات منتهية الصلاحية:")} {expiredBatches.map(b => `${b.itemName} (${b.quantity} - ${b.expiry_date})`).join('، ')}
-                </span>
+        <div style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: 16, marginBottom: 12, color: "var(--text-main)", fontWeight: 700 }}>⚠️ {t("تنبيهات الصلاحية")}</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+            {expiredBatches.map(b => (
+              <div key={`exp-${b.id}`} className="glass-panel animate-fade" style={{ padding: 12, border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.05)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 24 }}>🚨</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>{b.itemName}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t("الكمية:")} {b.quantity} | {t("منتهي في")} {b.expiry_date}</div>
+                </div>
               </div>
-            )}
-            {expiringSoonBatches.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#f59e0b', fontWeight: 700, fontSize: 13 }}>
-                <span>⚠️</span>
-                <span>
-                  {t("وجبات تنتهي صلاحيتها قريباً:")} {expiringSoonBatches.map(b => `${b.itemName} (${b.quantity} - ينتهي في ${b.expiry_date})`).join('، ')}
-                </span>
+            ))}
+            {expiringSoonBatches.map(b => (
+              <div key={`soon-${b.id}`} className="glass-panel animate-fade" style={{ padding: 12, border: '1px solid rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.05)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 24 }}>⚠️</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>{b.itemName}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t("الكمية:")} {b.quantity} | {t("ينتهي في")} {b.expiry_date}</div>
+                </div>
               </div>
-            )}
+            ))}
           </div>
         </div>
       )}
@@ -234,7 +237,7 @@ export default function Inventory() {
       )}
 
       {/* Grid view for inventory items */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
         {items.map(item => (
           <div key={item.id} className="glass-panel" style={{ 
             padding: 24, 

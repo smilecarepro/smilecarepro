@@ -19,7 +19,7 @@ const SummaryCard = ({ label, val, color }) => {
 const ReportRow = ({ label, val, unit, color, bold }) => (
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
     <span style={{ fontSize: 14, color: "var(--text-muted)" }}>{label}</span>
-    <span style={{ fontSize: bold ? 20 : 16, fontWeight: 700, color: color || "white" }}>{(val || 0).toLocaleString()} {unit}</span>
+    <span style={{ fontSize: bold ? 20 : 16, fontWeight: 700, color: color || "var(--text-main)" }}>{(val || 0).toLocaleString()} {unit}</span>
   </div>
 );
 

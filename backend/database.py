@@ -308,7 +308,7 @@ def init_clinic_schema(conn):
         "CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT, amount REAL, payment_method TEXT DEFAULT 'Cash', date TEXT, notes TEXT)",
         "CREATE TABLE IF NOT EXISTS teeth_map (patient_id INTEGER PRIMARY KEY, map_data TEXT)",
         "CREATE TABLE IF NOT EXISTS prescriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, patient_id INTEGER, meds TEXT, notes TEXT, date TEXT, image_url TEXT, rx_number TEXT, diagnosis TEXT, drugs_json TEXT)",
-        "CREATE TABLE IF NOT EXISTS drugs (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, category TEXT, stock_quantity REAL DEFAULT 0, min_quantity REAL DEFAULT 5, unit TEXT DEFAULT 'Piece', is_favorite INTEGER DEFAULT 0)",
+        "CREATE TABLE IF NOT EXISTS drugs (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, category TEXT, forms TEXT, doses_adult TEXT, doses_child TEXT, doses_adolescent TEXT, doses_elderly TEXT, meal_timing TEXT, timing TEXT, duration TEXT, note TEXT, warn_pregnant TEXT, warn_breastfeed TEXT, warn_renal TEXT, warn_hepatic TEXT, warn_allergy TEXT, warn_diabetes TEXT, warn_blood_pressure TEXT, warn_epilepsy TEXT, max_daily_dose REAL DEFAULT 0, stock_quantity REAL DEFAULT 0, min_quantity REAL DEFAULT 5, unit TEXT DEFAULT 'Piece', is_favorite INTEGER DEFAULT 0, is_custom INTEGER DEFAULT 0)",
         "CREATE TABLE IF NOT EXISTS inventory_items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, category TEXT, stock_quantity REAL DEFAULT 0, min_quantity REAL DEFAULT 5, unit TEXT DEFAULT 'Piece', purchase_price REAL DEFAULT 0, last_updated TEXT DEFAULT CURRENT_TIMESTAMP)",
         "CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, username TEXT, role TEXT, action TEXT, target_id INTEGER, target_name TEXT, description TEXT, old_data TEXT, new_data TEXT)",
         "CREATE TABLE IF NOT EXISTS internal_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, sender_role TEXT, content TEXT, image_url TEXT, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP)",
@@ -316,7 +316,8 @@ def init_clinic_schema(conn):
         "CREATE TABLE IF NOT EXISTS whatsapp_sessions (phone_number TEXT PRIMARY KEY, current_state TEXT, collected_data TEXT, last_interaction TEXT DEFAULT CURRENT_TIMESTAMP)",
         "CREATE TABLE IF NOT EXISTS purchase_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT DEFAULT 'pending', total_price REAL DEFAULT 0, notes TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, supplier_name TEXT)",
         "CREATE TABLE IF NOT EXISTS purchase_items (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER, inventory_item_id INTEGER, name TEXT, requested_qty REAL, received_qty REAL, price_per_unit REAL, expiry_date TEXT)",
-        "CREATE TABLE IF NOT EXISTS inventory_batches (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_item_id INTEGER, quantity REAL DEFAULT 0, expiry_date TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(id))"
+        "CREATE TABLE IF NOT EXISTS inventory_batches (id INTEGER PRIMARY KEY AUTOINCREMENT, inventory_item_id INTEGER, quantity REAL DEFAULT 0, expiry_date TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(id))",
+        "CREATE TABLE IF NOT EXISTS prescription_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, description TEXT, drugs_json TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
     ]
     for s in schema: 
         try: conn.execute(s)
@@ -338,6 +339,15 @@ def init_clinic_schema(conn):
     try: conn.execute("ALTER TABLE appointments ADD COLUMN teeth_snapshot TEXT")
     except: pass
     try: conn.execute("ALTER TABLE appointments ADD COLUMN image_url TEXT")
+    except: pass
+
+    # Drugs table migrations
+    for col in ['forms', 'doses_adult', 'doses_child', 'doses_adolescent', 'doses_elderly', 'meal_timing', 'timing', 'duration', 'note', 'warn_pregnant', 'warn_breastfeed', 'warn_renal', 'warn_hepatic', 'warn_allergy', 'warn_diabetes', 'warn_blood_pressure', 'warn_epilepsy']:
+        try: conn.execute(f"ALTER TABLE drugs ADD COLUMN {col} TEXT")
+        except: pass
+    try: conn.execute("ALTER TABLE drugs ADD COLUMN max_daily_dose REAL DEFAULT 0")
+    except: pass
+    try: conn.execute("ALTER TABLE drugs ADD COLUMN is_custom INTEGER DEFAULT 0")
     except: pass
 
 

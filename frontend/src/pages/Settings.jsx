@@ -21,7 +21,8 @@ export default function Settings() {
     med_dosages: ["500 mg", "1 g", "250 mg", "5 ml", "10 ml", "Tab", "Cap"],
     med_frequencies: ["مرتين يومياً (كل 12 ساعة)", "3 مرات يومياً (كل 8 ساعات)", "مرة واحدة يومياً", "عند اللزوم"],
     med_durations: ["لمدة 3 أيام", "لمدة 5 أيام", "لمدة أسبوع", "لمدة 10 أيام", "لمدة أسبوعين"],
-    expense_categories: ["إيجار العيادة", "رواتب الموظفين", "كهرباء ومولد", "مشتريات طبية", "صيانة", "أخرى"]
+    expense_categories: ["إيجار العيادة", "رواتب الموظفين", "كهرباء ومولد", "مشتريات طبية", "صيانة", "أخرى"],
+    med_forms: ["Tablets", "Capsules", "Syrup", "Injection", "Drops", "Ointment", "Cream", "Gel", "Suppositories", "Spray", "Patch", "Mouthwash"]
   };
   const [activeTab, setActiveTab] = useState(user?.role === 'secretary' ? "preferences" : "clinic");
   const [form, setForm] = useState({});
@@ -648,6 +649,7 @@ export default function Settings() {
                        { k: "payment_methods", l: "طرق الدفع", icon: "💰" },
                        { k: "med_categories", l: "تصنيفات الأدوية", icon: "💊" },
                        { k: "med_dosages", l: "جرعات الأدوية", icon: "⚖️" },
+                       { k: "med_forms", l: "الأشكال الصيدلانية", icon: "💊" },
                        { k: "med_frequencies", l: "تكرار الأدوية", icon: "🔄" },
                        { k: "med_durations", l: "مدة الأدوية", icon: "⏳" },
                        { k: "expense_categories", l: "فئات المصروفات", icon: "💸" },

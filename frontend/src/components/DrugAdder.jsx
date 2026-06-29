@@ -6,46 +6,52 @@ import { useSettings } from "../SettingsContext";
 
 function calcDose(drug, patient) {
   const age = parseInt(patient.age) || 30;
-  const weight = parseFloat(patient.weight) || 70;
-  const special = patient.systemic_conditions || "none"; // changed to match target DB
   let group = "adult";
-  if (age < 12) group = "child";
-  else if (age >= 65 || special.includes("elderly")) group = "elderly";
+  if (age <= 12) group = "child";
+  else if (age > 12 && age <= 16) group = "adolescent";
+  else if (age >= 65) group = "elderly";
   const doses = drug.doses[group]?.length ? drug.doses[group] : drug.doses.adult;
   let recommended = doses[0] || "";
-  if (group === "child" && recommended.includes("mg/kg")) {
-    const factor = parseFloat(recommended);
-    const calc = Math.round(factor * weight);
-    recommended = `${calc}mg (${factor}mg/kg × ${weight}كغ)`;
-  } else if (group === "adult" && weight > 90 && doses.length > 1) {
-    recommended = doses[1];
-  }
   return { recommended, doses, group };
 }
 
-function getWarnings(drug, patient) {
+export function getWarnings(drug, patient) {
   const warnings = [];
   const special = (patient.systemic_conditions || "").toLowerCase();
+  const gender = patient.gender || "";
   const age = parseInt(patient.age) || 30;
   
-  if ((special.includes("pregnant") || special.includes("حمل")) && drug.warnings?.pregnant)
-    warnings.push({ label: "Pregnant", text: drug.warnings.pregnant, type: "red" });
-  if ((special.includes("breastfeed") || special.includes("رضاعة")) && drug.warnings?.breastfeed)
-    warnings.push({ label: "Breastfeeding", text: drug.warnings.breastfeed, type: "red" });
+  console.log("getWarnings DEBUG:", { special, gender, age, drugWarnings: drug.warnings });
+
+  if (gender === "Female" || gender === "أنثى") {
+    if ((special.includes("pregnant") || special.includes("حمل")) && drug.warnings?.pregnant)
+      warnings.push({ label: "الحمل", text: drug.warnings.pregnant, type: "red" });
+    if ((special.includes("breastfeed") || special.includes("رضاعة")) && drug.warnings?.breastfeed)
+      warnings.push({ label: "الرضاعة", text: drug.warnings.breastfeed, type: "amber" });
+  }
+  
   if ((special.includes("renal") || special.includes("كلى") || special.includes("kidney")) && drug.warnings?.renal)
-    warnings.push({ label: "Renal Impairment", text: drug.warnings.renal, type: "amber" });
+    warnings.push({ label: "الكلى", text: drug.warnings.renal, type: "red" });
   if ((special.includes("hepatic") || special.includes("كبد") || special.includes("liver")) && drug.warnings?.hepatic)
-    warnings.push({ label: "Hepatic Impairment", text: drug.warnings.hepatic, type: "amber" });
+    warnings.push({ label: "الكبد", text: drug.warnings.hepatic, type: "red" });
     
   if ((special.includes("allergy") || special.includes("حساسية")) && drug.warnings?.allergy)
-    warnings.push({ label: "Allergy", text: drug.warnings.allergy, type: "amber" });
+    warnings.push({ label: "الحساسية", text: drug.warnings.allergy, type: "red" });
   if ((special.includes("diabetes") || special.includes("سكر")) && drug.warnings?.diabetes)
-    warnings.push({ label: "Diabetes", text: drug.warnings.diabetes, type: "amber" });
+    warnings.push({ label: "السكري", text: drug.warnings.diabetes, type: "amber" });
   if ((special.includes("pressure") || special.includes("ضغط") || special.includes("hypertension")) && drug.warnings?.blood_pressure)
-    warnings.push({ label: "Blood Pressure", text: drug.warnings.blood_pressure, type: "amber" });
+    warnings.push({ label: "ضغط الدم", text: drug.warnings.blood_pressure, type: "amber" });
+  if ((special.includes("epilepsy") || special.includes("صرع")) && drug.warnings?.epilepsy)
+    warnings.push({ label: "صرع", text: drug.warnings.epilepsy, type: "red" });
     
-  if (age < 12) warnings.push({ label: "Pediatric Dose", text: "", type: "blue" });
-  else if (age >= 65) warnings.push({ label: "Elderly Dose", text: "", type: "blue" });
+  if (age <= 12) {
+    if (!drug.doses.child || drug.doses.child.length === 0) warnings.push({ label: "تنبيه (جرعة)", text: "لا توجد جرعة أطفال", type: "red" });
+  } else if (age > 12 && age <= 16) {
+    if (!drug.doses.adolescent || drug.doses.adolescent.length === 0) warnings.push({ label: "تنبيه (جرعة)", text: "لا توجد جرعة يافعين", type: "amber" });
+  } else if (age >= 65) {
+    if (!drug.doses.elderly || drug.doses.elderly.length === 0) warnings.push({ label: "تنبيه (جرعة)", text: "لا توجد جرعة لكبار السن", type: "amber" });
+  }
+
   return warnings;
 }
 
@@ -127,7 +133,8 @@ export default function DrugAdder({ patient, onAdd }) {
     }
 
     onAdd({ 
-      name: selected.name, form, dose, timing, duration, note,
+      name: selected.name, form, dose, timing, duration, note, meal_timing: selected.meal_timing || "",
+      warnings: warnings,
       doseOptions: dosesOptions.length ? dosesOptions : [dose],
       timingOptions: selected.timing?.length ? selected.timing : [timing],
       durationOptions: selected.duration?.length ? selected.duration : [duration],
@@ -196,17 +203,19 @@ export default function DrugAdder({ patient, onAdd }) {
     const drugsToAdd = pendingDrugs.map(drug => {
       const { recommended, doses } = calcDose(drug, patient);
       return {
-        name: drug.name,
-        form: drug.forms?.[0] || "",
-        dose: recommended || doses[0] || "",
-        timing: drug.timing?.[0] || "",
-        duration: drug.duration?.[1] || drug.duration?.[0] || "",
-        note: drug.note || "",
-        doseOptions: doses.length ? doses : [recommended || doses[0]],
-        timingOptions: drug.timing?.length ? drug.timing : [],
-        durationOptions: drug.duration?.length ? drug.duration : [],
-      };
-    });
+          name: drug.name,
+          form: drug.forms?.[0] || "",
+          dose: recommended || doses[0] || "",
+          timing: drug.timing?.[0] || "",
+          duration: drug.duration?.[1] || drug.duration?.[0] || "",
+          note: drug.note || "",
+          meal_timing: drug.meal_timing || "",
+          warnings: getWarnings(drug, patient),
+          doseOptions: doses.length ? doses : [recommended || doses[0]],
+          timingOptions: drug.timing?.length ? drug.timing : [],
+          durationOptions: drug.duration?.length ? drug.duration : [],
+        };
+      });
     onAdd(drugsToAdd);
     setPendingDrugs([]);
   };
@@ -323,6 +332,27 @@ export default function DrugAdder({ patient, onAdd }) {
                    </select>
                  </div>
               </div>
+
+              {warnings.length > 0 && (
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {warnings.map((w, i) => (
+                    <div key={i} style={{ 
+                      padding: "8px 12px", 
+                      borderRadius: 8, 
+                      fontSize: 12, 
+                      background: w.type === 'red' ? '#fee2e2' : w.type === 'amber' ? '#fef3c7' : '#e0f2fe',
+                      color: w.type === 'red' ? '#991b1b' : w.type === 'amber' ? '#92400e' : '#075985',
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8
+                    }}>
+                      <span style={{ fontWeight: 700 }}>⚠️ {w.label}:</span>
+                      <span>{w.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <button className="btn-primary" style={{ width: "100%", marginTop: 12, padding: "10px", fontWeight: 700 }} onClick={handleAdd}>
                 {t("إضافة للوصفة")}
               </button>

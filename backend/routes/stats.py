@@ -243,83 +243,113 @@ def download_daily_summary_pdf():
     settings_rows = g.db.execute("SELECT key, value FROM settings").fetchall()
     clinic = {row["key"]: row["value"] for row in settings_rows}
 
+    from reportlab.lib.styles import ParagraphStyle
+    
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=60*mm, bottomMargin=45*mm)
+    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=50*mm, bottomMargin=40*mm, rightMargin=20*mm, leftMargin=20*mm)
     styles = get_pdf_styles()
     
-    styles["title"].alignment = 1
+    styles["title"].alignment = 1 # Center
     styles["normal"].alignment = 2 # Right align
-    styles["label"].alignment = 2
-    styles["value"].alignment = 2
+    styles["label"].alignment = 2 # Right align
+    styles["value"].alignment = 2 # Right align
+
+    # Create a centered style for tables
+    center_style = ParagraphStyle("CenterStyle", parent=styles["value"], alignment=1)
 
     story = []
 
-    story.append(Paragraph(f"{arabic_text('الملخص المالي اليومي')} - {target_date}", styles["title"]))
-    story.append(Spacer(1, 10*mm))
+    # Title
+    full_title = f"الملخص المالي اليومي - {target_date}"
+    story.append(Paragraph(f"<b>{arabic_text(full_title)}</b>", styles["title"]))
+    story.append(Spacer(1, 15*mm))
 
     # Revenue Table
-    story.append(Paragraph(arabic_text("الإيرادات (المدفوعات المستلمة)"), styles["label"]))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#10b981")))
-    story.append(Spacer(1, 4*mm))
+    story.append(Paragraph(f"<b>{arabic_text('الإيرادات (المدفوعات المستلمة)')}</b>", styles["label"]))
+    story.append(Spacer(1, 2*mm))
     
+    table_style = TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#10b981")), 
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.lightgrey),
+        ('PADDING', (0,0), (-1,-1), 8),
+    ])
+
     if rev_rows:
-        rev_data = [[arabic_text("المبلغ"), arabic_text("طريقة الدفع"), arabic_text("المريض")]]
+        rev_data = [[
+            Paragraph(f"<b><font color='white'>{arabic_text('المبلغ')}</font></b>", center_style), 
+            Paragraph(f"<b><font color='white'>{arabic_text('طريقة الدفع')}</font></b>", center_style), 
+            Paragraph(f"<b><font color='white'>{arabic_text('المريض')}</font></b>", center_style)
+        ]]
         for r in rev_rows:
             rev_data.append([
-                Paragraph(f"{r['paid_amount']:,.0f}", styles["value"]),
-                Paragraph(arabic_text(r['payment_method']), styles["value"]),
-                Paragraph(arabic_text(r['p_name']), styles["value"])
+                Paragraph(f"{r['paid_amount']:,.0f}", center_style),
+                Paragraph(arabic_text(r['payment_method']), center_style),
+                Paragraph(arabic_text(r['p_name']), center_style)
             ])
         
-        rt = Table(rev_data, colWidths=[35*mm, 35*mm, 100*mm])
-        rt.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), 
-            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), 
-            ('PADDING', (0,0), (-1,-1), 6),
-            ('ALIGN', (0,0), (-1,-1), 'RIGHT')
-        ]))
+        rt = Table(rev_data, colWidths=[40*mm, 40*mm, 90*mm])
+        rt.setStyle(table_style)
         story.append(rt)
     else:
-        story.append(Paragraph(arabic_text("لا توجد إيرادات مسجلة."), styles["normal"]))
+        story.append(Paragraph(arabic_text("لا توجد إيرادات مسجلة هذا اليوم."), styles["normal"]))
 
     story.append(Spacer(1, 15*mm))
 
     # Expenses Table
-    story.append(Paragraph(arabic_text("المصروفات"), styles["label"]))
-    story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#ef4444")))
-    story.append(Spacer(1, 4*mm))
+    story.append(Paragraph(f"<b>{arabic_text('المصروفات')}</b>", styles["label"]))
+    story.append(Spacer(1, 2*mm))
     
+    exp_table_style = TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#ef4444")), 
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.lightgrey),
+        ('PADDING', (0,0), (-1,-1), 8),
+    ])
+
     if exp_rows:
-        exp_data = [[arabic_text("المبلغ"), arabic_text("الوصف"), arabic_text("الفئة")]]
+        exp_data = [[
+            Paragraph(f"<b><font color='white'>{arabic_text('المبلغ')}</font></b>", center_style), 
+            Paragraph(f"<b><font color='white'>{arabic_text('الوصف')}</font></b>", center_style), 
+            Paragraph(f"<b><font color='white'>{arabic_text('الفئة')}</font></b>", center_style)
+        ]]
         for e in exp_rows:
             exp_data.append([
-                Paragraph(f"{e['amount']:,.0f}", styles["value"]),
-                Paragraph(arabic_text(e['description']), styles["value"]),
-                Paragraph(arabic_text(e['category']), styles["value"])
+                Paragraph(f"{e['amount']:,.0f}", center_style),
+                Paragraph(arabic_text(e['description']), center_style),
+                Paragraph(arabic_text(e['category']), center_style)
             ])
         
-        et = Table(exp_data, colWidths=[35*mm, 95*mm, 40*mm])
-        et.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke), 
-            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey), 
-            ('PADDING', (0,0), (-1,-1), 6),
-            ('ALIGN', (0,0), (-1,-1), 'RIGHT')
-        ]))
+        et = Table(exp_data, colWidths=[40*mm, 90*mm, 40*mm])
+        et.setStyle(exp_table_style)
         story.append(et)
     else:
-        story.append(Paragraph(arabic_text("لا توجد مصروفات مسجلة."), styles["normal"]))
+        story.append(Paragraph(arabic_text("لا توجد مصروفات مسجلة هذا اليوم."), styles["normal"]))
 
     story.append(Spacer(1, 20*mm))
     
     # Final Totals
     total_data = [
-        [f"{total_rev:,.0f} {arabic_text('دينار')}", arabic_text("إجمالي الإيرادات:")],
-        [f"{total_exp:,.0f} {arabic_text('دينار')}", arabic_text("إجمالي المصروفات:")],
-        [f"{(total_rev - total_exp):,.0f} {arabic_text('دينار')}", arabic_text("صافي التدفق النقدي:")]
+        [Paragraph(f"<b>{total_rev:,.0f}</b>", styles["value"]), Paragraph(f"<b>{arabic_text('إجمالي الإيرادات:')}</b>", styles["normal"])],
+        [Paragraph(f"<b>{total_exp:,.0f}</b>", styles["value"]), Paragraph(f"<b>{arabic_text('إجمالي المصروفات:')}</b>", styles["normal"])],
+        [Paragraph(f"<b><font color='#10b981'>{(total_rev - total_exp):,.0f}</font></b>", styles["value"]), Paragraph(f"<b>{arabic_text('صافي التدفق النقدي:')}</b>", styles["normal"])]
     ]
-    for val, lbl in total_data:
-        row = [Paragraph(f"<b>{val}</b>", styles["value"]), Paragraph(f"<b>{lbl}</b>", styles["normal"])]
-        story.append(Table([row], colWidths=[130*mm, 40*mm]))
+    
+    total_table = Table(total_data, colWidths=[40*mm, 50*mm], hAlign='LEFT')
+    total_table.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('LINEBELOW', (0,0), (-1,-2), 0.5, colors.lightgrey),
+        ('LINEABOVE', (0,2), (-1,2), 1, colors.black),
+    ]))
+    
+    story.append(total_table)
 
     doc.build(story, onFirstPage=lambda c, d: add_header_footer(c, d, clinic), onLaterPages=lambda c, d: add_header_footer(c, d, clinic))
     buf.seek(0)

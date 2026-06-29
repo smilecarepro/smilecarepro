@@ -17,6 +17,76 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
 
+  // Dragging state
+  const [position, setPosition] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, moved: false });
+
+  useEffect(() => {
+    // Initialize position
+    setPosition({
+      x: isRTL ? 25 : window.innerWidth - 80,
+      y: window.innerHeight - 80
+    });
+  }, [isRTL]);
+
+  const handlePointerDown = (e) => {
+    setIsDragging(true);
+    dragRef.current.startX = e.clientX || (e.touches && e.touches[0].clientX);
+    dragRef.current.startY = e.clientY || (e.touches && e.touches[0].clientY);
+    dragRef.current.initialX = position.x;
+    dragRef.current.initialY = position.y;
+    dragRef.current.moved = false;
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    if (clientX === undefined || clientY === undefined) return;
+
+    const dx = clientX - dragRef.current.startX;
+    const dy = clientY - dragRef.current.startY;
+    
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      dragRef.current.moved = true;
+      let newX = dragRef.current.initialX + dx;
+      let newY = dragRef.current.initialY + dy;
+      
+      // Constrain bubble within the screen bounds (bubble is 55x55)
+      newX = Math.max(0, Math.min(newX, window.innerWidth - 55));
+      newY = Math.max(0, Math.min(newY, window.innerHeight - 55));
+
+      setPosition({ x: newX, y: newY });
+    }
+  };
+
+  const handlePointerUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handlePointerMove);
+      window.addEventListener("mouseup", handlePointerUp);
+      window.addEventListener("touchmove", handlePointerMove, { passive: false });
+      window.addEventListener("touchend", handlePointerUp);
+    } else {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+      window.removeEventListener("touchmove", handlePointerMove);
+      window.removeEventListener("touchend", handlePointerUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+      window.removeEventListener("touchmove", handlePointerMove);
+      window.removeEventListener("touchend", handlePointerUp);
+    };
+  }, [isDragging, position]);
+
+
   // Poll for unread count
   useEffect(() => {
     if (!user) return;
@@ -75,13 +145,27 @@ export default function ChatWidget() {
     }
   };
 
-  if (!user) return null;
+  if (!user || !position) return null;
+
+  const isMobile = window.innerWidth < 768;
+  const chatHeight = isMobile ? 380 : 480;
+  const bottomSafeArea = isMobile ? 85 : 10;
 
   return (
-    <div className="chat-widget-wrapper" style={{ position: "fixed", bottom: 25, [isRTL ? "left" : "right"]: 25, zIndex: 1000 }}>
+    <div className="chat-widget-wrapper" style={{ 
+      position: "fixed", 
+      left: position.x, 
+      top: position.y, 
+      width: 55, height: 55,
+      zIndex: 99999
+    }}>
       {/* Floating Bubble */}
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onMouseDown={handlePointerDown}
+        onTouchStart={handlePointerDown}
+        onClick={(e) => {
+          if (!dragRef.current.moved) setIsOpen(!isOpen);
+        }}
         className="chat-bubble shadow-primary"
         style={{
           width: 55, height: 55, borderRadius: "50%",
@@ -106,8 +190,18 @@ export default function ChatWidget() {
       {/* Chat Window */}
       {isOpen && (
         <div className="glass-panel animate-scale-up" style={{
-          position: "absolute", bottom: 70, [isRTL ? "left" : "right"]: 0,
-          width: 340, height: 480, display: "flex", flexDirection: "column",
+          position: "fixed", 
+          top: Math.max(10, Math.min(
+            (window.innerHeight - position.y - 55 > position.y) ? position.y + 70 : position.y - chatHeight - 15,
+            window.innerHeight - chatHeight - bottomSafeArea
+          )),
+          left: Math.max(10, Math.min(
+            position.x - 340 / 2 + 55 / 2, 
+            window.innerWidth - 340 - 10
+          )),
+          width: 340, height: chatHeight, 
+          maxWidth: "calc(100vw - 20px)", maxHeight: `calc(100vh - ${bottomSafeArea + 10}px)`,
+          display: "flex", flexDirection: "column",
           overflow: "hidden", border: "1px solid var(--glass-border)",
           boxShadow: "0 20px 50px rgba(0,0,0,0.4)",
           borderRadius: 24
@@ -123,7 +217,7 @@ export default function ChatWidget() {
                 {isRTL ? "←" : "→"}
               </button>
             )}
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, color: "var(--text-main)" }}>
               <div style={{ fontWeight: 800, fontSize: 14 }}>
                 {selectedContact ? selectedContact.full_name : t("المراسلات")}
               </div>
@@ -131,6 +225,17 @@ export default function ChatWidget() {
                 {selectedContact ? (t(selectedContact.role) || "online") : t("اختر شخصاً للمراسلة")}
               </div>
             </div>
+            <button 
+              onClick={() => setIsOpen(false)} 
+              style={{ 
+                background: "rgba(0,0,0,0.05)", border: "none", color: "var(--text-main)", 
+                cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", 
+                justifyContent: "center", width: 28, height: 28, borderRadius: "50%",
+                transition: "0.2s"
+              }}
+            >
+              ✕
+            </button>
           </div>
 
           {/* Body */}

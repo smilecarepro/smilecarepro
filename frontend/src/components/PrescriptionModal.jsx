@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import DrugAdder from "./DrugAdder";
-import { createSmartPrescription, getPrescriptionPDFUrl, getSettings } from "../api";
+import DrugAdder, { getWarnings } from "./DrugAdder";
+import { createSmartPrescription, getPrescriptionPDFUrl, getSettings, getTemplates, getDrugs } from "../api";
 import { useLanguage } from "../LanguageContext";
 import { useSettings } from "../SettingsContext";
 
@@ -23,14 +23,17 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
       return existingData?.drugs_json ? JSON.parse(existingData.drugs_json) : (initialMeds || []);
     } catch (e) {
       console.error("Prescription parsing error:", e);
-      return initialMeds || [];
+      return [];
     }
   });
+
+  const [templates, setTemplates] = useState([]);
+  const [fullDrugs, setFullDrugs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const isReadOnly = !!existingData && !isEditing;
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -39,6 +42,8 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
 
   useEffect(() => {
     getSettings().then(setSettings).catch(console.error);
+    getTemplates().then(res => setTemplates(res || [])).catch(console.error);
+    getDrugs().then(res => setFullDrugs(res || [])).catch(console.error);
   }, []);
 
   function addDrug(drugOrDrugs) {
@@ -54,6 +59,37 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
     setStep(0);
   }
 
+  function applyTemplate(e) {
+    const tmplId = e.target.value;
+    if (!tmplId) return;
+    const tmpl = templates.find(t => t.id == tmplId);
+    if (!tmpl) return;
+    
+    try {
+      const templateDrugs = JSON.parse(tmpl.drugs_json || "[]");
+      const processedDrugs = templateDrugs.map(d => {
+        // Find full drug info to recalculate warnings
+        const fullDrug = fullDrugs.find(fd => fd.name === d.name);
+        if (fullDrug) {
+          // ensure doses object is parsed since it might be strings from DB
+          const parsedDrug = { ...fullDrug };
+          try {
+            if (typeof parsedDrug.doses === 'string') parsedDrug.doses = JSON.parse(parsedDrug.doses);
+            if (typeof parsedDrug.warnings === 'string') parsedDrug.warnings = JSON.parse(parsedDrug.warnings);
+          } catch(err){}
+          
+          d.warnings = getWarnings(parsedDrug, editablePatient);
+        } else {
+          d.warnings = []; // Fallback if drug is deleted
+        }
+        return d;
+      });
+      addDrug(processedDrugs);
+    } catch(err) {
+      console.error(err);
+    }
+    e.target.value = ""; // Reset selector
+  }
   function removeDrug(i) {
     if (isReadOnly) return;
     setDrugs((prev) => prev.filter((_, idx) => idx !== i));
@@ -73,24 +109,46 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
     const doc = iframe.contentWindow.document;
     doc.open();
     
-    const drugsHtml = drugs.map((d, i) => `
-      <li style="margin-bottom: 12px; font-size: 14px; padding: 10px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; list-style: none;">
-         <div style="font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 8px;">
-           ${i + 1}. ${d.name} <span style="font-weight: 400; font-size: 12px; color: #64748b; margin-left: 6px;">(${d.form})</span>
-         </div>
-         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-           <span style="font-size: 11px; color: #64748b; font-weight: 600;">Dose:</span>
-           <span style="font-size: 13px; color: #334155;">${d.dose}</span>
-           <span style="color: #cbd5e1;">&middot;</span>
-           <span style="font-size: 11px; color: #64748b; font-weight: 600;">Frequency:</span>
-           <span style="font-size: 13px; color: #334155;">${d.timing}</span>
-           <span style="color: #cbd5e1;">&middot;</span>
-           <span style="font-size: 11px; color: #64748b; font-weight: 600;">Duration:</span>
-           <span style="font-size: 13px; color: #334155;">${d.duration}</span>
-         </div>
-         ${d.note ? `<div style="font-size: 12px; color: #64748b; margin-top: 6px; font-style: italic;">Note: ${d.note}</div>` : ''}
-      </li>
-    `).join('');
+    const drugsHtml = drugs.map((d, i) => {
+      let warningsHtml = "";
+      if (d.warnings && d.warnings.length > 0) {
+        warningsHtml = d.warnings.map(w => `
+          <div style="padding: 2px 6px; border-radius: 4px; font-size: 11px; background: ${w.type === 'red' ? '#fee2e2' : w.type === 'amber' ? '#fef3c7' : '#e0f2fe'}; color: ${w.type === 'red' ? '#991b1b' : w.type === 'amber' ? '#92400e' : '#075985'}; display: flex; align-items: center; gap: 4px;">
+            <span style="font-weight: 700;">⚠️ ${w.label}:</span>
+            <span>${w.text}</span>
+          </div>
+        `).join('');
+      }
+      
+      return `
+        <li style="margin-bottom: 12px; font-size: 14px; padding: 10px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; list-style: none;">
+           <div style="font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 8px;">
+             ${i + 1}. ${d.name} <span style="font-weight: 400; font-size: 12px; color: #64748b; margin-left: 6px;">(${d.form})</span>
+           </div>
+           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+             <div style="display: flex; align-items: center; gap: 4px;">
+               <span style="font-size: 11px; color: #64748b; font-weight: 600;">الجرعة:</span>
+               <span style="font-size: 13px; color: #334155;">${d.dose}</span>
+             </div>
+             <span style="color: #cbd5e1;">&middot;</span>
+             <div style="display: flex; align-items: center; gap: 4px;">
+               <span style="font-size: 11px; color: #64748b; font-weight: 600;">التكرار:</span>
+               <span style="font-size: 13px; color: #334155;">${d.timing}</span>
+             </div>
+             <span style="color: #cbd5e1;">&middot;</span>
+             <div style="display: flex; align-items: center; gap: 4px;">
+               <span style="font-size: 11px; color: #64748b; font-weight: 600;">المدة:</span>
+               <span style="font-size: 13px; color: #334155;">${d.duration}</span>
+             </div>
+           </div>
+           
+           <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px;">
+             ${d.meal_timing && d.meal_timing !== "لا يهم" ? `<div style="font-size: 12px; color: #eab308; font-weight: bold;">التوقيت: ${d.meal_timing}</div>` : ''}
+             ${d.note ? `<div style="font-size: 12px; color: #64748b; font-style: italic;">ملاحظة: ${d.note}</div>` : ''}
+           </div>
+        </li>
+      `;
+    }).join('');
 
     doc.write(`
       <html>
@@ -121,26 +179,26 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
             <div class="content">
               <div class="patient-info">
                 <div class="info-col">
-                  <div class="info-row"><span class="label">Name:</span><span class="val">${editablePatient.name}</span></div>
+                  <div class="info-row"><span class="label">اسم المريض:</span><span class="val">${editablePatient.name}</span></div>
                   <div style="display: flex; gap: 20px;">
-                    <div class="info-row"><span class="label">Age:</span><span class="val">${editablePatient.age}</span></div>
-                    <div class="info-row"><span class="label">Gender:</span><span class="val">${editablePatient.gender}</span></div>
+                    <div class="info-row"><span class="label">العمر:</span><span class="val">${editablePatient.age}</span></div>
+                    <div class="info-row"><span class="label">الجنس:</span><span class="val">${editablePatient.gender === 'Male' ? 'ذكر' : editablePatient.gender === 'Female' ? 'أنثى' : editablePatient.gender}</span></div>
                   </div>
                 </div>
-                <div class="info-row"><span class="label">Date:</span><span class="val">${editablePatient.date}</span></div>
+                <div class="info-row"><span class="label">التاريخ:</span><span class="val">${editablePatient.date}</span></div>
               </div>
 
               ${diagnosis ? `<div style="font-size: 16px; margin-bottom: 20px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 5px;">${diagnosis}</div>` : ''}
 
               <div class="rx-box">
-                <div class="rx-mark">Rx</div>
+                <div class="rx-mark">الوصفة</div>
                 <ul style="padding: 0; margin: 0;">
                   ${drugsHtml}
                 </ul>
               </div>
 
               <div class="signature">
-                <div style="font-weight: 600; margin-bottom: 40px;">Doctor's Signature</div>
+                <div style="font-weight: 600; margin-bottom: 40px;">توقيع الطبيب</div>
                 <div style="border-top: 1px solid black; width: 150px; display: inline-block;"></div>
               </div>
             </div>
@@ -275,7 +333,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
           <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", gap: isMobile ? 15 : 0, marginBottom: 30 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ display: "flex", gap: 8 }}>
-                <span style={{ fontWeight: 600 }}>Name:</span>
+                <span style={{ fontWeight: 600 }}>اسم المريض:</span>
                 <input 
                   readOnly={isReadOnly}
                   value={editablePatient.name} 
@@ -285,7 +343,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
               </div>
               <div style={{ display: "flex", gap: 20 }}>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <span style={{ fontWeight: 600 }}>Age:</span>
+                  <span style={{ fontWeight: 600 }}>العمر:</span>
                   <input 
                     readOnly={isReadOnly}
                     type="number"
@@ -295,21 +353,21 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                   />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <span style={{ fontWeight: 600 }}>Gender:</span>
+                  <span style={{ fontWeight: 600 }}>الجنس:</span>
                   <select 
                     disabled={isReadOnly}
                     value={editablePatient.gender} 
                     onChange={e => setEditablePatient({...editablePatient, gender: e.target.value})}
                     style={paperInputStyle}
                   >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
+                    <option value="Male">ذكر</option>
+                    <option value="Female">أنثى</option>
                   </select>
                 </div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <span style={{ fontWeight: 600 }}>Date:</span>
+              <span style={{ fontWeight: 600 }}>التاريخ:</span>
               <input 
                 readOnly={isReadOnly}
                 type="text"
@@ -323,7 +381,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
           <div style={{ marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
              <input 
                readOnly={isReadOnly}
-               placeholder="Diagnosis / Notes (English)..." 
+               placeholder="التشخيص / الملاحظات..." 
                value={diagnosis} 
                onChange={e => setDiagnosis(e.target.value)}
                style={{ ...paperInputStyle, flex: 1, fontSize: 16, borderBottom: "1px dashed #cbd5e1", width: "100%" }}
@@ -332,7 +390,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
 
           {/* Rx Area */}
           <div style={{ position: "relative", minHeight: 300, border: "1px solid #f1f5f9", borderRadius: 8, padding: isMobile ? "25px 10px 15px 10px" : 20 }}>
-             <div style={{ position: "absolute", top: 10, left: 15, fontSize: 32, fontWeight: 800, opacity: 0.1 }}>Rx</div>
+             <div style={{ position: "absolute", top: 10, left: 15, fontSize: 32, fontWeight: 800, opacity: 0.1 }}>الوصفة</div>
              
              <ul style={{ listStyleType: "none", paddingLeft: 0, margin: 0 }}>
                {drugs.map((d, i) => (
@@ -348,7 +406,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                          {/* Dose */}
                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>Dose:</span>
+                           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>الجرعة:</span>
                            {isReadOnly ? (
                              <span style={{ fontSize: 13, color: "#334155" }}>{d.dose}</span>
                            ) : (
@@ -382,7 +440,7 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                          <span style={{ color: "#cbd5e1" }}>·</span>
                          {/* Duration */}
                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>Duration:</span>
+                           <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>المدة:</span>
                            {isReadOnly ? (
                              <span style={{ fontSize: 13, color: "#334155" }}>{d.duration}</span>
                            ) : (
@@ -398,8 +456,28 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                            )}
                          </div>
                        </div>
-                       {d.note && <div style={{ fontSize: 12, color: "#64748b", marginTop: 6, fontStyle: "italic" }}>Note: {d.note}</div>}
-                     </div>
+                         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 8 }}>
+                           {d.meal_timing && d.meal_timing !== "لا يهم" && (
+                             <div style={{ fontSize: 12, color: "#eab308", fontWeight: "bold" }}>التوقيت: {d.meal_timing}</div>
+                           )}
+                           
+                           {d.note && (
+                             <div style={{ fontSize: 12, color: "#64748b", fontStyle: "italic" }}>ملاحظة: {d.note}</div>
+                           )}
+
+                           {d.warnings && d.warnings.map((w, idx) => (
+                             <div key={idx} style={{ 
+                               padding: "2px 6px", borderRadius: 4, fontSize: 11, 
+                               background: w.type === 'red' ? '#fee2e2' : w.type === 'amber' ? '#fef3c7' : '#e0f2fe',
+                               color: w.type === 'red' ? '#991b1b' : w.type === 'amber' ? '#92400e' : '#075985',
+                               display: "flex", alignItems: "center", gap: 4
+                             }}>
+                               <span style={{ fontWeight: 700 }}>⚠️ {w.label}:</span>
+                               <span>{w.text}</span>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
                      {!isReadOnly && (
                        <button onClick={() => removeDrug(i)} className="delete-btn" style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
                      )}
@@ -408,28 +486,47 @@ export default function PrescriptionModal({ patient, onClose, onRefresh, existin
                ))}
              </ul>
 
-             {!isReadOnly && (
-               <button 
-                 onClick={() => setStep(1)}
-                 style={{ 
-                   width: "100%", 
-                   padding: 20, 
-                   border: "2px dashed #cbd5e1", 
-                   borderRadius: 12, 
-                   background: "none", 
-                   cursor: "pointer", 
-                   color: "#94a3b8",
-                   marginTop: 20,
-                   display: drugs.length > 5 ? "none" : "block"
-                 }}
-               >
-                 + Click here to add drugs
-               </button>
-             )}
+               {!isReadOnly && (
+                 <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+                   <button 
+                     onClick={() => setStep(1)}
+                     style={{ 
+                       flex: 1, 
+                       padding: 20, 
+                       border: "2px dashed #cbd5e1", 
+                       borderRadius: 12, 
+                       background: "none", 
+                       cursor: "pointer", 
+                       color: "#94a3b8",
+                       display: drugs.length > 5 ? "none" : "block"
+                     }}
+                   >
+                     + اضغط هنا لإضافة أدوية
+                   </button>
+                   <select 
+                     onChange={applyTemplate}
+                     style={{
+                       flex: 1,
+                       padding: 20,
+                       border: "2px dashed #cbd5e1",
+                       borderRadius: 12,
+                       background: "none",
+                       cursor: "pointer",
+                       color: "#94a3b8",
+                       outline: "none"
+                     }}
+                   >
+                     <option value="">🌟 قوالب جاهزة...</option>
+                     {templates.map(t => (
+                       <option key={t.id} value={t.id}>{t.name}</option>
+                     ))}
+                   </select>
+                 </div>
+               )}
           </div>
 
           <div style={{ marginTop: 40, textAlign: "right", paddingRight: 40 }}>
-             <div style={{ fontWeight: 600, marginBottom: 40 }}>Doctor's Signature</div>
+             <div style={{ fontWeight: 600, marginBottom: 40 }}>توقيع الطبيب</div>
              <div style={{ borderTop: "1px solid black", width: 150, display: "inline-block" }}></div>
           </div>
         </div>

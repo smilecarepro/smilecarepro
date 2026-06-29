@@ -282,3 +282,9 @@ export const testBackupDiagnostics = () => req("/settings/backup/test-diagnostic
 export const getAdminBackups = () => req("/auth/admin/backups");
 export const getAdminBackupUrl = (username) => `${BASE}/auth/admin/backups/download/${username}`;
 export const runAdminBackupsDiagnostics = () => req("/auth/admin/backups/run-diagnostics", "POST");
+
+// Prescription Templates
+export const getTemplates = () => req("/drugs/templates");
+export const createTemplate = (data) => req("/drugs/templates", "POST", data);
+export const updateTemplate = (id, data) => req("/drugs/templates/" + id, "PUT", data);
+export const deleteTemplate = (id) => req("/drugs/templates/" + id, "DELETE");
