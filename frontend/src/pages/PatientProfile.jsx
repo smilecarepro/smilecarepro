@@ -222,13 +222,13 @@ export default function PatientProfile() {
               </tr>
             </thead>
             <tbody>
-              \${displayedPayments.map(p => \`
+              ${displayedPayments.map(p => `
                 <tr>
-                  <td>\${p.date}</td>
-                  <td style="font-weight: 700;">\${(parseFloat(p.paid) || parseFloat(p.paid_amount) || 0).toLocaleString()} د.ع</td>
-                  <td>\${p.notes || '-'}</td>
+                  <td>${p.date}</td>
+                  <td style="font-weight: 700;">${(parseFloat(p.paid) || parseFloat(p.paid_amount) || 0).toLocaleString()} د.ع</td>
+                  <td>${p.notes || '-'}</td>
                 </tr>
-              \`).join('')}
+              `).join('')}
             </tbody>
           </table>
 

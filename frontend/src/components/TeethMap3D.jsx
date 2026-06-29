@@ -160,6 +160,7 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
   const [selectedStatus, setSelectedStatus] = useState("نخر");
   const [autoRotate, setAutoRotate] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [zoom, setZoom] = useState(1);
 
   React.useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -227,51 +228,68 @@ export default function TeethMap3D({ data: externalData, onChange, treatments, n
 
   return (
     <div className="animate-fade" style={noControls ? { height: "100%", width: "100%" } : { display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.8fr 1fr", gap: 24, minHeight: isMobile ? "auto" : 600 }}>
-      <div className={noControls ? "" : "glass-panel"} style={{ position: "relative", background: noControls ? "transparent" : "#0a0f18", borderRadius: noControls ? 0 : 24, overflow: "hidden", border: "none", height: isMobile ? 400 : "auto" }}>
-        {!noControls && (
-          <button onClick={() => setAutoRotate(!autoRotate)} style={{ position: 'absolute', top: 20, right: 20, zIndex: 10, background: autoRotate ? 'rgba(59,130,246,0.2)' : "var(--panel-bg)", color: autoRotate ? '#3b82f6' : 'var(--text-main)', padding: '8px 16px', borderRadius: 20, border: '1px solid var(--glass-border)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-            {autoRotate ? t("⏸️ إيقاف") : t("🎬 دوران")}
-          </button>
-        )}
-        <ErrorBoundary>
-          <Suspense fallback={<div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "var(--text-main)" }}>{t("جاري تحميل النموذج...")}</div>}>
-            <Canvas shadows camera={{ position: cameraPos, fov: 45 }} gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}>
-              <ambientLight intensity={0.5} />
-              <directionalLight 
-                position={[10, 20, 10]} 
-                intensity={1.2} 
-                castShadow 
-                shadow-mapSize-width={1024} 
-                shadow-mapSize-height={1024}
-                shadow-bias={-0.001}
-              />
-              <directionalLight 
-                position={[-10, 10, -10]} 
-                intensity={0.4} 
-              />
-              <pointLight position={[0, -10, 5]} intensity={0.3} />
-              <Center top={noControls ? false : true}>
-                <Model 
-                   url="second.glb" 
-                   onToothSelect={(id, raw) => {
-                     if (noControls) return;
-                     setSelectedTooth(id);
-                     setSelectedToothRaw(raw);
-                     if (onToothClick) onToothClick(id);
-                   }} 
-                   toothStatus={localData} 
-                   treatments={treatments}
-                   noControls={noControls}
-                   focusedTooth={focusedTooth}
-                   updateKey={updateKey}
-                />
-              </Center>
-              {!noControls && <OrbitControls autoRotate={autoRotate} enablePan={false} minDistance={3} maxDistance={500} />}
-              <Environment preset="city" />
-            </Canvas>
-          </Suspense>
-        </ErrorBoundary>
-      </div>
+        <div className={noControls ? "" : "glass-panel"} style={{ position: "relative", background: noControls ? "transparent" : "#0a0f18", borderRadius: noControls ? 0 : 24, overflow: "hidden", border: "none", height: isMobile ? 400 : "auto" }}>
+          
+          {!noControls && (
+            <div style={{ position: "absolute", top: 20, right: 20, display: "flex", flexDirection: "column", gap: 10, zIndex: 100 }}>
+              <button onClick={() => setAutoRotate(!autoRotate)} style={{ background: autoRotate ? 'rgba(59,130,246,0.2)' : "var(--panel-bg)", color: autoRotate ? '#3b82f6' : 'var(--text-main)', padding: '8px 16px', borderRadius: 20, border: '1px solid var(--glass-border)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                {autoRotate ? t("⏸️ إيقاف") : t("🎬 دوران")}
+              </button>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "center" }}>
+                <button onClick={() => setZoom(z => Math.min(z + 0.2, 3))} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: "50%", padding: 0, fontSize: 20, background: "rgba(255,255,255,0.1)" }}>+</button>
+                <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: "50%", padding: 0, fontSize: 20, background: "rgba(255,255,255,0.1)" }}>-</button>
+                <button onClick={() => setZoom(1)} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: "50%", padding: 0, fontSize: 12, background: "rgba(255,255,255,0.1)" }}>100%</button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ transform: `scale(${zoom})`, transformOrigin: "center center", transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)", width: "100%", height: "100%" }}>
+            <ErrorBoundary>
+              <Suspense fallback={<div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "var(--text-main)" }}>{t("جاري تحميل النموذج...")}</div>}>
+                <Canvas shadows camera={{ position: cameraPos, fov: 45 }} gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}>
+                  <ambientLight intensity={0.5} />
+                  <directionalLight 
+                    position={[10, 20, 10]} 
+                    intensity={1.2} 
+                    castShadow 
+                    shadow-mapSize-width={1024} 
+                    shadow-mapSize-height={1024}
+                    shadow-bias={-0.001}
+                  />
+                  <directionalLight position={[-10, 0, -10]} intensity={0.5} />
+                  <directionalLight position={[0, -20, 0]} intensity={0.3} />
+                  <Environment preset="city" />
+                  
+                  <Center>
+                    <Model 
+                      toothStatus={localData} 
+                      treatments={treatments}
+                      onToothSelect={(id, name) => {
+                        setSelectedTooth(id);
+                        setSelectedToothRaw(name);
+                        if(localData[id]) setSelectedStatus(localData[id].status || "نخر");
+                        if(onToothClick) onToothClick(id);
+                      }}
+                      noControls={noControls}
+                      focusedTooth={focusedTooth}
+                      updateKey={updateKey}
+                      url="second.glb"
+                    />
+                  </Center>
+                  <OrbitControls 
+                    enablePan={true}
+                    enableZoom={true}
+                    autoRotate={autoRotate}
+                    autoRotateSpeed={2.0}
+                    minDistance={5}
+                    maxDistance={100}
+                  />
+                </Canvas>
+              </Suspense>
+            </ErrorBoundary>
+          </div>
+        </div>
 
       {!noControls && (
         <div className="glass-panel" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>

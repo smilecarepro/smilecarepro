@@ -6,6 +6,7 @@ export default function TeethMap({ initial, pid, treatments, onToothClick, onAdd
   const [data, setData] = useState(initial || {});
   const [hoveredTooth, setHoveredTooth] = useState(null);
   const [selectedTooth, setSelectedTooth] = useState(null);
+  const [zoom, setZoom] = useState(1);
   const [internalTimelineIndex, setInternalTimelineIndex] = useState(treatments ? treatments.length : 0);
   const timelineIndex = manualIndex !== null ? manualIndex : internalTimelineIndex;
   const [selectedStatus, setSelectedStatus] = useState("حشو");
@@ -95,64 +96,72 @@ export default function TeethMap({ initial, pid, treatments, onToothClick, onAdd
       )}
 
 
-      <div style={{ background: "var(--panel-bg)", borderRadius: 30, padding: "40px 20px", border: "1px solid var(--glass-border)" }}>
-        <div style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 2 }}>{t("الفك العلوي - Upper Arch")}</div>
-        <div className="jaw-arch" style={{ marginBottom: 40 }}>
-          {upperTeeth.map((id, i) => {
-            const angle = (i - 7.5) * 6;
-            const yOffset = Math.pow(i - 7.5, 2) * 0.8;
-            return (
-              <div key={id} className="tooth-container" style={{ transform: `rotate(${angle}deg) translateY(${yOffset}px)` }}>
-                <ToothIcon 
-                  id={id} 
-                  status={getToothStatus(id)} 
-                  surfaceData={data[id]?.surfaces}
-                  onSurfaceClick={handleSurfaceClick}
-                  onToothClick={(tid) => {
-                    setSelectedTooth(tid);
-                    if (onToothClick) onToothClick(tid);
-                  }}
-                  isHovered={hoveredTooth === id}
-                  isSelected={selectedTooth === id}
-                  onHover={setHoveredTooth}
-                  lastLog={activeTreatments.filter(tr => tr.tooth_number == id).pop()}
-                  statusColors={statusColors}
-                />
-              </div>
-            );
-          })}
-        </div>
+        <div style={{ position: "relative", background: "var(--panel-bg)", borderRadius: 30, padding: "40px 20px", border: "1px solid var(--glass-border)", overflow: "hidden" }}>
+          
+          {/* Zoom Controls */}
+          <div style={{ position: "absolute", top: 20, right: 20, display: "flex", flexDirection: "column", gap: 5, zIndex: 100 }}>
+            <button onClick={() => setZoom(z => Math.min(z + 0.2, 2.5))} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: "50%", padding: 0, fontSize: 20, background: "var(--glass-bg)" }}>+</button>
+            <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: "50%", padding: 0, fontSize: 20, background: "var(--glass-bg)" }}>-</button>
+            <button onClick={() => setZoom(1)} className="btn-ghost" style={{ width: 40, height: 40, borderRadius: "50%", padding: 0, fontSize: 12, background: "var(--glass-bg)" }}>100%</button>
+          </div>
 
-        <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", margin: "0 40px 40px 40px" }} />
-
-        <div className="jaw-arch">
-          {lowerTeeth.map((id, i) => {
-            const angle = (7.5 - i) * 6;
-            const yOffset = -Math.pow(i - 7.5, 2) * 0.8;
-            return (
-              <div key={id} className="tooth-container" style={{ transform: `rotate(${angle}deg) translateY(${yOffset}px)` }}>
-                <ToothIcon 
-                  id={id} 
-                  status={getToothStatus(id)} 
-                  surfaceData={data[id]?.surfaces}
-                  onSurfaceClick={handleSurfaceClick}
-                  onToothClick={(tid) => {
-                    setSelectedTooth(tid);
-                    if (onToothClick) onToothClick(tid);
-                  }}
-                  isHovered={hoveredTooth === id}
-                  isSelected={selectedTooth === id}
-                  onHover={setHoveredTooth}
-                  lastLog={activeTreatments.filter(tr => tr.tooth_number == id).pop()}
-                  statusColors={statusColors}
-                  isLower
-                />
-              </div>
-            );
-          })}
+          <div style={{ transform: `scale(${zoom})`, transformOrigin: "top center", transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)" }}>
+            <div style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 2 }}>{t("الفك العلوي - Upper Arch")}</div>
+            <div className="jaw-arch" style={{ marginBottom: 40 }}>
+              {upperTeeth.map((id, i) => {
+                const angle = (i - 7.5) * 6;
+                const yOffset = Math.pow(i - 7.5, 2) * 0.8;
+                return (
+                  <div key={id} className="tooth-container" style={{ transform: `rotate(${angle}deg) translateY(${yOffset}px)` }}>
+                    <ToothIcon 
+                      id={id} 
+                      status={getToothStatus(id)} 
+                      surfaceData={data[id]?.surfaces}
+                      onSurfaceClick={handleSurfaceClick}
+                      onToothClick={(tid) => {
+                        setSelectedTooth(tid);
+                        if (onToothClick) onToothClick(tid);
+                      }}
+                      isHovered={hoveredTooth === id}
+                      isSelected={selectedTooth === id}
+                      onHover={setHoveredTooth}
+                      lastLog={activeTreatments.filter(tr => tr.tooth_number == id).pop()}
+                      statusColors={statusColors}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+    
+            <div className="jaw-arch">
+              {lowerTeeth.map((id, i) => {
+                const angle = (7.5 - i) * 6;
+                const yOffset = -Math.pow(i - 7.5, 2) * 0.8;
+                return (
+                  <div key={id} className="tooth-container" style={{ transform: `rotate(${angle}deg) translateY(${yOffset}px)` }}>
+                    <ToothIcon 
+                      id={id} 
+                      status={getToothStatus(id)} 
+                      surfaceData={data[id]?.surfaces}
+                      onSurfaceClick={handleSurfaceClick}
+                      onToothClick={(tid) => {
+                        setSelectedTooth(tid);
+                        if (onToothClick) onToothClick(tid);
+                      }}
+                      isHovered={hoveredTooth === id}
+                      isSelected={selectedTooth === id}
+                      onHover={setHoveredTooth}
+                      lastLog={activeTreatments.filter(tr => tr.tooth_number == id).pop()}
+                      statusColors={statusColors}
+                      isLower
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", marginTop: 10, textTransform: "uppercase", letterSpacing: 2 }}>{t("الفك السفلي - Lower Arch")}</div>
+          </div>
         </div>
-        <div style={{ textAlign: "center", fontSize: 10, color: "var(--text-muted)", marginTop: 20, textTransform: "uppercase", letterSpacing: 2 }}>{t("الفك السفلي - Lower Arch")}</div>
-      </div>
 
       {!readOnly && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 40, marginBottom: 20, justifyContent: "center" }}>
