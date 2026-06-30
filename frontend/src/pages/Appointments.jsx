@@ -207,8 +207,15 @@ export default function Appointments() {
 
   const daysInMonth  = new Date(year, month + 1, 0).getDate();
   const firstWeekDay = new Date(year, month, 1).getDay();
-  const aptDays = new Set(allApts.filter(a => a.date && typeof a.date === 'string').map(a => parseInt(a.date.split("-")[2])));
-
+  const aptDays = new Set(
+    allApts
+      .filter(a => {
+        if (!a.date || typeof a.date !== 'string') return false;
+        const [y, m] = a.date.split('-');
+        return parseInt(y) === year && parseInt(m) === month + 1;
+      })
+      .map(a => parseInt(a.date.split("-")[2]))
+  );
   const openModal = () => {
     setForm({ patient_id: "", date: dateStr(), time: "", type: "", duration_min: 30, status: "booked", notes: "", cost: "", paid: "" });
     setSearchTerm("");
@@ -622,7 +629,8 @@ export default function Appointments() {
             ) : apts.map(a => {
               const sc = STATUS_CONFIG[a.status] || STATUS_CONFIG["booked"];
               let isSoon = false;
-              if (a.status === "booked" && a.date && typeof a.date === 'string' && a.date === new Date().toISOString().split('T')[0]) {
+              const todayDateStr = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+              if (a.status === "booked" && a.date && typeof a.date === 'string' && a.date === todayDateStr) {
                 const [h, m] = a.time.split(':');
                 const aptTime = new Date();
                 aptTime.setHours(parseInt(h), parseInt(m), 0);

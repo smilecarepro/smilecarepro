@@ -21,6 +21,7 @@ import { useAuth } from "../AuthContext";
 import DatePicker from "../components/DatePicker";
 import TeethMap3D from "../components/TeethMap3D";
 import TimePicker from "../components/TimePicker";
+import PrescriptionModal from "../components/PrescriptionModal";
 
 const format12h = (timeStr, lang = "ar") => {
   if (!timeStr) return "";
@@ -84,6 +85,9 @@ export default function SecretaryDashboard() {
   const [absentStep, setAbsentStep] = useState(0); // 0 = Ask Fine, 1 = Ask Rebook
   const [fineAmount, setFineAmount] = useState("");
   const [savingFine, setSavingFine] = useState(false);
+  
+  const [receiptMode, setReceiptMode] = useState(false); 
+  const [viewingPrescription, setViewingPrescription] = useState(null);
 
   // Dynamic search state inside modals
   const [searchQuery, setSearchQuery] = useState("");
@@ -218,7 +222,7 @@ export default function SecretaryDashboard() {
   // Print Prescription
   const printPrescription = () => {
     if (checkoutSession?.prescription?.id) {
-      window.open(getPrescriptionPDFUrl(checkoutSession.prescription.id), "_blank");
+      setViewingPrescription(checkoutSession.prescription);
     } else {
       alert(t("لا توجد وصفة طبية مسجلة لهذه الجلسة"));
     }
